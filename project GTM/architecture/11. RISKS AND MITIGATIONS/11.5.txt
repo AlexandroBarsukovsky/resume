@@ -1,0 +1,175 @@
+═══════════════════════════════════════════════════════════════════════════════════
+PROTOCOL: 11.5. RESPONSE PLAN AND FALLBACK MEASURES
+Project: Sourcegraph GTM Infrastructure
+═══════════════════════════════════════════════════════════════════════════════════
+
+**11.5. RESPONSE PLAN AND FALLBACK MEASURES**
+
+────────────────────────────────────────────────────────────────────────────────────
+11.5.1. GENERAL APPROACH
+────────────────────────────────────────────────────────────────────────────────────
+
+The response plan and fallback measures are designed to ensure continuity of
+GTM infrastructure operations under any failures – from isolated agent errors to
+catastrophic failures of external systems. The main principles are:
+
+- **Proactive detection:** automatic monitoring of key metrics,
+  alerts when thresholds are exceeded.
+- **Clear escalation:** definition of criticality levels and notification chains.
+- **Redundancy:** duplication of critical components, availability of manual
+  procedures in case of complete automation failure.
+- **Regular drills:** verification of recovery plans at least once per quarter.
+- **Continuous improvement:** incident analysis and procedure adjustments.
+
+────────────────────────────────────────────────────────────────────────────────────
+11.5.2. CRITICALITY LEVELS AND ESCALATION
+────────────────────────────────────────────────────────────────────────────────────
+
+**11.5.2.1. Incident Classification**
+
+| Level | Description | Examples | Response Time |
+|-------|-------------|----------|---------------|
+| **Critical (P0)** | Complete or partial loss of functionality affecting revenue or reputation. | – Salesforce API unavailable.<br>– Mass agent failure (>50% error rate).<br>– Data leak. | 15 minutes |
+| **High (P1)** | Significant performance degradation affecting key processes. | – Gainsight integration failure, unable to launch playbooks.<br>– Processing delays >5 minutes.<br>– DLQ growth >1,000. | 1 hour |
+| **Medium (P2)** | Local issues not affecting critical functionality. | – Isolated agent errors.<br>– Stale data in dashboards.<br>– Incorrect trigger activation. | 2 hours |
+| **Low (P3)** | Minor inconveniences not requiring immediate intervention. | – Minor documentation errors.<br>– Cosmetic UI issues. | 24 hours |
+
+**11.5.2.2. Escalation Chain**
+
+| Level | First Level | Second Level | Third Level | Fourth Level |
+|-------|-------------|--------------|-------------|--------------|
+| P0 | Control Panel Operator | RevOps Lead | Technical Lead | CRO, CTO, Security |
+| P1 | Control Panel Operator | RevOps | Technical Lead | – |
+| P2 | Control Panel Operator | RevOps (if needed) | – | – |
+| P3 | Control Panel Operator (log) | – | – | – |
+
+**Notification Channels:**
+- Slack channel `#incident-response` (alerts and discussions).
+- PagerDuty for P0/P1 (call, SMS, push).
+- Email for P2/P3 (digest).
+
+────────────────────────────────────────────────────────────────────────────────────
+11.5.3. INCIDENT RESPONSE PROCESS
+────────────────────────────────────────────────────────────────────────────────────
+
+**11.5.3.1. Detection**
+
+- Automatic alerts based on metrics (CloudWatch, Datadog, PagerDuty).
+- Control panel operators visually monitor dashboards.
+- Users report issues via Slack or tickets.
+
+**11.5.3.2. Analysis and Diagnosis**
+
+- Control panel operator checks logs, DLQ, metrics.
+- Criticality level and possible cause are determined.
+- Escalation if necessary.
+
+**11.5.3.3. Containment and Isolation**
+
+- Temporarily disable faulty component (if possible).
+- Redirect traffic to fallback channels.
+- Collect data for further analysis.
+
+**11.5.3.4. Recovery**
+
+- Apply fallback procedures (manual operations, rollback).
+- Restart failed agents, reconfigure.
+- Verify functionality.
+
+**11.5.3.5. Post‑Incident Analysis (Post‑Mortem)**
+
+- Document causes, recovery time.
+- Develop measures to prevent recurrence.
+- Update procedures, training.
+
+────────────────────────────────────────────────────────────────────────────────────
+11.5.4. FALLBACK PROCEDURES (BY SCENARIO)
+────────────────────────────────────────────────────────────────────────────────────
+
+**11.5.4.1. External API Failures**
+
+| Scenario | Manual Action | Responsible |
+|----------|---------------|-------------|
+| **6sense API unavailable** | Strategist manually downloads intent signals from 6sense reports (CSV) and imports into Salesforce via Data Loader. Frequency – once per day. | RevOps, Strategist |
+| **Gainsight API unavailable** | CSM manually creates tasks in Salesforce; health score tracked via Snowflake reports; playbooks executed manually per instructions. | CSM, RevOps |
+| **SalesLoft API unavailable** | Strategist performs outreach manually via email/calls; records results in Salesforce. | Strategist |
+| **Hightouch unavailable** | RevOps runs batch data export from Snowflake to Salesforce via Data Loader (daily). | RevOps |
+
+**11.5.4.2. Internal Component Failures**
+
+| Scenario | Manual Action | Responsible |
+|----------|---------------|-------------|
+| **Analyst agent failure** | RevOps manually updates Account Score via SQL in Snowflake (followed by import). Priority only for high‑score accounts. | RevOps |
+| **Executor agent failure** | Control panel operators manually perform critical actions (task creation, field updates) via Salesforce UI. | Control Panel Operators |
+| **Control panel failure** | Operators use alternative access: CloudWatch logs, direct Salesforce management. | RevOps, Operators |
+| **Kafka unavailable** | Temporarily switch critical event processing to AWS SQS; reconfigure agents to read from SQS. | Engineers |
+
+**11.5.4.3. Data Loss**
+
+| Scenario | Manual Action | Responsible |
+|----------|---------------|-------------|
+| **Data loss in Salesforce** | Restore from Snowflake backup (daily dump); restore for last 24 hours. | RevOps, Engineers |
+| **Data loss in Snowflake** | Restore from cross‑regional replica (if configured) or from S3 backups. | Engineers |
+| **Incorrect data change by agents** | Roll back data via Salesforce (Field History) or restore from backup. | RevOps |
+
+**11.5.4.4. Complete GTM Infrastructure Unavailability (Extended Outage)**
+
+If the automated system is unavailable for more than 4 hours, **manual mode** is activated:
+
+1. All key processes (qualification, onboarding, renewal) are performed manually using Excel, Salesforce UI, and email.
+2. RevOps coordinates task distribution among teams.
+3. Leadership is notified of the switch to manual mode and estimated recovery time.
+
+────────────────────────────────────────────────────────────────────────────────────
+11.5.5. BACKUP AND RECOVERY
+────────────────────────────────────────────────────────────────────────────────────
+
+| Data | Storage Location | Backup Frequency | RPO | RTO | Recovery Method |
+|------|------------------|------------------|-----|-----|-----------------|
+| Salesforce | Snowflake (daily dump) | Daily | 24 hours | 4 hours | Import via Data Loader |
+| Snowflake | Cross‑regional replication | Continuous | 0 | 1 hour | Switch to replica |
+| Agent configuration | Git (GitHub) | On each change | 0 | 30 minutes | Deploy from repository |
+| Logs | CloudWatch, S3 | Continuous | 0 | 1 hour | Access via console |
+
+────────────────────────────────────────────────────────────────────────────────────
+11.5.6. DRILLS AND TESTING
+────────────────────────────────────────────────────────────────────────────────────
+
+**11.5.6.1. Drill Plan**
+
+| Drill Type | Frequency | Participants | Scenario |
+|------------|-----------|--------------|----------|
+| **Chaos engineering** | Monthly | Engineers, RevOps | Simulate failures in sandbox (API failure, delays). |
+| **Tabletop exercises** | Quarterly | RevOps, Operators, Leadership | Discuss hypothetical incidents, verify procedures. |
+| **Full‑scale recovery** | Every 6 months | All teams | Complete automation shutdown, switch to manual mode, restore. |
+
+**11.5.6.2. Drill Success Criteria**
+
+- Recovery time (RTO) does not exceed target (P0 – 1 hour, P1 – 4 hours).
+- All participants know their roles and procedures.
+- Documentation is up to date.
+
+────────────────────────────────────────────────────────────────────────────────────
+11.5.7. ROLES AND RESPONSIBILITIES IN INCIDENTS
+────────────────────────────────────────────────────────────────────────────────────
+
+| Role | Responsibilities |
+|------|------------------|
+| **Control Panel Operator** | Initial detection, analysis, attempt quick recovery (DLQ, restart). Escalate as needed. |
+| **RevOps** | In‑depth analysis, coordinate with technical team, communicate with business users. |
+| **Engineers (technical team)** | Diagnose infrastructure failures, fix code, restore services. |
+| **Security** | Investigate security incidents, block threats. |
+| **Leadership (CRO, CTO)** | Make escalation decisions, communicate with external parties (customers, investors) if necessary. |
+
+────────────────────────────────────────────────────────────────────────────────────
+**CONCLUSIONS ON THE RESPONSE PLAN AND FALLBACK MEASURES**
+
+- A comprehensive plan covering all possible incident types
+  – from API failures to complete data loss – has been developed.
+- Criticality levels, escalation chains, and timeframes are clearly defined.
+- Fallback procedures are provided for each scenario, enabling
+  critical operations to be maintained manually.
+- Regular drills and post‑incident analysis ensure continuous
+  improvement of recovery processes.
+
+═══════════════════════════════════════════════════════════════════════════════════

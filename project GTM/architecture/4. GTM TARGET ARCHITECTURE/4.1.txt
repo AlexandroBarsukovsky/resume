@@ -1,0 +1,270 @@
+═══════════════════════════════════════════════════════════════════════════════════
+PROTOCOL: 4.1. DESIGN PRINCIPLES
+Project: Sourcegraph GTM Infrastructure
+═══════════════════════════════════════════════════════════════════════════════════
+
+**4.1. DESIGN PRINCIPLES**
+
+This subsection details four fundamental principles on which the target GTM architecture
+for Sourcegraph is built. Each principle responds to the identified pain points (Section 3.5)
+and simultaneously implements the requirements formulated in the project goals and constraints
+(Section 2.3). The principles are interrelated: data atomicity creates the foundation for
+event‑driven automation, which in turn enables multi‑level orchestration, while hybrid
+management ensures adaptability and preserves the high‑agency culture.
+
+────────────────────────────────────────────────────────────────────────────────────
+4.1.1. DATA ATOMICITY
+────────────────────────────────────────────────────────────────────────────────────
+
+**Essence of the principle**
+Every significant event in the GTM ecosystem is recorded as an indivisible, independent unit,
+complete with full context. Unlike the traditional approach where data is aggregated into
+reports or updated in batches, atomicity ensures maximum granularity and the ability to
+reproduce any sequence of actions.
+
+**Why this is critical for Sourcegraph**
+- Without atomic data, accurate scoring and forecasting models cannot be built.
+- Manual processes (Excel, batch exports) create gaps and information loss.
+- Historical simulation X16 showed that all successful management systems
+  (from Egyptian scribes to modern CRMs) are based on recording every transaction.
+
+**Details of atomic events**
+
+1. **Intent signals (6sense)**
+   - Each signal is recorded with fields: `account_id`, `timestamp`, `source`
+     (search, page view, competitor activity), `intent_strength` (0–1), `keyword` (what was searched).
+   - Stored raw in Snowflake, then normalized for aggregation.
+   - Frequency: real‑time via 6sense REST API.
+
+2. **Product events (Snowflake)**
+   - Each user action in the product: login, search, code view, feature usage, configuration change.
+   - Fields: `account_id`, `user_id`, `event_type`, `timestamp`, `metadata`
+     (e.g., programming language, repository size).
+   - Source: Amplitude / Mixpanel → Snowflake (streaming).
+
+3. **CRM events (Salesforce)**
+   - Creation/update of Account, Opportunity, Activity.
+   - Changes to deal stage, MEDDPICC fields, forecast category.
+   - Generated via Salesforce Platform Events, published to EventBridge.
+
+4. **Customer interactions (SalesLoft)**
+   - Email send, open, click, call, meeting.
+   - Fields: `account_id`, `contact_id`, `activity_type`, `timestamp`, `outcome`.
+   - Integration via SalesLoft API, events synchronized with Salesforce.
+
+5. **Financial and contract events (Ironclad, DocuSign)**
+   - Contract creation, signing, amount change, renewal.
+   - Fields: `opportunity_id`, `contract_value`, `sign_date`, `term`.
+   - Integration via API, updates fields in Salesforce.
+
+**Technical implementation**
+- All events are ingested into a single **event bus** (AWS EventBridge + Kafka).
+- Each event has a unique `event_id` and `correlation_id` to link with other events (e.g., intent signal → Opportunity creation).
+- Event schemas are validated via **Schema Registry** (Confluent) to ensure consistency.
+- Data is stored in **Snowflake** in raw tables, then processed via ETL into analytical views.
+
+**Benefits of atomicity for Sourcegraph**
+- **Full reproducibility** – the timeline of any account can be reconstructed for any period.
+- **Analytics flexibility** – aggregations can be rebuilt for new questions without losing detail.
+- **Foundation for machine learning** – scoring and forecasting models require labeled data at the individual event level.
+- **Audit and compliance** – every automated action can be traced back to a specific event.
+
+────────────────────────────────────────────────────────────────────────────────────
+4.1.2. EVENT‑DRIVEN AUTOMATION
+────────────────────────────────────────────────────────────────────────────────────
+
+**Essence of the principle**
+Instead of periodic (batch) or manual actions, the system reacts to events in real time.
+Every state change (appearance of a new intent signal, update of a CRM field, deal closure)
+triggers a chain of automated operations. This reduces reaction time from days to minutes
+and eliminates manual labor.
+
+**Why this is critical for Sourcegraph**
+- Current response time to an intent signal is 2 days – unacceptable in an enterprise
+  environment (competitors react faster).
+- Manual routing and qualification create bottlenecks when scaling.
+- Historical simulation X16 showed that systems relying on manual information transfer
+  (e.g., messengers instead of postal service) inevitably fall behind.
+
+**Architecture of the event‑driven system**
+
+1. **Event sources**
+   - Salesforce Platform Events (CRM)
+   - 6sense Webhooks / REST API (intent)
+   - Snowflake Streams (product data)
+   - Gainsight Webhooks (health score)
+   - SalesLoft Webhooks (interactions)
+
+2. **Event Bus (central node)**
+   - **AWS EventBridge** – routes events between services.
+   - **Apache Kafka** – for long‑term event storage and processing in case of failures (persistent queue).
+
+3. **Handlers (agents)**
+   - Microservices subscribed to specific event types.
+   - Execute logic: scoring, task creation, API calls.
+   - Processing results can generate new events (chaining).
+
+4. **Dead Letter Queue (DLQ)**
+   - Events that fail after 3 attempts are placed in a queue for manual handling by RevOps operators.
+
+**Typical scenarios**
+
+| Event                                            | Handling (agent)                                         |
+|--------------------------------------------------|----------------------------------------------------------|
+| New intent signal (6sense)                       | Analytic agent updates Intent_Strength, recalculates     |
+|                                                  | Account Score; if >0.7, creates a task for Sales Strategist. 
+| Account Score >0.7                               | (event from previous step) → executor agent creates      |
+|                                                  | Opportunity in Salesforce, notifies Strategist.          |
+| Health Score <0.5 (Gainsight)                    | CS agent launches retention playbook: creates task for   |
+|                                                  | CSM, sends email with instructions.                      |
+| Opportunity moves to Closed Won                  | Executor agent creates task for CSM, initiates onboarding|
+|                                                  | in Gainsight, updates forecast.                          |
+| Pipeline Coverage <3× (weekly calculation)       | Analytic agent generates alert, sends email to CRO,      |
+|                                                  | creates a task in the control panel.                     |
+
+**Reliability measures**
+- **Idempotency** – processing an event multiple times does not lead to duplicate actions (checked by `event_id`).
+- **Retry with exponential backoff** – for temporary API failures.
+- **Circuit breaker** – when error threshold for an external service (e.g., Salesforce API) is exceeded,
+  processing is temporarily suspended and operator is notified.
+- **Monitoring** – all events are tracked in CloudWatch; alerts for latencies >500 ms or error rate >1%.
+
+**Benefits of the event‑driven approach**
+- **Response time** – from 2 days to <2 hours.
+- **Scalability** – system handles up to 10⁵ events/sec without human intervention.
+- **Transparency** – entire action chain is recorded and can be analyzed.
+- **Adaptability** – new scenarios are added by subscribing to events, without changing existing code.
+
+────────────────────────────────────────────────────────────────────────────────────
+4.1.3. MULTI‑LEVEL ORCHESTRATION (4 LEVELS)
+────────────────────────────────────────────────────────────────────────────────────
+
+**Essence of the principle**
+GTM functions are divided into four hierarchical levels, each with its own specialization,
+degree of abstraction, and scale. This enables:
+- Scaling each level independently.
+- Adapting strategy to different customer segments.
+- Maintaining flexibility when business goals change.
+
+**Why this is critical for Sourcegraph**
+- The current structure (SDR → AE → CSM) is linear and does not scale.
+- Enterprise clients require different approaches: some need conservative strategy,
+  others aggressive.
+- Historical simulations X16 and X64 showed that the most resilient systems
+  (Roman Empire, Mongol Empire, modern corporations) use hierarchical division of labor.
+
+**Detailed levels**
+
+**Level 1 – Mass analysis (1,024 analytic agents)**
+- **Task:** processing large volumes of data, feature extraction, scoring, pattern detection.
+- **Input:** raw events (intent, product, CRM).
+- **Output:** prioritized account lists with metrics (Account Score, Health Score, Risk Flag).
+- **Technologies:** Python, Pandas, Scikit‑learn, Snowpark, Redis.
+- **Scaling:** horizontal (auto‑scaling in Kubernetes).
+
+**Level 2 – Strategic ideologies (3 agents)**
+- **Task:** selecting a course of action (conservative, balanced, aggressive) based on business goals and macroeconomic factors.
+- **Input:** prioritized lists from Level 1, current OKRs, macro‑indices (PMI, interest rate, technology index).
+- **Output:** account distribution by ideology with resource allocation.
+- **Technologies:** Go, rule engine, logistic regression.
+- **Special feature:** the 3 agents act as a “council”; their decisions can be overridden by an operator.
+
+**Level 3 – Tactical groups (96 groups)**
+- **Task:** adapting strategy to specific segments (industry, region, customer size).
+- **Input:** accounts with assigned ideology.
+- **Output:** specific tasks for executors (message templates, channels, prices).
+- **Technologies:** Kubernetes (each group as a separate container), Jinja2 (templating), integration with SalesLoft.
+- **Specialization:** 4 industries × 4 regions × 3 sizes = 48 base groups, duplicated for peak loads → 96.
+
+**Level 4 – Execution cluster (3,000 agents)**
+- **Task:** performing concrete operations (task creation, CRM updates, email sending, calculations).
+- **Input:** tasks from Level 3.
+- **Output:** executed actions, logs, updated data in systems.
+- **Technologies:** AWS Lambda (fast operations), Kubernetes (long‑running tasks),
+  Salesforce, SalesLoft, Gainsight APIs.
+- **Functional split:** intent, funnel, CS, finance, reporting.
+
+**Interaction between levels**
+- **Data flow downward:** Level 1 → Level 2 → Level 3 → Level 4.
+- **Feedback upward:** execution results (success/failure) are sent via event bus back to Levels 1–3 for adjustment.
+- **Control points:** operators can intervene at any level, change decisions, or pause execution.
+
+**Benefits of multi‑level orchestration**
+- **Scalability** – the number of agents at Level 1 can be increased when data volume grows, without changing upper levels.
+- **Flexibility** – tactical groups can be added or modified without restructuring the entire system.
+- **Resilience** – a failure at one level does not halt others (e.g., if Level 3 is temporarily unavailable, Level 4 continues executing previously received tasks).
+- **Transparency** – each level has clear inputs/outputs, simplifying audit and debugging.
+
+────────────────────────────────────────────────────────────────────────────────────
+4.1.4. HYBRID MANAGEMENT (HUMANS + AI AGENTS)
+────────────────────────────────────────────────────────────────────────────────────
+
+**Essence of the principle**
+Agents handle routine, predictable operations, but critical decisions and exception handling
+remain with humans. This combines the efficiency of automation with the flexibility of human
+intellect and aligns with Sourcegraph’s high‑agency culture.
+
+**Why this is critical for Sourcegraph**
+- Full automation may cause resistance from teams accustomed to autonomy.
+- Enterprise deals often contain atypical situations requiring human judgment.
+- High‑agency culture implies that people should not be mere “executors” – they must have influence.
+- Historical simulation X16 showed that systems where humans were fully replaced by machines
+  (e.g., some colonial administrations) failed due to inability to adapt to local conditions.
+
+**Responsibility split**
+
+| Function                         | Agents (AI)                                      | Humans (operators, managers)                     |
+|----------------------------------|--------------------------------------------------|--------------------------------------------------|
+| Data collection and enrichment   | Automated (6sense, Snowflake)                    | Source configuration, validation                 |
+| Scoring and prioritization       | Automated (formulas)                             | Weight and threshold adjustments                 |
+| Primary qualification            | Automated Strategist tasks                       | Sales Strategist makes final decision            |
+| Task creation                    | Automated (triggers)                             | –                                                |
+| Complex / unusual cases          | –                                                | Operators handle manually                        |
+| Strategy selection (ideologies)  | Strategist agents (by rules)                     | Leaders set OKRs, approve                        |
+| Customer interaction             | Automated emails (SalesLoft)                     | Personal contact, complex negotiations           |
+| Health score monitoring          | CS agents (automated alerts)                     | CSM responds, conducts meetings                  |
+| Forecasting                      | Automated model                                  | Expert judgment adjustment                       |
+| Reporting                        | Automated (Tableau, agents)                      | Analysis, decision making                        |
+| Exception handling               | –                                                | RevOps operators                                 |
+| Model training                   | Automated (periodic)                             | Validation of results, data selection            |
+
+**Control Panel interface**
+- Dashboard for RevOps operators and managers.
+- Displays agent load, operation success rates, problem areas.
+- Allows:
+  * **Stop/start** agents by type.
+  * **Adjust thresholds** (e.g., change Account Score threshold from 0.7 to 0.6 for aggressive ideology).
+  * **Override decisions** – if an agent creates a task for Strategist, the operator can cancel or change its priority.
+  * **View logs** of each agent and event.
+
+**Escalation mechanism**
+1. **Automated action** (e.g., task creation).
+2. If the action fails due to API error or lack of data, the event is placed in the DLQ.
+3. Operator receives notification in the control panel, can review the context, and either perform the action manually or discard it.
+4. Operator response time – no more than 2 hours (SLA).
+
+**Cultural adaptation**
+- **Transparency:** all automated decisions are explained (e.g., “Task created because Account Score = 0.85 > threshold 0.7”).
+- **Training:** workshops for all teams explaining agent logic and manual intervention possibilities.
+- **Feedback:** operators can “teach” agents by marking incorrect decisions; this data is used for model retraining.
+- **Flexibility:** ability to disable automation for specific segments or accounts if necessary.
+
+**Benefits of hybrid management**
+- **Speed** – routine is automated, people focus on what matters.
+- **Adaptability** – exceptions are handled without delays.
+- **Acceptance** – teams do not feel “replaced” but instead gain powerful tools.
+- **Continuous improvement** – agents learn from human decisions, increasing accuracy.
+
+────────────────────────────────────────────────────────────────────────────────────
+**CONCLUSIONS ON DESIGN PRINCIPLES**
+
+The four principles – data atomicity, event‑driven automation, multi‑level orchestration,
+and hybrid management – form a cohesive architectural foundation that:
+- Addresses all identified pain points (Section 3.5).
+- Aligns with project goals and constraints (Section 2.3).
+- Considers Sourcegraph’s cultural characteristics (high agency, remote‑first).
+
+The following subsections (4.2–4.4) detail the implementation of these principles
+in specific architecture components.
+
+═══════════════════════════════════════════════════════════════════════════════════

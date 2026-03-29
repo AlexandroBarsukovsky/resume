@@ -1,0 +1,182 @@
+═══════════════════════════════════════════════════════════════════════════════════
+PROTOCOL: 7.3. COMPENSATION MODEL (BASE + VARIABLE, OPTIMAL CONTRACT)
+Project: Sourcegraph GTM Infrastructure
+═══════════════════════════════════════════════════════════════════════════════════
+
+**7.3. COMPENSATION MODEL (BASE + VARIABLE, OPTIMAL CONTRACT)**
+
+────────────────────────────────────────────────────────────────────────────────────
+7.3.1. PURPOSE AND KEY PRINCIPLES
+────────────────────────────────────────────────────────────────────────────────────
+
+The compensation model is designed to incentivize GTM employees (AE, CSM, AM, RevOps)
+to achieve company goals, ensuring fair compensation, talent retention, and alignment
+with Sourcegraph’s culture (high agency, transparency).
+
+**Key principles:**
+- **Transparency:** all compensation rules (base, variable, multipliers) are openly
+  documented and accessible to every employee.
+- **Tied to results:** the variable component directly depends on key metrics
+  (ARR, net retention, win rate, forecast accuracy, health score).
+- **Balance of risk and motivation:** the structure should encourage long‑term
+  success rather than short‑term risk (adjustments for chargebacks and customer
+  experience are used).
+- **Competitiveness:** target total compensation (base + variable at plan attainment)
+  is set above market average to attract and retain top talent.
+- **Automation:** commission and bonus calculations are performed by financial agents
+  (Level 4) monthly, with RevOps verification.
+
+────────────────────────────────────────────────────────────────────────────────────
+7.3.2. COMPENSATION STRUCTURE BY ROLE
+────────────────────────────────────────────────────────────────────────────────────
+
+**7.3.2.1. Account Executive (AE)**
+
+| Component               | Description                                                                  |
+|-------------------------|------------------------------------------------------------------------------|
+| **Base salary**         | Fixed portion, determined by level (M3) and market data.                     |
+| **Variable component**  | Commission on revenue from closed deals (typically 5–15% of annual contract).|
+| **Quota**               | Target ARR per quarter / year. Set based on territory potential.             |
+| **Accelerators**        | When quota is exceeded, the commission rate increases (e.g., 1.5× on amounts above 100% of quota). |
+| **Adjustments**         | Chargebacks – if a customer churns within the first year, the commission is reversed. |
+
+**AE monthly commission formula:**
+
+Commission = Σ (ARR_closed × rate) × multiplier
+
+where:
+- `ARR_closed` – annual revenue of the closed deal.
+- `rate` – base commission rate (e.g., 10%).
+- `multiplier` – acceleration factor: 1.0 for deals up to 100% of quota, 1.5 for amounts exceeding quota.
+
+**Payment frequency:** monthly (upon deal close).
+
+**7.3.2.2. Customer Success Manager (CSM)**
+
+| Component               | Description                                                                  |
+|-------------------------|------------------------------------------------------------------------------|
+| **Base salary**         | Fixed portion.                                                               |
+| **Variable component**  | Bonus tied to net retention (NRR) and health score.                          |
+| **Goals**               | NRR >120%, share of customers in the green zone (>80%).                      |
+| **Adjustments**         | Bonus may be reduced if churn is high in the CSM’s portfolio.                |
+
+**CSM quarterly bonus formula:**
+
+Bonus = Base_Bonus × (0.6 × (NRR_achieved / NRR_target) + 0.4 × (Green_Zone_achieved / Green_Zone_target))
+
+where `Base_Bonus` is the target bonus at plan attainment (e.g., 20% of annual base).
+
+**7.3.2.3. Account Manager (AM)**
+
+| Component               | Description                                                                  |
+|-------------------------|------------------------------------------------------------------------------|
+| **Base salary**         | Fixed portion.                                                               |
+| **Variable component**  | Commission on expansion ARR (upsell/cross‑sell) and renewal bonus.           |
+| **Goals**               | Expansion ARR (target), renewal rate (>90%).                                 |
+
+**Formula:**
+
+Commission = Σ (Expansion_ARR × rate) + (Renewal_Bonus × renewal_rate_factor)
+
+**7.3.2.4. Revenue Operations (RevOps)**
+
+| Component               | Description                                                                  |
+|-------------------------|------------------------------------------------------------------------------|
+| **Base salary**         | Fixed portion.                                                               |
+| **Variable component**  | Bonus tied to forecast accuracy (MAPE), report preparation time, and team satisfaction. |
+| **Goals**               | MAPE <10%, QBR preparation time <2 hours, internal NPS >80.                  |
+
+────────────────────────────────────────────────────────────────────────────────────
+7.3.3. OPTIMAL CONTRACT (PRINCIPAL‑AGENT THEORY)
+────────────────────────────────────────────────────────────────────────────────────
+
+For AEs, a **linear commission without a cap** is used, which aligns with principal‑agent
+theory under the assumption that the agent cannot influence deal risk. Formally:
+
+`U_AE = E[bonus] - ½·ρ·Var(bonus) - c(e)`
+
+where:
+- `E[bonus]` – expected bonus, linearly dependent on effort e.
+- `ρ` – coefficient of risk aversion (determined empirically).
+- `c(e) = θ·e²/2` – cost of effort.
+
+The optimal (linear) contract minimizes agency costs while satisfying participation (IR)
+and incentive compatibility (IC) constraints. The coefficients (`rate`, `quota`) are
+calibrated based on historical AE performance data and their risk preferences.
+
+**Practical calibration:**
+- Quota is set at a level achievable with average effort (70th percentile of historical performance).
+- The base rate is calculated so that the target total compensation (OTE) matches the
+  market, with variable component making up 30–50% of OTE.
+- Accelerators kick in after 100% quota attainment, encouraging over‑achievement without a cap.
+
+────────────────────────────────────────────────────────────────────────────────────
+7.3.4. AUTOMATION OF CALCULATION (FINANCIAL AGENTS)
+────────────────────────────────────────────────────────────────────────────────────
+
+Commission and bonus calculations are fully automated:
+
+1. **Data collection:**
+   - Closed deals (Closed Won) from Salesforce, with AE, amount, date.
+   - Net retention, health score, expansion ARR – from Snowflake (aggregates).
+   - Goals (quotas) – from the custom object `Sales_Quota__c` (loaded at the beginning of the period).
+
+2. **Calculation:**
+   - Financial agents (Level 4) run the calculation monthly using the formulas above.
+   - Results are stored in Snowflake (table `commission_calculations`).
+
+3. **Verification and publication:**
+   - A summary is sent to the control panel for RevOps operator review.
+   - After confirmation, the results are synchronized with Salesforce (object `Commission_Statement__c`)
+     and the payroll system (via API or export).
+
+4. **Feedback:**
+   - Each AE can view their calculation in Salesforce (via a custom Lightning component).
+   - A “Dispute” button creates a task for RevOps.
+
+────────────────────────────────────────────────────────────────────────────────────
+7.3.5. EXAMPLE CALCULATION FOR AE
+────────────────────────────────────────────────────────────────────────────────────
+
+**Input data:**
+- Quarterly quota: $500,000 ARR.
+- Base rate: 10%.
+- Accelerator: 1.5× on amounts above quota.
+
+**Performance:**
+- Closed deals during the quarter: $600,000 ARR.
+- Commission:
+  * On quota: $500,000 × 10% = $50,000.
+  * On excess: $100,000 × 10% × 1.5 = $15,000.
+- **Total commission:** $65,000.
+
+**Total compensation (assuming base salary $120,000/year):**
+- Base for the quarter: $30,000.
+- Commission: $65,000.
+- Total for the quarter: $95,000.
+
+────────────────────────────────────────────────────────────────────────────────────
+7.3.6. ADJUSTMENT MECHANISMS
+────────────────────────────────────────────────────────────────────────────────────
+
+- **Chargebacks:** if a customer brought in by an AE churns within 12 months,
+  the commission for that deal is reversed (deducted from future payments). This
+  encourages customer quality over quantity.
+- **Customer experience quality:** for CSM and AM, part of the bonus may be adjusted
+  based on NPS or health score to prevent “turning a blind eye” to problems.
+- **Team bonuses:** for RevOps and managers, part of the variable payout may depend
+  on company‑wide metrics (ARR, NRR) to promote collaboration.
+
+────────────────────────────────────────────────────────────────────────────────────
+**CONCLUSIONS ON THE COMPENSATION MODEL**
+
+- The model ensures fair and transparent compensation that incentivizes achievement
+  of strategic goals.
+- Differentiation by role (AE – commission, CSM/AM – bonuses tied to retention/expansion)
+  reflects the specifics of each function.
+- Using principal‑agent theory allows optimal calibration of linear contracts
+  (quotas, rates, accelerators).
+- Automated calculation by financial agents reduces the RevOps workload and eliminates
+  manual data entry errors.
+
+═══════════════════════════════════════════════════════════════════════════════════

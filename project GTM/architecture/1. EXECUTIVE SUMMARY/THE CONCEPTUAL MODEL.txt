@@ -1,0 +1,55 @@
+═══════════════════════════════════════════════════════════════════════════════════
+APPENDIX A. EXECUTIVE SUMMARY FOR NON-TECHNICAL AUDIENCE
+═══════════════════════════════════════════════════════════════════════════════════
+
+**What’s the problem?**
+Sourcegraph makes a great product – it helps programmers quickly find code, understand how everything is structured, and avoid breaking anything. Previously, they sold it through the website: a developer would come, pay by card, and start using it. But large companies don’t operate that way. They need contracts, security, lengthy negotiations. Sourcegraph decided to restructure, but the old processes remained: data is scattered across many places, sales reps manually decide who to call, revenue forecasts are a guessing game, and managers only learn about customer issues after the customer has already left.
+
+**What do we propose?**
+Build a “factory” where robots (we call them agents) handle the routine, while people focus on what matters most.
+
+- **First floor of the factory – scouts.** 1,024 robots gather information from everywhere: who is searching for solutions online, how customers use the product, which companies are the best fit for us. They assign a score to each customer and say: “Call this one right now, this one can wait.”
+
+- **Second floor – strategists.** Three robot‑managers decide which tactic to choose: cautious (retain and avoid risk), balanced (grow moderately), or aggressive (go all‑in, capture market share).
+
+- **Third floor – specialists.** 96 groups, each knowing its industry (finance, technology, retail), its region, and client size. They tailor emails, prices, and approaches to specific audiences.
+
+- **Fourth floor – workers.** 3,000 robots do all the dirty work:
+  – 500 process interest signals.
+  – 800 manage the sales funnel (create tasks, remind about meetings).
+  – 700 monitor customer health (if someone stops using the product – immediate alert).
+  – 600 calculate money, commissions, forecasts.
+  – 400 prepare reports for management.
+
+People‑operators sit at the console, watching the screen and managing the entire operation: setting goals, changing rules, handling complex cases.
+
+**What will change?**
+- Instead of two days to react to a customer’s interest – two hours.
+- Sales reps will win 15–20% more large deals.
+- Deals will close 20% faster.
+- Customers will buy more (net retention will rise to 120%).
+- We will know exactly how much revenue we will receive next quarter (error <10%).
+- Customers in the green zone (everything fine) will account for over 80%.
+
+**How much does it cost and when will it pay off?**
+- Development and implementation: $2 million (one‑time).
+- Operations: $1.7 million per year.
+- Additional revenue in the first year: $3.5–5 million; in five years: $15–25 million per year.
+- Payback period: 8–12 months.
+- Each dollar invested will return more than three dollars over three years.
+
+**How will we implement it?**
+- **Phase 1 (1–2 months):** launch the scouts and 200 workers, test on a small group.
+- **Phase 2 (3–4 months):** add strategists, expand to 800 workers, automate customer distribution.
+- **Phase 3 (5–6 months):** launch all 3,000 workers, set up a customer health monitoring system, build the operator console.
+- **Phase 4 (7–12 months):** retrain robots on new data, strengthen security, and look ahead every six months.
+
+**What could go wrong?**
+- People may take time to adjust – we’ll train them and show quick wins.
+- Technical failures may occur – we’ll roll out in stages and always have a backup plan.
+- Forecasts may sometimes be off – we’ll continuously fine‑tune the settings.
+
+**The main idea:**
+We are not just building a system; we are building a factory that will operate autonomously, freeing people to focus on truly important tasks. Sourcegraph will be able to grow without interruption, knowing exactly what is happening and reacting quickly to any changes. It’s like putting robots on the assembly line: productivity soars, chaos disappears.
+
+═══════════════════════════════════════════════════════════════════════════════════

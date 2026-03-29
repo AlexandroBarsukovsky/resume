@@ -1,0 +1,98 @@
+═══════════════════════════════════════════════════════════════════════════════════
+PROTOCOL: 11.2. TECHNICAL RISKS (INTEGRATION, RELIABILITY)
+Project: Sourcegraph GTM Infrastructure
+═══════════════════════════════════════════════════════════════════════════════════
+
+**11.2. TECHNICAL RISKS (INTEGRATION, RELIABILITY)**
+
+────────────────────────────────────────────────────────────────────────────────────
+11.2.1. DESCRIPTION AND CONTEXT
+────────────────────────────────────────────────────────────────────────────────────
+
+Technical risks cover possible failures in infrastructure operation, integrations
+between components, data loss, insufficient performance, and agent holding failures.
+The target architecture relies on many external systems (Salesforce, 6sense,
+Gainsight, SalesLoft, Hightouch, Snowflake) and internal services (agents,
+event bus, control panel). Failure of any of these elements can lead to delays,
+information loss, or automation stoppage. Managing technical risks requires proactive
+monitoring, redundancy, automatic recovery, and clear response procedures.
+
+────────────────────────────────────────────────────────────────────────────────────
+11.2.2. KEY TECHNICAL RISKS
+────────────────────────────────────────────────────────────────────────────────────
+
+| Risk                                     | Likelihood | Impact | Mitigation                                                                 | Responsible |
+|------------------------------------------|-------------|--------|----------------------------------------------------------------------------|-------------|
+| **External system API failures** (6sense, Gainsight, SalesLoft) | Medium | High | • Exponential backoff retries (3 attempts).<br>• Dead Letter Queue (DLQ) for unprocessed events.<br>• Fallback mechanisms: manual export/import of data (CSV) during extended outages.<br>• API availability monitoring, alerts on error rate >1%. | Engineers, RevOps |
+| **Salesforce API limit breaches**         | Low         | High   | • Use Bulk API for mass operations.<br>• Batch processing (batch size ≤2000).<br>• Real‑time monitoring of remaining limits (via Salesforce metrics).<br>• When approaching limits – automatically reduce request frequency (rate limiting). | Engineers |
+| **Reverse ETL (Hightouch) delays/failures** | Medium   | Medium | • Configure real‑time synchronisation via webhooks.<br>• Monitor latency, alerts on delays >10 sec.<br>• Backup channel: agents can update Salesforce directly via API if Hightouch fails. | RevOps, Engineers |
+| **Data loss during migration**            | Low         | Critical | • Full backup of all data in Snowflake (daily dump).<br>• Pilot run on a copy of data before migration.<br>• Rollback plan to previous CRM version with history preservation. | Engineers, RevOps |
+| **Insufficient agent performance when scaling** | Medium | High | • Load testing up to 10⁵ events/second (K6, Locust).<br>• Auto‑scaling (HPA in Kubernetes, Lambda concurrency).<br>• Code profiling (cProfile, py-spy) and bottleneck optimisation.<br>• Capacity reserve (20% headroom). | Engineers, Technical Lead |
+| **Kafka failure (message broker)**        | Low         | Critical | • Replication (replication factor = 3), automatic recovery.<br>• Monitor lag, queue sizes.<br>• Alternative channel: AWS SQS for critical events (as backup). | Engineers |
+| **Complexity of debugging distributed system** | Medium | Medium | • Centralised logging (CloudWatch, ELK).<br>• End‑to‑end tracing with correlation ID (passed through all services).<br>• Detailed metrics per agent type (CloudWatch, Datadog).<br>• Tracing tools (AWS X‑Ray). | Engineers, RevOps |
+| **Incorrect agent operation (logic errors)** | Medium | High | • Unit tests (coverage >85%).<br>• Testing in sandbox with real data.<br>• Canary deployment (5% → 20% → 100%).<br>• Automatic rollback on errors. | Engineers |
+| **Control panel failure**                 | Low         | Medium | • Deploy control panel across multiple availability zones (multi‑AZ).<br>• Fallback access to logs via CloudWatch.<br>• Operators can perform manual actions directly via Salesforce. | Engineers, RevOps |
+| **Security vulnerabilities in agents**    | Low         | High   | • Code vulnerability scanning (SAST, Snyk).<br>• Use of least‑privilege IAM roles.<br>• Encryption at rest and in transit.<br>• Regular dependency updates. | Engineers, Security |
+
+────────────────────────────────────────────────────────────────────────────────────
+11.2.3. MONITORING AND METRICS
+────────────────────────────────────────────────────────────────────────────────────
+
+| Metric                                     | Source                               | Target / Alert Condition                |
+|--------------------------------------------|--------------------------------------|-----------------------------------------|
+| **Agent holding availability**             | CloudWatch (health checks)           | >99.9%                                  |
+| **P99 agent latency**                      | CloudWatch (Lambda/Kubernetes metrics) | <1 sec (target), >2 sec – alert        |
+| **Agent error rate**                       | CloudWatch (errors)                  | <0.5% (target), >1% – alert             |
+| **Kafka consumer lag**                     | MSK Console / CloudWatch             | <1000 (target), >10,000 – alert         |
+| **Dead Letter Queue (DLQ) size**           | SQS / Kafka DLQ                      | <50 (target), >100 – alert              |
+| **Salesforce API usage (remaining limits)** | Salesforce (reports)                 | <10% of limit – warning                 |
+| **Reverse ETL (Hightouch) latency**        | Hightouch Dashboard / CloudWatch     | <5 sec (target), >30 sec – alert        |
+| **External API availability** (6sense, Gainsight) | CloudWatch (health checks)       | >99% (target), <95% – alert             |
+
+────────────────────────────────────────────────────────────────────────────────────
+11.2.4. INCIDENT RESPONSE PLAN FOR TECHNICAL FAILURES
+────────────────────────────────────────────────────────────────────────────────────
+
+| Criticality Level | Example Incident                              | Action                                                                 | Response Time |
+|-------------------|-----------------------------------------------|------------------------------------------------------------------------|---------------|
+| **Critical**      | Complete Salesforce API unavailability, data loss, Kafka failure | • Immediate PagerDuty escalation.<br>• Activate fallback plan: manual processing via control panel (if possible).<br>• Notify leadership.<br>• Restore from backups. | 15 minutes    |
+| **High**          | Mass agent errors (>5% error rate), Gainsight integration failure | • Analyse logs, adjust configuration.<br>• Restart failed agents.<br>• If unresolved in 1 hour – escalate to technical team. | 1 hour        |
+| **Medium**        | Isolated errors, processing delays, DLQ growth | • Control panel operator processes DLQ.<br>• Check API limits.<br>• Regular RevOps report. | 2 hours       |
+| **Low**           | Stale data, minor errors                      | • Planned fix during retraining cycle.<br>• Log for analysis.          | 24 hours      |
+
+────────────────────────────────────────────────────────────────────────────────────
+11.2.5. FALLBACK PROCEDURES (FOR EXTENDED OUTAGES)
+────────────────────────────────────────────────────────────────────────────────────
+
+| Scenario                                     | Manual Action                                                                 |
+|----------------------------------------------|---------------------------------------------------------------------------------|
+| **6sense API unavailable**                   | Strategist manually downloads intent signals from 6sense reports (CSV) and imports into Salesforce via Data Loader. |
+| **Gainsight unavailable**                    | CSM manually creates tasks in Salesforce, tracks Health Score via Snowflake reports; playbooks executed manually. |
+| **Hightouch unavailable**                    | RevOps runs batch data export from Snowflake to Salesforce via Data Loader (daily). |
+| **Executor agent failure**                   | Control panel operators manually perform critical actions (task creation, field updates) via Salesforce UI. |
+| **Data loss in Salesforce**                  | Restore from Snowflake backup (daily dump); restore for last 24 hours.          |
+| **Kafka failure**                            | Temporarily switch critical event processing to AWS SQS; reconfigure agents to read from SQS. |
+
+────────────────────────────────────────────────────────────────────────────────────
+11.2.6. DRILLS AND TESTING
+────────────────────────────────────────────────────────────────────────────────────
+
+- **Scheduled recovery drills** (quarterly) with RevOps, engineers, and control panel operators. Scenarios:
+  * Salesforce API failure.
+  * Kafka failure.
+  * Mass agent failure.
+- **Chaos engineering** – simulate failures in sandbox (e.g., API delays, component failure) to verify resilience.
+- **Incident analysis** – post‑mortem with root cause, recovery time, and improvement documentation.
+
+────────────────────────────────────────────────────────────────────────────────────
+**CONCLUSIONS ON TECHNICAL RISKS**
+
+- Technical risks require a systematic approach to monitoring, redundancy,
+  and automatic recovery.
+- Key measures: use of DLQ, retries, horizontal scaling,
+  backup communication channels, regular testing.
+- Transparent tracing and centralised logging accelerate diagnosis
+  and recovery.
+- Drills and incident analysis enable continuous improvement of system reliability.
+
+═══════════════════════════════════════════════════════════════════════════════════

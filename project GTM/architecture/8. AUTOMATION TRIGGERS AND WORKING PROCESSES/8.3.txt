@@ -1,0 +1,170 @@
+═══════════════════════════════════════════════════════════════════════════════════
+PROTOCOL: 8.3. CUSTOMER LIFECYCLE AND AUTOMATED ROLE HANDOVERS
+Project: Sourcegraph GTM Infrastructure
+═══════════════════════════════════════════════════════════════════════════════════
+
+**8.3. CUSTOMER LIFECYCLE AND AUTOMATED ROLE HANDOVERS**
+
+This protocol describes the end-to-end customer lifecycle in the target GTM architecture,
+from the first intent signal to expansion. All handovers between roles (Sales Strategist,
+Account Executive, Customer Success Manager, Account Manager) are automated
+and triggered by events handled by triggers and playbooks. Each handover guarantees
+the transfer of necessary data, creation of tasks and notifications,
+ensuring process continuity.
+
+────────────────────────────────────────────────────────────────────────────────────
+8.3.1. FROM INTENT SIGNAL TO QUALIFICATION (SALES STRATEGIST)
+────────────────────────────────────────────────────────────────────────────────────
+
+**8.3.1.1. Overview**
+- **Input:** New intent signal from 6sense.
+- **Process:** Analyst agents update Intent_Strength, recalculate Account Score.
+  When Account Score >0.7, the qualification playbook is launched.
+- **Output:** Task for Sales Strategist; account added to SalesLoft queue.
+- **Role:** Sales Strategist performs initial outreach, qualifies the account,
+  and, if positive, creates an Opportunity and hands over to the AE.
+
+**8.3.1.2. Detailed Steps**
+
+| Step | Action                                                                   | Executor                       | Integration / Data                                                                  |
+|------|--------------------------------------------------------------------------|--------------------------------|-------------------------------------------------------------------------------------|
+| 1    | Receive intent signal from 6sense (webhook or pull)                      | Analyst Agent (Level 1)        | 6sense API → Snowflake (table `raw_intent`)                                         |
+| 2    | Update Intent_Strength__c field in Salesforce                            | Hightouch (reverse ETL)        | Snowflake → Salesforce (Account)                                                    |
+| 3    | Recalculate Account Score (S = 0.4*I + 0.3*U + 0.3*F)                    | Analyst Agent (Level 1)        | Read I (from Snowflake), U (from Snowflake), F (from Salesforce) → save in `account_scores` |
+| 4    | If S > 0.7, publish Account_Change__e event                              | Salesforce Apex (trigger)      | Platform Event                                                                      |
+| 5    | Launch qualification playbook (8.2.3)                                    | Action Agent (Level 4)         | Subscribe to Kafka topic `playbook_qualification`                                   |
+| 6    | Create task for Sales Strategist (Task)                                  | Action Agent                   | Salesforce REST API (Task: Subject = “Qualification: [Account]”, Priority High)     |
+| 7    | Add account to SalesLoft cadence (sequence)                              | Action Agent                   | SalesLoft API (create person, add to cadence)                                       |
+| 8    | Log trigger fact in Snowflake                                            | Analyst Agent                  | Write to table `qualification_events`                                               |
+| 9    | Sales Strategist performs outreach (email/call)                          | Human (Strategist)             | Uses SalesLoft; records result in Salesforce (Activity)                             |
+| 10   | If qualification successful – Strategist creates Opportunity and assigns AE | Human (Strategist)           | Salesforce UI / API                                                                |
+| 11   | Opportunity created → transition to stage 8.3.2 (from qualification to deal) | Automatic (trigger T11)      | Platform Event `Opportunity_Change__e`                                             |
+
+**8.3.1.3. Time Metrics**
+- From intent signal to Strategist task creation: <2 seconds.
+- Strategist response time (to first contact): <2 hours (target).
+- Intent → Opportunity conversion: >20%.
+
+────────────────────────────────────────────────────────────────────────────────────
+8.3.2. FROM QUALIFICATION TO DEAL (AE)
+────────────────────────────────────────────────────────────────────────────────────
+
+**8.3.2.1. Overview**
+- **Input:** Opportunity created (by Strategist) or new demo request.
+- **Process:** AE receives task, manages the deal using MEDDPICC.
+  Automatic reminders to fill MEDDPICC, forecast updates.
+- **Output:** Closed Won deal or Closed Lost.
+
+**8.3.2.2. Detailed Steps**
+
+| Step | Action                                                                   | Executor                       | Integration / Data                                                                  |
+|------|--------------------------------------------------------------------------|--------------------------------|-------------------------------------------------------------------------------------|
+| 1    | Opportunity created (manually by Strategist or via demo request)         | Strategist / AE                | Salesforce UI                                                                      |
+| 2    | Publish Opportunity_Change__e event                                      | Salesforce Apex (trigger)      | Platform Event                                                                      |
+| 3    | Assign AE (OwnerId) – if not assigned, trigger creates task for manager  | Automatic (trigger T11)        | Salesforce Process Builder                                                          |
+| 4    | Weekly calculation of Win_Probability__c (logistic regression)           | Financial Agent (Level 4)      | Snowflake → update field in Salesforce via Hightouch                                |
+| 5    | If MEDDPICC_Completeness__c < 0.7, create reminder task for AE           | Automatic (trigger T12)        | Apex trigger on Opportunity; create Task                                           |
+| 6    | AE updates stages, fills MEDDPICC_Fields__c (JSON)                       | Human (AE)                     | Custom Lightning component in Salesforce                                            |
+| 7    | When moving to “Proposal” stage → create contract in Ironclad            | Automatic (trigger T05)        | Action Agent (call Ironclad API)                                                   |
+| 8    | When deal is closed (Closed Won / Closed Lost):                          |                                |                                                                                     |
+|      | - Update forecasts (financial agents)                                    | Automatic (trigger T06/T07)    | Recalculate win rates, update forecast accuracy                                     |
+|      | - If Closed Won → launch onboarding playbook (transition to 8.3.3)       |                                | Create task for CSM, initialize in Gainsight                                        |
+|      | - If Closed Lost → record loss reason (field Lost_Reason__c)             |                                |                                                                                     |
+| 9    | Notify AE about closure (Slack)                                          | Action Agent                   | Slack API                                                                          |
+
+**8.3.2.3. Time Metrics**
+- Time from Opportunity creation to Proposal stage – target <30 days.
+- Win rate (enterprise) – >25%.
+- MEDDPICC completeness (Completeness >0.7) – >80% of deals.
+
+────────────────────────────────────────────────────────────────────────────────────
+8.3.3. FROM CLOSED DEAL TO ONBOARDING (CSM)
+────────────────────────────────────────────────────────────────────────────────────
+
+**8.3.3.1. Overview**
+- **Input:** Opportunity moved to Closed Won.
+- **Process:** Automatic creation of task for CSM, initialization of onboarding
+  in Gainsight, transfer of customer data.
+- **Output:** Customer successfully onboarded (Time to First Value achieved).
+
+**8.3.3.2. Detailed Steps**
+
+| Step | Action                                                                   | Executor                       | Integration / Data                                                                  |
+|------|--------------------------------------------------------------------------|--------------------------------|-------------------------------------------------------------------------------------|
+| 1    | Opportunity moved to Closed Won → event Opportunity_Change__e            | Salesforce Apex (trigger)      | Platform Event                                                                      |
+| 2    | Create task for CSM (Task)                                               | Action Agent (Level 4)         | Salesforce REST API: Subject = “Onboarding: [Account]”, Priority High, Owner = CSM from Account field |
+| 3    | Initialize onboarding in Gainsight (create company, contacts)            | Action Agent                   | Gainsight API (create Company, link to Salesforce)                                  |
+| 4    | Launch onboarding playbook in Gainsight (automatic email series)         | Gainsight (default)            | Configured “Welcome” playbook                                                       |
+| 5    | Update field `Onboarding_Status__c` in Salesforce (Started)              | Action Agent                   | Salesforce API                                                                     |
+| 6    | CSM conducts onboarding (meetings, training)                             | Human (CSM)                    | Salesforce – log activities; Gainsight – tracking                                   |
+| 7    | Monitor TTFV (Time to First Value): date of first product login          | Analyst Agent (Level 1)        | Snowflake (product events) → update field `TTFV_Days__c` in Opportunity            |
+| 8    | After TTFV is achieved (<30 days) – update onboarding status             | Analyst Agent                  | Update `Onboarding_Status__c = Completed`                                           |
+| 9    | If TTFV exceeds 45 days – create escalation task for CSM manager         | Action Agent (timer)           | Salesforce Task; notification in Slack                                              |
+
+**8.3.3.3. Time Metrics**
+- Time from deal closure to CSM task creation: <1 minute.
+- TTFV (Time to First Value) – target <30 days.
+- Percentage of customers successfully onboarded (TTFV achieved) – >90%.
+
+────────────────────────────────────────────────────────────────────────────────────
+8.3.4. FROM SUCCESSFUL USAGE TO EXPANSION (AM)
+────────────────────────────────────────────────────────────────────────────────────
+
+**8.3.4.1. Overview**
+- **Input:** Customer has achieved sustained usage (Health Score >0.8) or
+  an Expansion Signal appears (user growth, requests).
+- **Process:** Automatic creation of task for AM, preparation of commercial
+  proposal, monitoring of response.
+- **Output:** Closed expansion deal (upsell/cross‑sell) or rejection.
+
+**8.3.4.2. Detailed Steps**
+
+| Step | Action                                                                   | Executor                       | Integration / Data                                                                  |
+|------|--------------------------------------------------------------------------|--------------------------------|-------------------------------------------------------------------------------------|
+| 1    | Analyst Agent detects condition: Health Score >0.8 and user growth >30%  | Analyst Agent (Level 1)        | Weekly calculation, saved in Snowflake `expansion_signals`                          |
+| 2    | Set flag Expansion_Signal__c = true in Salesforce                        | Hightouch                      | Snowflake → Salesforce                                                              |
+| 3    | Publish Account_Change__e event (field change)                           | Salesforce Apex (trigger)      | Platform Event                                                                      |
+| 4    | Launch expansion playbook (8.2.2)                                        | Action Agent (Level 4)         | Subscribe to Kafka topic `playbook_expansion`                                       |
+| 5    | Create task for AM (Task)                                                | Action Agent                   | Salesforce REST API: Subject = “Expansion: [Account]”, Priority High                |
+| 6    | Prepare commercial proposal (financial agents)                           | Financial Agent (Level 4)      | Calculation based on consumption, history; save in field `Proposed_Expansion_Amount__c` |
+| 7    | Notify AM in Slack                                                       | Action Agent                   | Slack API (channel #expansion-opportunities)                                        |
+| 8    | AM conducts negotiations, creates expansion Opportunity if needed        | Human (AM)                     | Salesforce UI                                                                       |
+| 9    | If Opportunity created → link to task, automatic closure                 | Automatic (trigger T13)        | Apex trigger on Opportunity                                                         |
+| 10   | If task not closed after 5 days – escalation (reminder, task for manager)| Action Agent (timer)            | Slack reminder, create Task for VP of CS                                            |
+| 11   | After expansion deal is closed → update metrics (Expansion ARR)          | Financial Agent                | Update Snowflake data marts, reflect in dashboards                                  |
+
+**8.3.4.3. Time Metrics**
+- Time from signal to AM task creation: <2 seconds.
+- AM response time (to first contact) – <2 business days.
+- Expansion signals to deals conversion – >30%.
+
+────────────────────────────────────────────────────────────────────────────────────
+**8.3.5. INTEGRATION AND MONITORING OF HANDOVERS**
+
+All handovers are integrated through a unified event bus (AWS EventBridge + Kafka)
+and tracked in dashboards:
+
+| Handover                               | Key Monitoring Metrics                                         |
+|----------------------------------------|----------------------------------------------------------------|
+| Intent → qualification (8.3.1)         | Strategist response time, conversion to Opportunity            |
+| Qualification → deal (8.3.2)           | Win rate, deal duration, MEDDPICC completeness                 |
+| Deal → onboarding (8.3.3)              | TTFV, percentage of successful onboarding                      |
+| Usage → expansion (8.3.4)              | AM response time, expansion signals conversion                 |
+
+RevOps operators can view in the control panel:
+- Current number of active handovers (tasks in “pending” status).
+- Delays per stage (histograms).
+- Problem areas (e.g., deals stuck in “Proposal” stage).
+
+────────────────────────────────────────────────────────────────────────────────────
+**CONCLUSIONS ON THE CUSTOMER LIFECYCLE**
+
+- The end-to-end customer lifecycle is fully automated: from the first intent signal
+  to expansion, with clear handovers between roles.
+- Each handover is triggered by triggers and playbooks, ensuring minimal delays
+  and eliminating data loss.
+- Integration of Salesforce, Gainsight, SalesLoft, and agents guarantees that
+  all actions are logged and available for analysis.
+- Metrics for each handover enable continuous process improvement.
+
+═══════════════════════════════════════════════════════════════════════════════════

@@ -1,0 +1,157 @@
+╔══════════════════════════════════════════════════════════════════════════════════╗
+║  PROTOCOL 7.2. DESCRIPTION OF KEY PLAYBOOKS                                      ║
+║  PROJECT: IRON KIT – 13,918 SALES                                                 ║
+║                                                                                  ║
+╚══════════════════════════════════════════════════════════════════════════════════╝
+
+═══════════════════════════════════════════════════════════════════════════════════
+**7.2. DESCRIPTION OF KEY PLAYBOOKS**
+───────────────────────────────────────────────────────────────────────────────────
+
+A playbook is a predefined sequence of automated actions triggered by specific events.
+Each playbook addresses a typical business task: business retention during crisis
+indicators, response to competitor price attacks, launching new products, preventing
+shortages. All playbooks are implemented via an event‑driven architecture and can be
+adjusted by the operator through the control panel.
+
+────────────────────────────────────────────────────────────────────────────────────
+**7.2.1. “RETENTION” PLAYBOOK (HEALTH SCORE < 0.5)**
+───────────────────────────────────────────────────────────────────────────────────
+
+**7.2.1.1. Purpose and trigger**
+This playbook is designed to stabilise the business when the integral health indicator
+falls below the critical threshold. Triggered by T06 (Health Score < 0.5).
+
+**7.2.1.2. Target metrics**
+- Restore Health Score to ≥0.5 within 3 days.
+- Reduce shortage for fast‑moving SKUs to <5%.
+- Improve margin for problematic items to ≥25%.
+
+**7.2.1.3. Detailed steps**
+
+| Step | Action                                                                 | Executor                      | Expected Result                                  |
+|------|------------------------------------------------------------------------|-------------------------------|--------------------------------------------------|
+| 1    | **Notify operator** (push in console, email) with current Health Score and contribution of each component (shortage, turnover, margin). | Risk Manager (B3)             | Operator informed, can take action.              |
+| 2    | **Pause automatic purchases** – all raw material orders and production tasks are set to `pending` and require manual confirmation. | Scriptor #2 (Treasury) + Inventory Manager (D3) | Stop uncontrolled spending.                      |
+| 3    | **Root cause analysis** – agent B3 decomposes Health Score into components, identifies which factor contributed most: shortage, turnover, or margin. | Risk Manager (B3)             | Root cause identified (e.g., slow‑moving stock or demand drop). |
+| 4    | **Generate recommendations** – based on the analysis, B3 creates a list of specific actions: |
+|      | – If problem is shortage → urgent raw material order, redirect production. | B3 + Production Scheduler (L3) | Prevent further revenue loss.                    |
+|      | – If problem is turnover (slow‑moving stock) → suggest price reduction of 10–15% or launch a clearance ad campaign. | B3 + Pricing Strategist (B1) + Ad Optimiser (D2) | Accelerate turnover.                             |
+|      | – If problem is margin → analyse cost, review pricing.                 | B3 + Pricing Strategist (B1)   | Increase margin.                                 |
+| 5    | **Publish tasks to console** – recommendations appear in the operator’s task queue with buttons “Execute” (apply automatically), “Reject”, “Configure later”. | B3 → console                   | Operator can make a decision.                    |
+| 6    | **Monitor for 3 days** – daily recalculation of Health Score. If after 3 days H ≥ 0.5, playbook is considered successful; automatic purchases resume. | B3                              | Normal mode restored.                            |
+| 7    | **Escalate** – if after 3 days H < 0.5, create a task for an external consultant (optional), initiate review with business owner. | B3 → console, email             | Bring in expertise.                              |
+
+**7.2.1.4. Success metrics**
+- Time to restore Health Score (average) – <3 days.
+- Share of successful recoveries (>80%).
+- Reduce shortage by 5 percentage points within a week.
+
+────────────────────────────────────────────────────────────────────────────────────
+**7.2.2. “PRICE WAR” PLAYBOOK (COMPETITOR PRICE DROP >5%)**
+───────────────────────────────────────────────────────────────────────────────────
+
+**7.2.2.1. Purpose and trigger**
+Maintain competitiveness when competitors aggressively lower prices, minimising margin
+loss. Trigger T02: competitor price drop >5% within 24 hours.
+
+**7.2.2.2. Target metrics**
+- Maintain sales volume at no less than 95% of the previous period.
+- Margin not to decrease by more than 2 percentage points.
+
+**7.2.2.3. Detailed steps**
+
+| Step | Action                                                                 | Executor                      | Expected Result                                  |
+|------|------------------------------------------------------------------------|-------------------------------|--------------------------------------------------|
+| 1    | **Receive signal** from agent A1 (competitive intelligence) about competitor price drop. | Competitive Intelligence (A1) | Change recorded.                                 |
+| 2    | **Calculate optimal price** by agent B1 (pricing strategist) using logit model, demand forecast, and minimum margin constraints. | Pricing Strategist (B1)       | Recommended price \(p^*\) obtained.               |
+| 3    | **Assess deviation** – compute Δ = (p* – current price) / current price. | B1                            | Determine whether intervention is needed.        |
+| 4    | **Select application mode**:                                                                    |                               |                                                  |
+|      | – If |Δ| ≤ 5% → **automatic update** of price on WB via Scriptor #3. | B1 → D10 (Scriptor #3)       | Price updated without human involvement.         |
+|      | – If |Δ| > 5% → **create task for operator** in console with current and recommended prices, reason (competitor drop). | B1 → console                  | Operator makes final decision.                   |
+| 5    | **Logging** – record event in `price_changes` table with fields: SKU, old price, new price, reason, executor (agent / operator). | B1 / console                  | Price change audit.                              |
+| 6    | **Post‑monitoring** – after 24 hours, agent B1 checks whether the competitor changed price again. If further drop occurs, recalculate. | B1                            | Adapt to market dynamics.                        |
+
+**7.2.2.4. Success metrics**
+- Response time to competitor price change – <30 minutes.
+- Share of automatic changes (without intervention) – >80%.
+- Maintain margin at or above target.
+
+────────────────────────────────────────────────────────────────────────────────────
+**7.2.3. “ASSORTMENT EXPANSION” PLAYBOOK (NEW IDEA FROM GENESIS)**
+───────────────────────────────────────────────────────────────────────────────────
+
+**7.2.3.1. Purpose and trigger**
+Launch new products with minimal risk. Trigger T07: new idea generated by GENESIS (E1)
+or proposed by the operator.
+
+**7.2.3.2. Target metrics**
+- Share of successful ideas (ROMI >50%) – >30%.
+- Time from idea to scaling – <30 days.
+
+**7.2.3.3. Detailed steps**
+
+| Step | Action                                                                 | Executor                      | Expected Result                                  |
+|------|------------------------------------------------------------------------|-------------------------------|--------------------------------------------------|
+| 1    | **Generate idea** – GENESIS (E1) creates a description of a new product (based on trends, reviews, competitors). | Assortment Strategist (B2)    | Idea with preliminary demand assessment.         |
+| 2    | **Check manufacturability** – agent E2 (process engineer) assesses whether the product can be made on existing equipment, estimates approximate cost. | Process Engineer (E2)         | Feasibility conclusion (possible / needs rework). |
+| 3    | **Estimate margin** – agent B1 (pricing strategist) forecasts optimal price and expected margin. | Pricing Strategist (B1)       | Forecasted margin (must be ≥30%).                |
+| 4    | **Decision** – if all filters pass (manufacturability + margin), idea moves to “test” status. If not, it is sent for revision or rejected. | B2 (with manual override possible) | 3–5 ideas selected for testing.                  |
+| 5    | **Launch pilot batch** – agent E4 (test analyst) creates a production task for 10–20 units, procures materials (if needed). | Test Analyst (E4)             | Pilot batch manufactured.                        |
+| 6    | **List on WB** – agent E3 (creative marketer) creates product card (name, description, photos), agent D10 (Scriptor #3) uploads to WB. | E3, D10                       | Product available for order.                     |
+| 7    | **Test advertising** – agent D2 (ad optimiser) starts a campaign with a budget of 5–10 thousand RUB for 2 weeks. | Ad Optimiser (D2)             | Data on conversion and reviews collected.        |
+| 8    | **Analyse results** – after 2 weeks, agent E4 collects data: sales, ROMI, reviews. | E4                            | Success assessment.                              |
+| 9    | **Scale decision** – if ROMI > 50% and reviews are mostly positive (≥4.5), agent B2 initiates scaling: increase production batch, permanent listing. | B2                            | New product becomes permanent.                   |
+| 10   | **Document** – all stages saved in `product_launch_history` table for later analysis. | Archivist (L3)                | Knowledge accumulation for GENESIS improvement.  |
+
+**7.2.3.4. Success metrics**
+- Share of ideas that reach scaling – >30%.
+- Average ROMI of launched products – >100%.
+- Time from idea to sales – <30 days.
+
+────────────────────────────────────────────────────────────────────────────────────
+**7.2.4. “SHORTAGE” PLAYBOOK (STOCK BELOW THRESHOLD S)**
+───────────────────────────────────────────────────────────────────────────────────
+
+**7.2.4.1. Purpose and trigger**
+Prevent revenue loss due to product unavailability. Trigger T01: stock below minimum
+threshold s (calculated by (s,S) model for each SKU).
+
+**7.2.4.2. Target metrics**
+- Percentage of days without shortage for fast‑moving SKUs – >95%.
+- Time to resolve shortage – <3 days.
+
+**7.2.4.3. Detailed steps**
+
+| Step | Action                                                                 | Executor                      | Expected Result                                  |
+|------|------------------------------------------------------------------------|-------------------------------|--------------------------------------------------|
+| 1    | **Detection** – WB API monitor (A2) updates stock, agent D3 (inventory manager) checks each SKU. | WB API Monitor (A2), Inventory Manager (D3) | SKUs with stock < s identified.                  |
+| 2    | **Check existing orders** – D3 checks whether there is already an active production task or raw material order for that SKU. | D3                            | Avoid duplication.                               |
+| 3    | **Create order** – if no order exists, D3 creates a record in `production_tasks` with urgency (high priority). | D3                            | Production order created.                        |
+| 4    | **Notify scheduler** – `stock_low` event is published, received by agent L3 (production scheduler). | D3 → Redis Stream             | Production receives the task.                    |
+| 5    | **Adjust schedule** – L3 adds the task to the schedule, reallocates resources if necessary (postpone less urgent orders). | Production Scheduler (L3)     | Production prioritised.                          |
+| 6    | **Monitor execution** – L3 tracks task status. If after 24 hours the task has not moved to `in_progress`, notifies operator. | L3 → console                  | Manual intervention for delays.                  |
+| 7    | **Pause advertising** (if shortage forecast within 3 days) – agent D2 (ad optimiser) temporarily reduces or stops advertising for that SKU to avoid creating unsatisfied demand. | D2                            | Prevent reputation loss due to unavailability.   |
+| 8    | **Completion** – when stock returns above s, D3 automatically removes urgent status, D2 resumes advertising. | D3, D2                        | Normal operation restored.                       |
+
+**7.2.4.4. Success metrics**
+- Time from shortage detection to production start – <1 hour.
+- Percentage of shortage days for fast‑moving SKUs – <5%.
+- Number of escalations to operator – <2 per month.
+
+────────────────────────────────────────────────────────────────────────────────────
+**7.2.5. PLAYBOOK MANAGEMENT VIA THE OPERATOR CONSOLE**
+───────────────────────────────────────────────────────────────────────────────────
+
+The operator can:
+- **Enable / disable** any playbook (e.g., temporarily disable automatic pricing during manual strategy).
+- **Change thresholds** – for “Retention” playbook, adjust target Health Score; for “Price War” playbook, adjust the automatic‑application threshold.
+- **View history** – all playbook runs with results (success/failure, execution time).
+- **Manually initiate** a playbook (e.g., forcibly start “Retention” if there are clear signs of crisis even when H ≥ 0.5).
+
+**Interface:** “Playbooks” tab in the console, cards with indicators of last runs, configuration buttons.
+
+═══════════════════════════════════════════════════════════════════════════════════
+**NOTE:** All playbooks use the common trigger infrastructure and can be extended
+by the operator by adding new rules in the interface. Each playbook has a unique
+identifier logged for audit purposes.

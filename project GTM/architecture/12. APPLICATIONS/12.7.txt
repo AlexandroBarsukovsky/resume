@@ -1,0 +1,131 @@
+═══════════════════════════════════════════════════════════════════════════════════
+PROTOCOL: 12.7. REFERENCES AND SOURCES
+Project: Sourcegraph GTM Infrastructure
+═══════════════════════════════════════════════════════════════════════════════════
+
+**12.7. REFERENCES AND SOURCES**
+
+This section contains a list of sources used in the development of the target
+GTM architecture. The sources are divided into categories: Sourcegraph corporate
+materials, external industry sources, scientific and technical literature,
+management and methodology books, as well as internal SIMBIOS PUT B protocols.
+
+────────────────────────────────────────────────────────────────────────────────────
+12.7.1. SOURCEGRAPH CORPORATE MATERIALS
+────────────────────────────────────────────────────────────────────────────────────
+
+1. **Sourcegraph Handbook** (public version) – description of culture, processes,
+   OKRs, team structure. Used to analyse the current state of GTM and
+   cultural characteristics.  
+   *Source:* https://handbook.sourcegraph.com/
+
+2. **Sourcegraph Blog** – articles on GTM transformation, product releases,
+   customer case studies (Stripe, Uber, Palo Alto Networks).  
+   *Source:* https://sourcegraph.com/blog
+
+3. **Interviews with leadership** – public appearances by Quinn Slack (CEO),
+   interviews with CRO and CPO, available on YouTube and podcasts (e.g.,
+   “The Changelog”, “Software Engineering Daily”).  
+   *Links:* a selection of quotes is provided in Sections 2 and 3.
+
+4. **Open job postings** – descriptions of Sales Strategist, AE, CSM, RevOps roles
+   on Sourcegraph’s careers portal. Used to refine KPIs and employee expectations.  
+   *Source:* https://boards.greenhouse.io/sourcegraph
+
+────────────────────────────────────────────────────────────────────────────────────
+12.7.2. EXTERNAL INDUSTRY SOURCES
+────────────────────────────────────────────────────────────────────────────────────
+
+5. **Gartner Market Guide for Code Intelligence Platforms** (2024) – market overview,
+   key players, trends. Used for Sourcegraph positioning.
+   *Access:* Gartner subscription required.
+
+6. **Forrester Wave: AI‑Powered Code Development Tools** (2025) – analysis of the
+   competitive landscape, impact of AI on development tools.
+
+7. **Macroeconomic indicator reports**:
+   - PMI (ISM Manufacturing and Services) – data for 2015–2025.
+   - Federal Reserve (refinancing rate).
+   - S&P 500 IT Index (technology index).  
+   Used to calibrate the VAR model.
+
+────────────────────────────────────────────────────────────────────────────────────
+12.7.3. SCIENTIFIC AND TECHNICAL LITERATURE
+────────────────────────────────────────────────────────────────────────────────────
+
+8. **Logistic regression** – Hastie, T., Tibshirani, R., & Friedman, J.
+   (2009). *The Elements of Statistical Learning*. Springer.  
+   Used for the deal closing probability model.
+
+9. **VAR models** – Lütkepohl, H. (2005). *New Introduction to Multiple Time
+   Series Analysis*. Springer.  
+   Applied for macroeconomic adjustment of forecasts.
+
+10. **Quantum key distribution (BB84)** – Bennett, C. H., & Brassard, G.
+    (1984). “Quantum cryptography: Public key distribution and coin tossing”.
+    *Proceedings of IEEE International Conference on Computers, Systems and
+    Signal Processing*.  
+    Used for quantum encryption simulation in Phase 4.
+
+11. **Post‑quantum cryptography (CRYSTALS-Kyber, CRYSTALS-Dilithium)** –
+    NIST specifications.  
+    Considered in the security architecture as a potential direction for development.
+
+────────────────────────────────────────────────────────────────────────────────────
+12.7.4. MANAGEMENT AND METHODOLOGY BOOKS
+────────────────────────────────────────────────────────────────────────────────────
+
+12. **“The Richest Man in Babylon”** – George S. Clason.  
+    Used for the principle of investing 10% of income in automation development.
+
+13. **“Capital”** – Karl Marx.  
+    Analysis of class structure and crisis cycles for customer segmentation
+    and forecasting.
+
+14. **“Entertaining Mathematics”** – Yakov Perelman.  
+    Inspiration for simple models of complex systems (health score, account score).
+
+15. **“The Prince”** – Niccolò Machiavelli.  
+    Principles of rapid change and self‑reliance in implementing GTM transformation.
+
+16. **MEDDPICC methodology** – official documentation and training materials.  
+    Used to structure fields in Salesforce and automate qualification.
+
+────────────────────────────────────────────────────────────────────────────────────
+12.7.5. TOOL DOCUMENTATION
+────────────────────────────────────────────────────────────────────────────────────
+
+17. **Salesforce Documentation** – Apex Developer Guide, Platform Events,
+    Process Builder, Flow. Used to implement automation in the CRM.
+
+18. **AWS Documentation** – EventBridge, MSK (Kafka), Lambda, EKS, S3, RDS,
+    CloudWatch, IAM. Used to design the infrastructure.
+
+19. **Snowflake Documentation** – SQL, Snowpark, Streams, Tasks. Applied to build
+    data marts.
+
+20. **Hightouch Documentation** – Reverse ETL, Webhooks. Used to configure
+    synchronisation.
+
+21. **Gainsight Documentation** – API, Playbooks, Health Score. Applied for
+    customer success integration.
+
+22. **6sense API Documentation** – REST API, signals. Used to obtain intent data.
+
+23. **SalesLoft API Documentation** – Cadences, People, Activities. Used for
+    outreach automation.
+
+24. **Tableau Documentation** – Live connections, Row‑level security,
+    Dashboard publishing. Used for visualisation.
+
+────────────────────────────────────────────────────────────────────────────────────
+**CONCLUSIONS ON REFERENCES AND SOURCES**
+
+- The presented list covers all key sources used in the development of the target
+  GTM architecture.
+- Sourcegraph corporate materials ensured the relevance of the analysis,
+  external sources provided market context, and scientific and technical literature
+  provided mathematical rigour for the models.
+- Tool documentation enabled the practical implementation of the described architecture.
+
+═══════════════════════════════════════════════════════════════════════════════════

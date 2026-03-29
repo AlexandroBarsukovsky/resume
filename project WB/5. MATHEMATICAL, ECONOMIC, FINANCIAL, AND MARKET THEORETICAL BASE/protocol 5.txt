@@ -1,0 +1,200 @@
+╔══════════════════════════════════════════════════════════════════════════════════╗
+║  SECTION 5. MATHEMATICAL MODELS AND ALGORITHMS (MASTER PROTOCOL)                 ║
+║  PROJECT: IRON KIT – 13,918 SALES                                                 ║
+║                                                                                  ║
+╚══════════════════════════════════════════════════════════════════════════════════╝
+
+═══════════════════════════════════════════════════════════════════════════════════
+**5.1. DEMAND FORECASTING MODEL (FORECAST ENGINE)**
+───────────────────────────────────────────────────────────────────────────────────
+
+**5.1.1. Purpose and Input Data**
+Demand forecasting is the foundation for production planning, procurement, and advertising budgets. The model builds forecasts for 7, 30, and 90 days for each SKU.
+
+| Input Parameter           | Source                                   | Update Frequency |
+|---------------------------|------------------------------------------|------------------|
+| Daily sales (units)       | WB API Monitor (table `orders`)          | Daily            |
+| Price (RUB)               | WB API / “Pricing strategist” agent      | On change        |
+| Seasonal coefficients     | “Seasonal forecaster” agent              | Monthly          |
+| Weather data              | OpenWeatherMap (temperature, precipitation) | Daily         |
+| Holiday calendar          | Built‑in calendar (January, May holidays)| Static           |
+| Promotions / discounts    | Advertising campaign data                | As incurred      |
+
+**5.1.2. Ensemble Architecture**
+A combination of three models is used with dynamic weight adjustment:
+
+1. **Prophet (Facebook)** – baseline, handles trends, seasonality, holidays well.
+2. **ARIMA (auto.arima)** – for short‑term forecasts (7 days), sensitive to local fluctuations.
+3. **Exponential smoothing (Holt‑Winters)** – for medium‑term forecasts (30–90 days), multiplicative seasonality.
+
+Model weights are optimised monthly to minimise MAPE on a test set (last 30 days). The final forecast formula:
+
+\[
+\hat{y}_t = w_1 \cdot \hat{y}_t^{(Prophet)} + w_2 \cdot \hat{y}_t^{(ARIMA)} + w_3 \cdot \hat{y}_t^{(HW)}
+\]
+
+where \(w_i \ge 0\), \(\sum w_i = 1\). Optimal weights are found by brute force with a step of 0.1.
+
+**5.1.3. Accounting for Seasonality and External Factors**
+- **Seasonality:** multiplicative STL decomposition (statsmodels) extracts weekly, monthly, and yearly seasonality.
+- **Weather adjustments:** linear regression on historical data:
+
+\[
+\text{Sales}_d = \beta_0 + \beta_1 \cdot T_d + \beta_2 \cdot \text{Precipitation}_d + \varepsilon
+\]
+
+Coefficients are recalculated monthly. For future days, forecast weather values are used.
+
+- **Holiday effects:** fixed coefficients (e.g., during May holidays, picket sales drop by 20%). Coefficients are extracted from historical data.
+
+**5.1.4. Accuracy Assessment**
+\[
+\text{MAPE} = \frac{1}{n} \sum_{t=1}^{n} \left| \frac{y_t - \hat{y}_t}{y_t} \right| \times 100\%
+\]
+
+Target: MAPE < 15% for 30‑day forecasts. If the threshold of 20% is exceeded, model retraining and input data quality checks are triggered.
+
+────────────────────────────────────────────────────────────────────────────────────
+**5.2. OPTIMAL PRICING MODEL (PRICING AGENT)**
+───────────────────────────────────────────────────────────────────────────────────
+
+**5.2.1. Logit Model for Purchase Probability**
+The probability that a customer will buy a product at price \(p\) given competitor price \(p_c\) and rating \(r\) is described by logistic regression:
+
+\[
+P(\text{purchase}) = \frac{1}{1 + e^{-(\alpha_0 + \alpha_1 p + \alpha_2 p_c + \alpha_3 r)}}
+\]
+
+Coefficients \(\alpha\) are estimated from historical data (sales and prices over the last 6 months) using maximum likelihood. The model is recalculated monthly.
+
+**5.2.2. Margin Optimisation**
+The objective is to maximise expected marginal profit subject to a minimum margin constraint \(m_{\min}\):
+
+\[
+\max_{p} \quad (p - c) \cdot Q(p) \cdot P_{\text{purchase}}(p)
+\]
+
+where:
+- \(c\) – cost,
+- \(Q(p)\) – forecasted demand at price \(p\) (from the demand model, Section 5.1),
+- \(P_{\text{purchase}}(p)\) – purchase probability from the logit model.
+
+The solution is found numerically (golden section search) on the interval \([c \cdot (1+m_{\min}), \, \max(\text{competitor\_price}, c \cdot (1+m_{\max})]\).
+
+**5.2.3. Manual Intervention Rules**
+- If deviation from the current price >20% – the decision is not applied automatically but sent to the console for confirmation.
+- During a promotion (discount >10%), the model is temporarily disabled, and the price is fixed for the promotion period.
+- The price cannot be lower than cost + 10% (minimum margin).
+
+────────────────────────────────────────────────────────────────────────────────────
+**5.3. INVENTORY MANAGEMENT MODEL (INVENTORY OPTIMIZER)**
+───────────────────────────────────────────────────────────────────────────────────
+
+**5.3.1. (s, S) Model with Uncertainty**
+For each SKU, two thresholds are calculated:
+- **s** – the level at which an order should be placed,
+- **S** – the target replenishment level.
+
+Parameters are computed based on demand forecast and lead time (L = 14 days for raw materials, 7 days for finished goods at WB).
+
+**5.3.2. Formulas**
+Mean demand during lead time: \(\mu_L = \hat{y}_{L} \cdot L\) (where \(\hat{y}_{L}\) is the forecast for the lead time period). Standard deviation of demand during lead time: \(\sigma_L = \sqrt{L \cdot \sigma^2}\) (\(\sigma\) – standard deviation of daily demand).
+
+Service level (probability of no stockout) is set to 95%, corresponding to safety factor \(z = 1.645\).
+
+\[
+s = \mu_L + z \cdot \sigma_L
+\]
+
+\[
+S = \mu_L + z \cdot \sigma_L + Q_{\text{opt}}
+\]
+
+where \(Q_{\text{opt}}\) is the economic order quantity (Wilson formula):
+
+\[
+Q_{\text{opt}} = \sqrt{\frac{2 \cdot \mu_L \cdot K}{h}}
+\]
+
+- \(K\) – fixed order cost (≈ 5000 RUB),
+- \(h\) – holding cost per unit per day (≈ 0.5% of cost).
+
+**5.3.3. Operation Algorithm**
+1. Daily check of stock level (production + WB).
+2. If stock < s – a production order (or raw material purchase) is generated in the amount of \(S - \text{stock}\).
+3. The order is sent to agent D3 “Inventory manager” for execution.
+4. If a shortage occurs (stock = 0), an urgent alert is sent to the operator.
+
+────────────────────────────────────────────────────────────────────────────────────
+**5.4. BUSINESS HEALTH SCORE (HEALTH SCORE)**
+───────────────────────────────────────────────────────────────────────────────────
+
+**5.4.1. Composite Indicators**
+\[
+H = w_1 \cdot (1 - \text{shortage}) + w_2 \cdot \text{turnover}_\text{norm} + w_3 \cdot \text{margin}_\text{norm}
+\]
+
+Normalisation:
+- **shortage** – proportion of days in the month when the product was out of stock (0–1).
+- **turnover_norm** – \(1 - \frac{\text{turnover} - \text{target}}{\text{target}}\), clipped to [0,1].
+- **margin_norm** – ratio of current margin to target (35%).
+
+Weights were obtained via analytic hierarchy process (AHP) with the owner’s participation: \(w_1 = 0.4\), \(w_2 = 0.3\), \(w_3 = 0.3\).
+
+**5.4.2. Colour Zones and Playbook**
+| H              | Zone     | Action                                     |
+|----------------|----------|--------------------------------------------|
+| ≥ 0.7          | Green    | Monitoring, planned expansion              |
+| 0.5 ≤ H < 0.7  | Yellow   | Daily review, price/procurement adjustments|
+| < 0.5          | Red      | Urgent playbook: root cause analysis, manual intervention, escalation |
+
+Health Score is recalculated daily and displayed on the main console dashboard.
+
+────────────────────────────────────────────────────────────────────────────────────
+**5.5. TASK PRIORITISATION MODEL (TASK SCORE)**
+───────────────────────────────────────────────────────────────────────────────────
+
+To rank tasks requiring operator attention (confirmation queue), the following formula is used:
+
+\[
+T = w_{\text{urgency}} \cdot \text{urgency} + w_{\text{impact}} \cdot \text{impact} + w_{\text{resources}} \cdot (1 - \text{availability})
+\]
+
+Parameters:
+- **urgency** – inverse of time until deadline (0–1),
+- **impact** – estimated impact on revenue (0–1) (high – 1, medium – 0.5, low – 0.1),
+- **availability** – resource readiness (0–1) (e.g., raw material stock, budget).
+
+Weights are set by the operator (default \(w_{\text{urgency}}=0.5, w_{\text{impact}}=0.3, w_{\text{resources}}=0.2\)). Tasks with T > 0.7 are displayed in red in the queue.
+
+────────────────────────────────────────────────────────────────────────────────────
+**5.6. NEW IDEA GENERATION MODEL (GENESIS)**
+───────────────────────────────────────────────────────────────────────────────────
+
+**5.6.1. Idea Sources**
+- Review analysis (identified wishes, defects).
+- Competitor data (new products, popular items).
+- Trends (from social media, search queries).
+- Random combinations of existing SKUs (hybrid products).
+
+**5.6.2. Filtering Process**
+1. Generate 20–30 ideas per week (LLM + rules).
+2. Automatic filtering by manufacturability (agent E2 “Process engineer”).
+3. Calculation of expected margin (similar to pricing model).
+4. A/B testing: 3–5 ideas are launched in a pilot batch (10–20 units) on WB.
+5. Based on test results (conversion, reviews), a decision is made to scale.
+
+**5.6.3. Success Metric**
+\[
+\text{Idea success} = \frac{\text{revenue from idea over 30 days} - \text{cost}}{\text{cost}} \times 100\%
+\]
+
+If success > 50%, the idea is added to the permanent assortment.
+
+═══════════════════════════════════════════════════════════════════════════════════
+**NOTE:** This section contains the mathematical core of the system. All models are
+implemented as Python scripts, called by agents via the event bus. Model parameters
+(weights, thresholds) can be adjusted via the operator console. Monthly recalibration
+on new data is performed.
+
+

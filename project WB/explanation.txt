@@ -1,0 +1,273 @@
+╔══════════════════════════════════════════════════════════════════════════════════╗
+║                                                                                  ║
+║     AI ECOSYSTEM FOR THE METAL PRODUCTS MANUFACTURER “IRON KIT”                  ║
+║               FULL SYSTEM DESCRIPTION FOR THE “SMART MONKEY”                     ║
+║                                                                                  ║
+║            READY FOR BUSINESS IMPLEMENTATION                                     ║
+║                                                                                  ║
+╚══════════════════════════════════════════════════════════════════════════════════╝
+
+═══════════════════════════════════════════════════════════════════════════════════
+**1. INTRODUCTION: WHY DO YOU NEED THIS THING?**
+═══════════════════════════════════════════════════════════════════════════════════
+
+You are the owner of a business that makes metal fences, angle brackets, wind strips,
+and flashings. You sell on Wildberries. Business is going well: in just over a year
+you have sold almost 14,000 items, with an average rating of 4.9 out of 5. But you
+feel that you cannot continue like this.
+
+Currently, you or your employees do everything manually:
+- monitor stock (in Excel, by eye),
+- set prices (cost + markup, without looking at competitors),
+- reply to reviews (when you remember),
+- run ads (whatever feels right),
+- calculate taxes and revenue (once a quarter, with errors).
+
+As a result:
+- in season you run out of goods and lose money;
+- in the off‑season the warehouse is full, money is tied up;
+- you spend 35+ hours a week on routine;
+- new products appear once a year, but they could appear every month.
+
+**What do we propose?**
+Build a whole ecosystem of 38 smart helpers (we call them “agents”) that will take
+over all the boring work. They will monitor the market, forecast, make decisions,
+and take action. You remain the boss – only now you will not be a “worker” but a
+“commander”. You will have a game‑style console (like in a strategy game) where you
+can see everything that is happening and intervene at any moment.
+
+This document is a full description of how it all works. It is written so that even
+a “smart monkey” can understand it. That is, no complicated words, but with complete
+accuracy.
+
+═══════════════════════════════════════════════════════════════════════════════════
+**2. WHAT YOU HAVE NOW (PROBLEMS)**
+═══════════════════════════════════════════════════════════════════════════════════
+
+**2.1. Data is scattered**
+Excel, Wildberries personal account, 1С, bank – all separate. You manually copy
+numbers from one place to another. This takes 10–15 hours a week.
+
+**2.2. Manual management**
+- Stock: look at the warehouse, guess “seems low”, order.
+- Prices: once a week look at competitors, if they are very different – change.
+- Reviews: read, reply selectively. Negative reviews can sit for days.
+- Advertising: throw money at random, do not know if it pays off.
+
+**2.3. No forecasts**
+You do not know how much you will sell in a month. So either you cannot produce
+enough, or you make too much.
+
+**2.4. No automatic control**
+You notice problems after they happen: a customer has left, goods have run out,
+advertising has wasted the budget for nothing.
+
+**2.5. You are exhausted**
+You spend 35 hours a week on routine. You have no time for development, new ideas,
+or rest.
+
+═══════════════════════════════════════════════════════════════════════════════════
+**3. WHAT WE PROPOSE (THE SOLUTION)**
+═══════════════════════════════════════════════════════════════════════════════════
+
+We are creating a “factory” of 38 agents. They are divided into four floors (levels):
+
+**3.1. First floor – Analysts (6 agents)**
+They collect information:
+- **Competitive intelligence** – every 30 minutes looks at competitor prices and promotions.
+- **WB API monitor** – constantly receives your orders, stock, reviews.
+- **Demand analyst** – builds sales forecasts for a week, a month, three months.
+- **Review processor** – reads all reviews, understands sentiment (good/bad),
+  extracts topics (quality, delivery) and remembers them.
+- **News monitor** – follows news about Wildberries, the market, competitors.
+- **Seasonal forecaster** – calculates which months have higher sales (March‑October is peak).
+
+**3.2. Second floor – Strategists (6 agents)**
+They decide what to do:
+- **Pricing strategist** – calculates what price will give the maximum profit
+  considering cost and competitor prices.
+- **Assortment strategist** – decides which products to remove, which to add,
+  which new products to launch.
+- **Risk manager** – calculates the “health” of the business (Health Score) and
+  raises the alarm if it falls.
+- **Marketing analyst** – allocates the advertising budget to get maximum return.
+- **Quality control** – analyses complaints to improve production.
+- **Expansion analyst** – looks for new platforms (Ozon, Yandex.Market) and niches.
+
+**3.3. Third floor – Tacticians (8 agents)**
+They adapt the strategy to specific products and coordinate work:
+- 4 agents – one for each product group (pickets, angle brackets, wind strips, flashings).
+- **Scriptor #1** – transfers tasks between floors.
+- **Archivist** – saves everything, keeps history.
+- **Supervisor** – ensures all agents are working, restarts failed ones.
+- **Production scheduler** – gives tasks to the team when something needs to be made.
+
+**3.4. Fourth floor – Executors (18 agents)**
+They do concrete things:
+- **Tax calculator** – calculates taxes, generates payment orders.
+- **Ad optimiser** – starts/stops ads, adjusts bids.
+- **Inventory manager** – orders raw materials when needed.
+- **Logistics dispatcher** – ships goods to Wildberries.
+- **Financial controller** – keeps track of money.
+- **Legal assistant** – checks contracts, helps with claims.
+- **Customer service** – replies to reviews (automatically, but you can adjust).
+- **Document flow** – creates invoices, waybills.
+- **Scriptor #2 (Treasury)** – makes sure you do not run out of money.
+- **Scriptor #3 (Execution)** – communicates with Wildberries, the bank, 1С.
+
+Plus 8 **creative agents** that come later:
+- **Creative designer** – designs new products.
+- **Process engineer** – checks if they can be made.
+- **Creative marketer** – writes beautiful descriptions.
+- **Test analyst** – tests new products in small batches.
+- **Trend scout** – follows fashion.
+- **System architect** – improves the agents themselves.
+- **Partner integrator** – connects new channels (Ozon, social media).
+- **Quantum synthesizer** – invents hybrid products (e.g., a fence with solar panels).
+
+═══════════════════════════════════════════════════════════════════════════════════
+**4. HOW IT WORKS (PRINCIPLES)**
+═══════════════════════════════════════════════════════════════════════════════════
+
+**4.1. Everything is recorded (atomicity)**
+Every order, every review, every price change – the system remembers it as a
+separate event. From these bricks you can build any kind of analytics.
+
+**4.2. Real‑time reaction (event‑driven)**
+As soon as something happens (a competitor lowers the price, a review appears,
+goods run out) – the system reacts immediately. It does not wait for you to look;
+it instantly suggests a solution.
+
+**4.3. Division of labour (4 floors)**
+Each agent does its own narrow job. This is like a good company: some collect data,
+others think, others do.
+
+**4.4. You are the boss (hybrid governance)**
+Agents propose, you approve or adjust. Big decisions (large purchases, launching
+new products) are yours. Routine is done by them.
+
+═══════════════════════════════════════════════════════════════════════════════════
+**5. HOW IT LOOKS ON SCREEN (THE OPERATOR CONSOLE)**
+═══════════════════════════════════════════════════════════════════════════════════
+
+The console is your command centre. It is designed like a strategy game to be
+engaging and easy to understand.
+
+**Main screen:**
+- Large numbers: revenue, margin, turnover, Health Score.
+- Product map: 4 blocks (pickets, angle brackets, wind strips, flashings). Colours:
+  green – all good, yellow – needs attention, red – act now.
+- Agent list: icons with indicators. Click – you see their log, settings.
+- Task queue: e.g., “A competitor lowered the price, we suggest changing the price to 5850?”
+  Buttons: “Yes”, “No”, “Configure”.
+
+**Settings:**
+- You can change thresholds (e.g., at what competitor price to react).
+- You can turn automatic actions on/off.
+- You can view the history of all events.
+
+**Exception handling:**
+If something goes wrong (e.g., the Wildberries API did not respond), the event
+lands in the “unprocessed queue”. You can see what happened and manually retry
+or fix it.
+
+═══════════════════════════════════════════════════════════════════════════════════
+**6. THE MATHEMATICS BEHIND IT (FOR THE CURIOUS)**
+═══════════════════════════════════════════════════════════════════════════════════
+
+We will not overload you with formulas, but we want you to know that it is serious.
+
+**6.1. Sales forecast**
+The computer looks at sales history, adds seasonality (April‑May sales are higher),
+weather (people build fences less in rain), holidays (May holidays are quiet). It
+mixes three methods (Prophet, ARIMA, smoothing) and produces a forecast. The error
+is usually less than 15% – so it guesses pretty accurately.
+
+**6.2. Price**
+Logit model: how purchase probability depends on price, competitor price, and rating.
+The agent finds the price that makes you the most profit without losing sales.
+
+**6.3. Stock**
+(s, S) formula: when stock falls below threshold s – order. Order enough to reach
+level S. It considers the lead time and how much you would lose if you run out.
+
+**6.4. Business Health Score**
+Three indicators combined: shortage (how often you ran out), turnover (how fast
+goods sell), margin (how much stays in your pocket). If the total falls below 0.5 –
+alarm, you need to investigate.
+
+**6.5. Finance**
+We calculate how much money the system will bring. Payback – about 6–8 months.
+Over three years, every rouble invested returns 10–15 roubles.
+
+═══════════════════════════════════════════════════════════════════════════════════
+**7. WHAT NEEDS TO BE DONE (IMPLEMENTATION PLAN)**
+═══════════════════════════════════════════════════════════════════════════════════
+
+Implementation is split into 4 phases so that you are not overwhelmed and can see
+results quickly.
+
+**Phase 0 (2 weeks):**
+- Get access to the Wildberries API (keys).
+- Collect all sales, reviews, price history.
+- Set up a computer (server) with databases.
+
+**Phase 1 (1–2 months):**
+- Launch the 6 analytical agents. They will start collecting data and showing a dashboard.
+- Result: review response time drops from 48 to 12 hours, forecasts become more
+  accurate (error <25%). You start seeing what is happening.
+
+**Phase 2 (3–4 months):**
+- Add the forecast module, pricing, inventory management.
+- Result: margin increases by 5%, stock turnover improves (from 45 to 30 days).
+  You will run out of stock less often.
+
+**Phase 3 (5–6 months):**
+- Launch the executive agents (tax, advertising, logistics). Complete the console.
+- Result: 70% of routine is automated, you save 20 hours a week, advertising
+  becomes profitable (ROMI >200%).
+
+**Phase 4 (7–12 months):**
+- Connect the creative agents. They will start inventing new products.
+- Result: revenue grows 50% per year, assortment expands to 500+ items,
+  new products appear every week. The business becomes nearly fully autonomous.
+
+═══════════════════════════════════════════════════════════════════════════════════
+**8. HOW WE KEEP THINGS FROM FALLING APART (RISKS AND PROTECTION)**
+═══════════════════════════════════════════════════════════════════════════════════
+
+**8.1. If you do not trust the robots (organisational risk)**
+We make the interface clear, like a game. You can always cancel any decision.
+The first phases will be run on a small number of products so that you can see
+the results.
+
+**8.2. If Wildberries breaks (technical risk)**
+We have a backup plan: you can upload data manually via Excel, and the system
+will keep working.
+
+**8.3. If the budget runs out (financial risk)**
+We allocate money in stages. If something goes wrong at any stage, we can stop.
+We will set aside 10% for unforeseen expenses.
+
+**8.4. If data is stolen (security)**
+Everything will be encrypted, access only with a password. You will see who logged
+in and when. No leaks.
+
+**8.5. If a new product infringes copyright (intellectual property)**
+The legal agent will check patent databases to avoid accidentally copying something.
+And the final decision is yours.
+
+═══════════════════════════════════════════════════════════════════════════════════
+**9. WHAT YOU WILL GET IN THE END**
+═══════════════════════════════════════════════════════════════════════════════════
+
+- **Free time** – instead of 35 hours of routine, you will spend 5–10 hours
+  on management (or just play the strategy game).
+- **More money** – margin will increase by 10%, revenue by 50% per year,
+  assortment will grow tenfold.
+- **Peace of mind** – you know that everything is under control, and if something
+  happens, the system will warn you and suggest a solution.
+- **Growth** – new products will appear automatically, and you will be able to
+  expand to other platforms (Ozon, Yandex.Market).
+
+**And most importantly: you remain the boss. The robots are your helpers, not your replacement.**

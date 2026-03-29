@@ -1,0 +1,265 @@
+╔══════════════════════════════════════════════════════════════════════════════════╗
+║ PROTOCOL 5.3. INVENTORY MANAGEMENT MODEL (INVENTORY OPTIMIZER)                   ║
+║ PROJECT: IRON KIT – 13,918 SALES                                                 ║
+║                                                                                  ║
+╚══════════════════════════════════════════════════════════════════════════════════╝
+
+═══════════════════════════════════════════════════════════════════════════════════
+5.3. INVENTORY MANAGEMENT MODEL (INVENTORY OPTIMIZER)
+───────────────────────────────────────────────────────────────────────────────────
+
+The “Inventory manager” agent (level 4, D3) is responsible for maintaining optimal
+stock levels of finished goods and raw materials, minimising holding costs and
+losses from shortages. The model uses the classic (s, S) approach, accounting for
+stochastic demand and lead time, and integrates with production scheduling and
+raw material procurement.
+
+────────────────────────────────────────────────────────────────────────────────────
+5.3.1. PURPOSE AND PLACE IN THE ARCHITECTURE
+───────────────────────────────────────────────────────────────────────────────────
+
+**Input data:**
+
+- Demand forecast (from the “Demand analyst” agent, Section 5.1) – daily forecasts
+  for 7, 30, 90 days.
+- Finished goods warehouse stock (production warehouse + Wildberries warehouse) –
+  from the “WB API monitor” agent.
+- Raw material stock (at the production warehouse) – from Excel / 1С (monthly).
+- Raw material lead time – from supplier (14 days).
+- Production cycle time – from the production team (3 days).
+- Holding cost per unit per day – set by the operator (default 0.5% of cost).
+- Order cost (fixed overhead per order) – 5000 RUB.
+
+**Output data:**
+
+- `stock.low` signal (when stock falls below threshold s) – triggers raw material
+  order (or production).
+- `production_order` signal – production task (which SKU, how many, deadline).
+- `purchase_order` signal – raw material order to supplier.
+- Reports: inventory turnover, shortage, current service level.
+
+**Frequency:** stock check – daily (morning, 08:00); parameter (s, S) recalculation –
+weekly (Sunday).
+
+────────────────────────────────────────────────────────────────────────────────────
+5.3.2. (s, S) MODEL FOR FINISHED GOODS
+───────────────────────────────────────────────────────────────────────────────────
+
+**5.3.2.1. Model parameters**
+For each SKU, two levels are defined:
+
+- **s** – reorder point (stock level at which production/order should be triggered).
+- **S** – target replenishment level (stock after replenishment).
+
+Parameters are calculated based on:
+
+- Demand forecast – average demand during replenishment lead time (L).
+- Demand variance – standard deviation of demand during replenishment lead time.
+- Replenishment lead time – time from order to goods arriving at warehouse.
+
+**5.3.2.2. Replenishment lead time**
+For finished goods, replenishment lead time consists of:
+
+- Production cycle time – 3 days (if raw material available).
+- Delivery time to Wildberries warehouse – 1 day (FBO) or 2 days (FBS).
+Total replenishment lead time L = 4 days (conservative). In the future, it could
+be differentiated by SKU.
+
+**5.3.2.3. Parameter (s, S) calculation**
+
+- Mean demand during lead time:
+\[
+\mu_L = \sum_{i=1}^{L} \hat{y}_{t+i}
+\]
+  where \(\hat{y}_{t+i}\) is the demand forecast for the i‑th day (from Section 5.1,
+  7‑day forecast).
+
+- Standard deviation of demand during lead time:
+\[
+\sigma_L = \sqrt{L \cdot \sigma^2}
+\]
+  where \(\sigma\) is the standard deviation of daily demand (calculated from
+  the last 30 days of history).
+
+- Safety factor z – determines the service level (probability of no stockout).
+  Default 95% → z = 1.645.
+
+- Reorder point s:
+\[
+s = \mu_L + z \cdot \sigma_L
+\]
+  Rounded up to an integer.
+
+- Target stock level S:
+\[
+S = \mu_L + z \cdot \sigma_L + Q_{\text{opt}}
+\]
+  where \(Q_{\text{opt}}\) is the economic order quantity (Wilson formula):
+\[
+Q_{\text{opt}} = \sqrt{\frac{2 \cdot \mu_L \cdot K}{h}}
+\]
+  – \(K\) – fixed order cost (5000 RUB).
+  – \(h\) – holding cost per unit per day: \(h = c \cdot 0.005\) (0.5% of cost).
+
+- \(Q_{\text{opt}}\) is bounded below by the minimum production batch size
+  (usually 20 units) and above by maximum capacity (500 units).
+
+**5.3.2.4. Daily check algorithm**
+
+for each SKU:
+current_stock = production_warehouse_stock + WB_warehouse_stock
+if current_stock < s:
+qty_to_produce = S - current_stock
+if qty_to_produce > 0:
+create production_order event (SKU, qty, deadline: today + 3 days)
+record in production_orders table
+else (if stock already > s) – do nothing
+if current_stock < 0 (shortage):
+urgent alert to operator (console, email)
+
+
+**5.3.2.5. Calculation example (picket fence)**
+
+- 4‑day forecast: 40, 45, 50, 55 → μ_L = 190 units.
+- σ = 8 units → σ_L = 8 * √4 = 16 units.
+- z = 1.645 → s = 190 + 1.645*16 ≈ 216 units.
+- h = c * 0.005 = 5000 * 0.005 = 25 RUB/day (c ≈ 5000 RUB cost per picket).
+- K = 5000 RUB.
+- Q_opt = √(2 * 190 * 5000 / 25) ≈ √(76000) ≈ 276 units.
+- S = 190 + 1.645*16 + 276 ≈ 492 units.
+
+When stock falls below 216 units, production is triggered up to 492 units.
+
+────────────────────────────────────────────────────────────────────────────────────
+5.3.3. RAW MATERIAL PROCUREMENT MODEL (analogous (s, S) for raw materials)
+───────────────────────────────────────────────────────────────────────────────────
+
+Raw materials (steel, paint) are purchased from suppliers. For simplicity, the model
+is analogous, but lead time L = 14 days (supplier lead time). Raw material demand is
+determined by the production plan (how many finished goods will be manufactured).
+
+**5.3.3.1. Input data**
+
+- Raw material consumption rates – for each SKU (e.g., 2 kg of steel, 0.1 kg of
+  paint per picket). Rates are stored in a BOM table.
+- Production forecast – based on demand forecast and current orders (see 5.3.2).
+- Raw material stock – from Excel / 1С.
+
+**5.3.3.2. Raw material demand calculation**
+Daily forecasted raw material consumption over the next L days is computed:
+\[
+\text{Demand\_raw}_t = \sum_{\text{sku}} \left( \text{consumption\_rate}_{\text{sku,raw}} \cdot \sum_{i=1}^{L} \hat{y}_{t+i} \right)
+\]
+where \(\hat{y}_{t+i}\) is the finished goods demand forecast.
+
+**5.3.3.3. (s, S) parameters for raw materials**
+
+- μ_L = forecasted consumption over L days.
+- σ_L = σ (daily) * √L.
+- s = μ_L + z·σ_L.
+- Q_opt = √(2·μ_L·K / h) (K – order cost, h – holding cost of raw material).
+- S = s + Q_opt.
+
+**5.3.3.4. Algorithm**
+Daily raw material stock is checked. If stock < s – a purchase order for the supplier
+is created for quantity (S – stock). The order is sent to agent D3 for execution
+(via Scriptor #3 – supplier contact by phone/email, later by API).
+
+────────────────────────────────────────────────────────────────────────────────────
+5.3.4. INTEGRATION WITH PRODUCTION SCHEDULER (LEVEL 3)
+───────────────────────────────────────────────────────────────────────────────────
+
+The “Production scheduler” agent (level 3) receives `production_order` events and
+creates a production task for the team.
+
+**5.3.4.1. Task prioritisation**
+Tasks are prioritised by:
+- deadline (closer deadline = higher priority),
+- raw material availability (if raw material missing, task is postponed until
+  arrival),
+- profitability (higher‑margin items are prioritised).
+
+**5.3.4.2. Handover to the team**
+- Tasks are displayed on the operator console (to‑do list).
+- The team receives tasks via Telegram bot (notification) or on a shop‑floor screen.
+- After completion, they mark “Done” in the system, updating stock levels.
+
+**5.3.4.3. Production capacity consideration**
+Maximum production capacity: 2,500 products per month (~100 per day). If overloaded,
+tasks are shifted to subsequent days, and the operator is notified.
+
+────────────────────────────────────────────────────────────────────────────────────
+5.3.5. PERFORMANCE METRICS
+───────────────────────────────────────────────────────────────────────────────────
+| Metric                     | Formula                                      | Target Value |
+|----------------------------|----------------------------------------------|--------------|
+| Inventory turnover (days)  | (Avg stock / COGS) × 365                     | <30          |
+| Shortage rate (%)          | (Days with shortage / Total days) × 100      | <5%          |
+| Service level (%)          | 1 – (shortage units / demand) × 100          | >95%         |
+| Average order quantity     | Average size of orders (raw and finished)    | Optimal      |
+
+These metrics are displayed on the console dashboard and in the weekly report.
+
+────────────────────────────────────────────────────────────────────────────────────
+5.3.6. WEEKLY PARAMETER (s, S) RECALCULATION ALGORITHM
+───────────────────────────────────────────────────────────────────────────────────
+
+1. Load sales history for the last 90 days (by SKU).
+2. For each SKU:
+   - Calculate the mean and standard deviation of daily sales.
+   - Build a forecast for the next L days (L = 4).
+   - Compute μ_L, σ_L, Q_opt.
+   - Compute s and S.
+3. Store parameters in the `inventory_params` table.
+4. Publish the `inventory_params_updated` event.
+
+────────────────────────────────────────────────────────────────────────────────────
+5.3.7. TECHNICAL IMPLEMENTATION
+───────────────────────────────────────────────────────────────────────────────────
+
+**5.3.7.1. Stack**
+- Python 3.11
+- Libraries: pandas, numpy, psycopg2, sqlalchemy
+- Storage: PostgreSQL (tables `inventory_params`, `stock_levels`, `production_orders`, `purchase_orders`)
+- Event queue: Redis Streams
+
+**5.3.7.2. Example code (stock check)**
+```python
+import psycopg2
+import numpy as np
+
+def check_inventory():
+    conn = psycopg2.connect(...)
+    cur = conn.cursor()
+    cur.execute("SELECT sku, current_stock, s_point, s_target FROM inventory_params")
+    rows = cur.fetchall()
+    for sku, stock, s, S in rows:
+        if stock < s:
+            order_qty = S - stock
+            if order_qty > 0:
+                # Create production task
+                cur.execute("INSERT INTO production_orders (sku, qty, deadline) VALUES (%s, %s, NOW() + interval '3 days')", (sku, order_qty))
+                conn.commit()
+        elif stock < 0:
+            # alert operator
+            send_alert(f"Shortage for SKU {sku}, stock {stock}")
+    cur.close()
+    conn.close()
+
+    ────────────────────────────────────────────────────────────────────────────────────
+5.3.8. EXAMPLE OUTPUT (DASHBOARD)
+───────────────────────────────────────────────────────────────────────────────────
+
+“Inventory management” widget in the console:
+
+    Table of SKUs with columns: Stock (units), Reorder point s, Target level S,
+    Forecast for 4 days, Recommended action.
+
+    Graph: stock dynamics over the last 30 days, with s and S thresholds marked.
+
+    Button “Urgent order” for manual intervention.
+
+═══════════════════════════════════════════════════════════════════════════════════
+NOTE: The inventory management model is integrated with demand forecasting
+and production planning. Parameters (z, K, h) can be adjusted by the operator
+via the console. Weekly recalculation ensures adaptation to seasonality and trends.

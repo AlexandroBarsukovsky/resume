@@ -1,0 +1,122 @@
+═══════════════════════════════════════════════════════════════════════════════════
+PROTOCOL: 5.1. OBJECTS AND KEY FIELDS
+Project: Sourcegraph GTM Infrastructure
+═══════════════════════════════════════════════════════════════════════════════════
+
+**5.1. OBJECTS AND KEY FIELDS**
+
+This subsection details modifications to three main Salesforce objects:
+Account, Opportunity, and Activity. These changes form the foundation for storing
+data used by agents, models, and dashboards. All new fields are designed with
+atomicity, event‑driven architecture, and compatibility with Sourcegraph’s
+existing processes in mind.
+
+────────────────────────────────────────────────────────────────────────────────────
+5.1.1. ACCOUNT (ICP_FIT, INTENT_STRENGTH, HEALTH_SCORE, LAST_ACTIVITY)
+────────────────────────────────────────────────────────────────────────────────────
+
+The Account object serves as the central repository for customer (company) information.
+New fields are added to enable automatic prioritization, health assessment, and
+strategic choice.
+
+**Table 5.1.1. – Additional Account Fields**
+
+| Field                        | Type           | Length / Format      | Required | Description                                                                 | Update Source                               |
+|------------------------------|----------------|----------------------|----------|-----------------------------------------------------------------------------|---------------------------------------------|
+| `ICP_Fit__c`                 | Number (0–1)   | Decimal (2 digits)   | Yes      | Fit with ideal customer profile (0 – no fit, 1 – perfect match). Calculated based on Clearbit/ZoomInfo: industry, size, technology stack. | Analytic agents (Level 1) → Hightouch → Salesforce |
+| `Intent_Strength__c`         | Number (0–1)   | Decimal (3 digits)   | Yes      | Aggregated strength of intent signals from 6sense over the last 7 days with exponential decay. | Analytic agents → Hightouch → Salesforce |
+| `Health_Score__c`            | Number (0–1)   | Decimal (3 digits)   | Yes      | Composite customer health indicator: `0.5·Usage + 0.2·(1‑Support) + 0.2·Engagement + 0.1·NPS`. | Analytic agents → Hightouch → Salesforce |
+| `Strategic_Ideology__c`      | Picklist      | 40 characters        | No       | Selected strategic ideology: `Conservative`, `Balanced`, `Aggressive`. Assigned by strategist agents (Level 2). | Strategist agents → Salesforce API |
+| `Last_Activity_Date__c`      | DateTime      | –                    | Yes      | Date and time of the last recorded activity (any interaction: product, email, call). Used to identify “cold” accounts. | Analytic agents (from Snowflake/SalesLoft) → API |
+| `Risk_Flag__c`               | Boolean       | –                    | No       | High‑risk flag (automatically set when `Health_Score__c` < 0.5 or a sharp activity drop >30% in a month). | Analytic agents → Hightouch → Salesforce |
+| `Expansion_Signal__c`        | Boolean       | –                    | No       | Flag indicating the customer is ready for expansion (upsell/cross‑sell). Conditions: `Usage > 0.7` and user growth >30% over 30 days, or a feature request. | Analytic agents → Hightouch → Salesforce |
+| `Owner_Assigned_By__c`       | Lookup(User)  | –                    | No       | Reference to the user (or system agent account) that last assigned the account owner. Used for auditing. | Automatically when `OwnerId` is updated (trigger) |
+| `Last_Score_Update__c`       | DateTime      | –                    | Yes      | Date of the last scoring field recalculation (used to plan the next update). | Analytic agents → API |
+
+**Implementation notes:**
+- Fields `ICP_Fit__c`, `Intent_Strength__c`, `Health_Score__c` are updated via Hightouch reverse ETL in real time (latency < 2 sec). Corresponding data marts in Snowflake trigger webhooks.
+- `Strategic_Ideology__c` is updated by strategist agents (Level 2) each time the strategy is reviewed (daily or on request).
+- `Last_Activity_Date__c` is updated asynchronously: upon receiving any event from SalesLoft (email open), product (login), or task creation. Analytic agents process these events and call the Salesforce API.
+- All changes to fields that affect decision‑making (`Health_Score__c`, `Risk_Flag__c`, `Expansion_Signal__c`) publish Platform Events (see 5.2), triggering further automation.
+
+────────────────────────────────────────────────────────────────────────────────────
+5.1.2. OPPORTUNITY (STAGE, WIN_PROBABILITY, FORECAST_CATEGORY, MEDDPICC FIELDS)
+────────────────────────────────────────────────────────────────────────────────────
+
+The Opportunity object holds information about a deal at various stages. Added fields ensure accurate forecasting and automated qualification.
+
+**Table 5.1.2. – Additional Opportunity Fields**
+
+| Field                           | Type           | Length / Format      | Required | Description                                                                 | Update Source                               |
+|---------------------------------|----------------|----------------------|----------|-----------------------------------------------------------------------------|---------------------------------------------|
+| `Win_Probability__c`            | Number (0–1)   | Decimal (3 digits)   | Yes      | Probability of closing the deal, calculated by a model based on stage, segment, region, macroeconomic factors. | Financial agents (Level 4) → Salesforce API |
+| `Forecast_Category__c`          | Picklist      | 20 characters        | Yes      | Forecast category: `Commit` (≥75%), `Best Case` (50–74%), `Pipeline` (<50%). Automatically set based on `Win_Probability__c`. | Automatically (Apex trigger)                |
+| `Forecast_Accuracy__c`          | Number (0–1)   | Decimal (3 digits)   | No       | Historical forecast accuracy for the given stage/segment (used for model calibration). | Financial agents → API                      |
+| `MEDDPICC_Fields__c`            | Long Text     | 32 768 characters    | No       | Structured storage of MEDDPICC data in JSON format. Enables automatic assessment of qualification completeness. | AE (via custom Lightning component) / API   |
+| `MEDDPICC_Completeness__c`      | Number (0–1)   | Decimal (2 digits)   | No       | Degree of MEDDPICC field completion (0 – empty, 1 – fully filled). Used for automated reminders. | Analytic agents (JSON check) → API          |
+| `Days_In_Stage__c`              | Number        | Integer              | Yes      | Number of days the deal has been in the current stage. Automatically calculated via formula. | Salesforce formula field                    |
+| `Last_Stage_Change__c`          | DateTime      | –                    | Yes      | Date and time of the last stage transition. Automatically updated when `StageName` changes. | Salesforce workflow                          |
+| `Assigned_AE__c`                | Lookup(User)  | –                    | Yes      | Responsible Account Executive (duplicates `OwnerId` for reporting clarity). | Upon Opportunity creation / update          |
+| `Agent_Task_ID__c`              | Text          | 100 characters       | No       | Task identifier of the agent that last updated the record (used for tracing). | Agents when calling the API                 |
+| `Contract_Status__c`            | Picklist      | 30 characters        | No       | Contract status: `Not Started`, `In Review`, `Signed`, `Expired`. Synchronized with Ironclad. | Executor agents → API                       |
+
+**JSON structure in MEDDPICC_Fields__c:**
+
+```json
+{
+  "Metrics": "$500k contract, budget approved",
+  "Economic_Buyer": "CTO John Smith",
+  "Decision_Criteria": "stability, Java support, GitLab integration",
+  "Decision_Process": "board of directors vote, last week of quarter",
+  "Paper_Process": "Ironclad contract, needs CTO and legal signatures",
+  "Identify_Pain": "time lost searching code, incidents due to unclear dependencies",
+  "Champion": "Tech Lead Anna, actively promoting",
+  "Competition": "GitLab Code Search (price pressure)"
+}
+
+Automation:
+
+    When StageName changes, a trigger updates Last_Stage_Change__c and recalculates Days_In_Stage__c.
+
+    When MEDDPICC_Fields__c is updated, an analytic agent (via Platform Event) computes MEDDPICC_Completeness__c. If the value falls below the threshold (0.7), it creates a task for the AE reminding them to fill in the fields.
+
+    When a deal closes (Stage = 'Closed Won'), a Platform Event is published, initiating contract creation in Ironclad and a task for the CSM.
+
+────────────────────────────────────────────────────────────────────────────────────
+5.1.3. ACTIVITY (TYPE, OUTCOME, CREATED_BY_AGENT_ID)
+────────────────────────────────────────────────────────────────────────────────────
+
+The Activity object (standard Task and Event) records all interactions with the customer. Added fields distinguish between automatic and manual actions and allow tracing.
+
+**Table 5.1.3. – Additional Task / Event Fields**
+
+| Field                         | Type           | Length / Format | Required | Description                                                                 | Update Source                               |
+|-------------------------------|----------------|-----------------|----------|-----------------------------------------------------------------------------|---------------------------------------------|
+| `Created_by_Agent_ID__c`      | Text           | 100 characters  | No       | Unique identifier of the agent that created the activity (or “human” for manual actions). Used to analyze automation effectiveness. | Automatically upon creation (API / UI)       |
+| `Agent_Task_ID__c`            | Text           | 100 characters  | No       | ID of the task from the agent queue that led to the activity. Links the activity to logs in Kafka / Snowflake. | Agents when calling the API                 |
+| `Outcome__c`                  | Text           | 255 characters  | No       | Outcome of the activity (e.g., “reply received”, “meeting scheduled”, “customer interested”). Used for conversion analysis. | Agents / users (via interface)              |
+| `Automated__c`                | Boolean        | –               | Yes      | Flag indicating the activity was created automatically (by an agent). Allows filtering in reports. | Agents upon creation (set to true)          |
+| `Related_Opportunity__c`      | Lookup(Opportunity) | –           | No       | Link to a specific deal (if the activity relates to it). Facilitates deal‑level reporting. | Upon creation (API / UI)                    |
+| `Activity_Type_Detail__c`     | Picklist       | 50 characters   | No       | Detailed activity type: Email_Sent, Email_Opened, Call, Demo, Task_Reminder. Used for analytics. | Agents / users                              |
+
+**Notes:**
+
+- The `Automated__c` field is automatically set to `true` for all activities created via API using a system user (or by specifying `Created_by_Agent_ID__c`). For activities created by a human through the Salesforce UI, the default is `false`.
+- `Created_by_Agent_ID__c` stores the agent identifier (e.g., `analytics_agent_1`, `cs_agent_342`). For manual actions, `human` or the user ID is used.
+- `Agent_Task_ID__c` allows operators to reconstruct the full chain: event → task → activity → result. This is critical for debugging and auditing.
+
+**Automation:**
+
+- When an agent creates an activity, `Automated__c = true`, `Created_by_Agent_ID__c`, and `Agent_Task_ID__c` are automatically populated.
+- If an activity is created from the Salesforce interface (standard Task creation), `Automated__c` remains `false`, and `Created_by_Agent_ID__c` is set to `human`.
+- Analytic agents (Level 1) subscribe to activity creation events (Platform Event) to update `Last_Activity_Date__c` on the related Account and, if necessary, adjust the Engagement component of Health Score.
+
+────────────────────────────────────────────────────────────────────────────────────
+**CONCLUSIONS ON OBJECTS AND KEY FIELDS**
+
+- All new fields are designed to minimize changes to existing processes while providing the data needed for automation.
+- Using custom fields with clear sources and update rules ensures data consistency.
+- Tracing fields (`Created_by_Agent_ID__c`, `Agent_Task_ID__c`) enable transparent tracking of all automated actions, which is critical for high‑agency culture and auditing.
+- Detailed storage of MEDDPICC in JSON format provides flexibility and enables automatic qualification quality assessment.
+
+═══════════════════════════════════════════════════════════════════════════════════

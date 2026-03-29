@@ -1,0 +1,134 @@
+═══════════════════════════════════════════════════════════════════════════════════
+PROTOCOL: 10.4. PHASE 4 (7–12 MONTHS): OPTIMISATION AND RETRAINING
+Project: Sourcegraph GTM Infrastructure
+═══════════════════════════════════════════════════════════════════════════════════
+
+**10.4. PHASE 4 (7–12 MONTHS): OPTIMISATION AND RETRAINING**
+
+────────────────────────────────────────────────────────────────────────────────────
+10.4.1. ACTIONS, RESOURCES, RISKS
+────────────────────────────────────────────────────────────────────────────────────
+
+**10.4.1.1. Actions**
+
+| Week (Month) | Action                                                                  | Responsible                 |
+|--------------|-------------------------------------------------------------------------|-----------------------------|
+| 1–4 (month 7) | **Collect and analyse agent metrics** – create detailed dashboards for each agent type: success rate, latency, load, error rate. Identify bottlenecks and frequent errors. | RevOps (2), Engineers (1)   |
+| 5–8 (month 8) | **Retrain scoring models** – collect feedback from Strategists, AEs, CSMs, AMs (false positives, missed signals). Retrain logistic regression for Account Score, Health Score, Expansion Signals on new data (6 months of operations). | ML Engineers (2), Analyst (1) |
+| 9–12 (months 8–9) | **Performance optimisation** – profile agents, reduce latency (target p99 <1 sec), optimise Snowflake SQL queries, configure Redis caching, increase parallelism. | Engineers (2)                |
+| 13–16 (months 9–10) | **Implement quantum encryption (pilot)** – for critical operations (contract transfers, sensitive data), introduce hybrid encryption (AES-256 + quantum key distribution simulation). | Engineers (2), Security (1)  |
+| 17–20 (month 10) | **Develop “foresight session” mechanism** – create a process for regular roadmap review (every 6 months) with leadership, RevOps, technical team. Prepare templates for scenario modelling. | RevOps (2), Technical Lead (1) |
+| 21–24 (month 11) | **Automate feedback loop for retraining** – build a pipeline that automatically collects labelled data (manual overrides, comments) and adds them to the training set. | ML Engineers (1), Engineers (1) |
+| 25–28 (month 12) | **Final testing and stabilisation** – full run of all processes with real data, stress testing, prepare for production handover. | All participants             |
+
+**Action Details:**
+
+- **Collect and analyse metrics:** create advanced dashboards in Tableau and the control panel. Track:
+  * For each agent type: number of calls, success rate (%), average latency, p99 latency, error rate.
+  * For models: forecast accuracy (Account Score vs actual qualification, Health Score vs churn).
+  * For business processes: conversion at each stage (intent → qualification → deal → onboarding → expansion).
+
+- **Retrain models:** monthly cycle of data collection (manual interventions, qualification outcomes, churn) and retraining. Used:
+  * Logistic regression for Account Score (update weights).
+  * Gaussian process for Health Score (optimise weights).
+  * VAR model for forecasts (re‑estimate coefficients on new macroeconomic data).
+
+- **Performance optimisation:**
+  * Profile agent code (cProfile, py-spy) to identify bottlenecks.
+  * Optimise Snowflake SQL queries (use clustering, materialised views).
+  * Configure Redis (TTL, eviction strategies) to increase hit rate.
+  * Horizontal scaling: increase number of Kubernetes pods for the busiest agents (intent, funnel).
+
+- **Quantum encryption (pilot):** implement hybrid encryption for critical data (contracts, financial information) using quantum key distribution simulation (BB84). Encryption applies to:
+  * Contract transfers between Salesforce and Ironclad.
+  * API key storage in AWS Secrets Manager (with rotation).
+  * Auditing sensitive logs (masking).
+
+- **Foresight sessions:** regular (every 6 months) meetings with C‑level to:
+  * Analyse market trends, competitors, technology shifts.
+  * Adjust strategic OKRs.
+  * Update the roadmap for the next 12–24 months.
+  * Prepare “what if” scenarios (optimistic, pessimistic) using models.
+
+- **Automated feedback loop:** a pipeline that:
+  * Collects data on manual overrides (from the control panel) – original agent decision, operator action, context.
+  * Stores them in Snowflake (table `feedback_loop`).
+  * Monthly creates a training set for model retraining (random sample, stratified by error types).
+
+**10.4.1.2. Resources**
+
+| Resource Type              | Composition                                                             | Allocation              |
+|----------------------------|-------------------------------------------------------------------------|-------------------------|
+| **ML Engineers**           | 2 specialists (model retraining, feedback pipeline)                     | 50% time, 6 months      |
+| **Engineers (development)**| 2 engineers (optimisation, quantum encryption, foresight tools)        | 30% time, 6 months      |
+| **RevOps**                 | 2 specialists (metric collection, analysis, foresight sessions)        | 50% time, 6 months      |
+| **Data Analyst**           | 1 specialist (metric analysis, model validation)                       | 30% time, 6 months      |
+| **Security (part‑time)**   | 1 specialist (quantum encryption consultation)                         | 10% time, 3 months      |
+| **Technical Lead**         | 1 lead (coordination, foresight)                                       | 20% time, 6 months      |
+| **Leadership (C‑level)**   | CRO, CFO, CPO (participate in foresight sessions)                      | 1–2 days per quarter    |
+
+**Budget (CAPEX/OPEX):** $150K (optimisation, retraining, quantum encryption) + $100K (foresight sessions, analytics). Total $250K.
+
+**10.4.1.3. Risks and Mitigations**
+
+| Risk                                     | Likelihood | Impact | Mitigation                                                             |
+|------------------------------------------|------------|--------|------------------------------------------------------------------------|
+| Model quality degradation during retraining | Low      | High   | A/B test new models on 10% of traffic before full deployment; automatic rollback if metrics worsen. |
+| Insufficient performance after optimisation | Medium   | Medium | Roll out optimisations step by step, load test at each stage.          |
+| Complexity of quantum encryption implementation | Medium   | Medium | Start with pilot on non‑critical data; use proven libraries (Qiskit simulation); plan rollback to classical encryption. |
+| Low leadership engagement in foresight sessions | Low      | High   | Embed foresight in annual planning cycle, link to OKRs, demonstrate ROI. |
+| Architecture obsolescence (new technologies) | Low    | Medium | Regularly review roadmap, allocate time for research (10% of resources). |
+
+────────────────────────────────────────────────────────────────────────────────────
+10.4.2. EXPECTED KPIs
+────────────────────────────────────────────────────────────────────────────────────
+
+**10.4.2.1. Operational KPIs**
+
+| KPI                                  | Formula / Measurement Method                     | Target Value                |
+|--------------------------------------|--------------------------------------------------|-----------------------------|
+| **Forecast accuracy (MAPE)**         | Average forecast error per quarter               | <8% (improved from 10%)     |
+| **Percentage of manual interventions** | Number of manual actions / total automated operations | <3% (down from 5%)          |
+| **Time to insight (reporting)**      | Time from quarter close to board‑pack readiness  | <1 hour                     |
+| **Net retention (NRR)**              | (ARR_start + Expansion – Churn) / ARR_start      | >125%                       |
+| **Churn rate (enterprise)**          | Lost ARR / ARR_start                             | <4%                         |
+| **Health Score accuracy (F1)**       | F1‑score for churn prediction within 30 days     | >0.90                       |
+
+**10.4.2.2. Technical KPIs**
+
+| KPI                                  | Formula / Measurement Method                     | Target Value                |
+|--------------------------------------|--------------------------------------------------|-----------------------------|
+| **Agent latency (p99)**              | 99th percentile of action execution time         | <1 second                   |
+| **System availability**              | Agent holding uptime                             | >99.9%                      |
+| **Caching efficiency**               | Redis hit rate (for scoring)                     | >80%                        |
+| **Model retraining speed**           | Time from data collection to new model deployment | <7 days                     |
+| **Automatic rollback success rate**  | Percentage of cases where rollback worked correctly | 100%                        |
+
+**10.4.2.3. Business Outcomes**
+
+- **3‑year ROI** – >400% (improved forecast accuracy and reduced churn).
+- **Operating cost reduction** – $500K/year saved through automation of routine tasks.
+- **Increased speed of new product launches** – time to market for new modules reduced by 30% due to GTM infrastructure agility.
+- **Scalability readiness** – ability to process 10⁶ events/second and support ARR >$200M without architectural changes.
+
+────────────────────────────────────────────────────────────────────────────────────
+**PHASE 4 COMPLETION CRITERIA AND HANDOVER TO PRODUCTION OPERATIONS**
+
+Phase 4 is considered complete and the system ready for production operations when the following conditions are met:
+
+1. All operational KPIs achieved (NRR >125%, forecast accuracy >92%, churn <4%).
+2. Technical KPIs consistently maintained for 2 months (uptime >99.9%, latency <1 sec).
+3. The model retraining process is automated and runs monthly without manual intervention.
+4. At least two foresight sessions have been held with leadership, and the roadmap has been updated for the next year.
+5. Quantum encryption has been implemented for critical operations, and a security audit has been passed.
+6. Documentation and training completed; GTM teams can independently use all system functions.
+
+────────────────────────────────────────────────────────────────────────────────────
+**CONCLUSIONS ON PHASE 4**
+
+- Phase 4 focuses on continuous improvement: model retraining, performance optimisation, implementation of advanced security methods, and strategic planning.
+- Automated feedback loops and regular foresight sessions ensure long‑term adaptability of the system.
+- Achieving the target KPIs confirms that the GTM infrastructure not only operates stably but also continuously improves efficiency.
+- Upon completion of Phase 4, the system is ready to scale for the next 3–5 years without major architectural changes.
+
+═══════════════════════════════════════════════════════════════════════════════════

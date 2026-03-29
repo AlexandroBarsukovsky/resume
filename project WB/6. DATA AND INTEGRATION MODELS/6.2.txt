@@ -1,0 +1,181 @@
+╔══════════════════════════════════════════════════════════════════════════════════╗
+║  PROTOCOL 6.2. EXTERNAL INTEGRATIONS (DETAILED DESCRIPTION)                      ║
+║  PROJECT: IRON KIT – 13,918 SALES                                                 ║
+║                                                                                  ║
+╚══════════════════════════════════════════════════════════════════════════════════╝
+
+═══════════════════════════════════════════════════════════════════════════════════
+**6.2. EXTERNAL INTEGRATIONS (DETAILED DESCRIPTION)**
+───────────────────────────────────────────────────────────────────────────────────
+
+All external integrations are centralised through Scriptor #3 (“Execution”). This provides
+a single point for management, caching, logging, and error handling. Agents do not call
+external APIs directly but invoke internal endpoints of Scriptor #3.
+
+────────────────────────────────────────────────────────────────────────────────────
+**6.2.1. Wildberries API (Primary Channel)**
+───────────────────────────────────────────────────────────────────────────────────
+
+**6.2.1.1. Authentication and tokens**
+- An API key (token) generated in the Wildberries personal account is used
+  (Settings → API Access).
+- The token is stored encrypted in the environment variable `WB_API_TOKEN`.
+- The token is forcibly renewed every 90 days (operator reminder via the console).
+
+**6.2.1.2. Base URL**
+- API v2 (for sellers): `https://suppliers-api.wildberries.ru/api/v2`
+- API v3 (for statistics): `https://statistics-api.wildberries.ru/api/v3`
+
+**6.2.1.3. Endpoints and parameters**
+
+| Operation                   | Method | Endpoint                          | Parameters                                 | Frequency        | Handling                          |
+|-----------------------------|-------|-----------------------------------|--------------------------------------------|------------------|-----------------------------------|
+| Retrieve orders             | GET   | `/api/v2/orders`                  | `dateFrom` (ISO)                           | every 5 min      | Save to `orders`                  |
+| Retrieve stock              | GET   | `/api/v2/stocks`                  | –                                          | every 30 min     | Update `stock_wb` in `sku`        |
+| Retrieve reviews            | GET   | `/api/v2/reviews`                 | `dateFrom`, `limit` (100)                  | every 15 min     | Save to `reviews`                 |
+| Update price                | POST  | `/api/v2/price`                   | `{"data":[{"nmId":123,"price":5900}]}`     | on trigger       | Log success/error                 |
+| Create shipment request     | POST  | `/api/v2/supplies`                | `{"supplyId":"...","warehouseId":...}`     | on trigger       | Return status                      |
+| Retrieve financial reports  | GET   | `/api/v2/finances`                | `dateFrom`, `dateTo`                       | once per day     | Save to `finances` (separate table)|
+| Reply to review             | POST  | `/api/v2/feedback/answer`         | `{"id": "...", "text": "..."}`              | real‑time        | Update `answered` in `reviews`    |
+
+**6.2.1.4. API rate limits**
+- For v2: no more than 100 requests per minute.
+- Scriptor #3 uses a token pool (if needed) and a built‑in limiter.
+- If the limit is exceeded – automatic delay (sleep) with exponential backoff.
+
+**6.2.1.5. Error handling**
+- For HTTP 429 (Too Many Requests) – retry after 60 seconds, up to 3 times.
+- For HTTP 5xx – retry after 30, 60, 120 seconds.
+- For authorisation errors (401) – notify operator in the console, stop operations until manual correction.
+- All errors are logged in the `api_calls` table (see Section 6.2.5).
+
+**6.2.1.6. Caching**
+- Results of queries that do not require real‑time (stock, competitor prices) are cached in Redis with TTL corresponding to the update frequency.
+- If the API fails, the cache is used (if still valid) to keep agents running.
+
+────────────────────────────────────────────────────────────────────────────────────
+**6.2.2. 1С (Cost Import)**
+───────────────────────────────────────────────────────────────────────────────────
+
+**6.2.2.1. Data format**
+- CSV file with semicolon delimiter, UTF‑8 encoding.
+- Fields: `sku` (article), `cost` (cost in RUB), `effective_date` (start date, optional).
+- Example:
+```csv
+sku;cost;effective_date
+SHT-001;3200.00;2026-03-01
+UG-010;150.00;2026-03-01
+
+6.2.2.2. Transfer method
+
+    Automatic: if a shared folder (SMB) or cloud storage (Yandex Disk) exists, Scriptor #3 checks for new files once a day.
+
+    Manual: via the operator console (upload file through the web interface).
+
+6.2.2.3. Processing
+
+    After file upload, the following steps are performed:
+
+        Structure validation (headers, data types).
+
+        For each row – update the cost field in the sku_cost_history table and, if the effective date is current, update cost in the main sku table.
+
+        Log successful and erroneous rows.
+
+    On error (invalid SKU) – operator notification, data not imported.
+
+6.2.2.4. Frequency
+
+    Recommended monthly (after closing the reporting period). When raw material prices change – unscheduled.
+
+────────────────────────────────────────────────────────────────────────────────────
+6.2.3. Bank (Statement and Payment Orders)
+───────────────────────────────────────────────────────────────────────────────────
+
+6.2.3.1. Obtaining statements
+
+    Format: CSV/Excel exported from the bank‑client system.
+
+    Method: once a week, the operator uploads the statement via the console; in the future – bank API (for legal entities).
+
+    Processing: Scriptor #3 parses the file, matches it with already recorded expenses (from the budget), updates spent in the budget table by category, and records WB commissions (as a separate entry).
+
+6.2.3.2. Generating payment orders
+
+    Agent D1 “Tax calculator” generates payment orders in XML format (1С:Предприятие) or CSV (for import into the bank‑client).
+
+    Payment orders contain: payee, TIN, registration code, BIC, account, amount, purpose.
+
+    After operator verification (via the console), payment orders are saved and can be uploaded to the bank‑client.
+
+6.2.3.3. Security
+
+    Account and bank details are stored encrypted (AES‑256) in the bank_accounts table.
+
+    Access to payment order generation is limited to the operator (owner).
+
+────────────────────────────────────────────────────────────────────────────────────
+6.2.4. Weather Data (OpenWeatherMap)
+───────────────────────────────────────────────────────────────────────────────────
+
+6.2.4.1. API
+
+    URL: https://api.openweathermap.org/data/2.5/onecall
+
+    Parameters: lat, lon (region coordinates, e.g., Moscow region: 55.7558, 37.6173), exclude=minutely,hourly,alerts, appid.
+
+6.2.4.2. Request frequency
+
+    Daily at 06:00 UTC, agent A6 “Seasonal forecaster” requests historical data for the last 7 days and a 5‑day forecast.
+
+    Results are stored in tables weather_history (historical) and weather_forecast.
+
+6.2.4.3. Usage
+
+    Weather data is used in the demand forecast model (5.1.1) to adjust seasonal coefficients.
+
+    In case of significant deviations (e.g., sudden cold snap), a forecast recalculation is triggered.
+
+────────────────────────────────────────────────────────────────────────────────────
+6.2.5. Logging and Monitoring of External Calls
+───────────────────────────────────────────────────────────────────────────────────
+sql
+
+CREATE TABLE api_calls (
+    id              SERIAL PRIMARY KEY,
+    endpoint        VARCHAR(200) NOT NULL,
+    method          VARCHAR(10) NOT NULL,
+    request_body    TEXT,
+    response_code   INTEGER,
+    response_body   TEXT,
+    success         BOOLEAN NOT NULL,
+    latency_ms      INTEGER,
+    error_message   TEXT,
+    timestamp       TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_api_calls_timestamp ON api_calls(timestamp);
+CREATE INDEX idx_api_calls_endpoint ON api_calls(endpoint);
+
+    Each external API call is logged in the api_calls table.
+
+    If latency > 5 seconds or error rate > 2% per hour – alert to operator.
+
+    A dashboard in the console displays call statistics for the last 24 hours.
+
+────────────────────────────────────────────────────────────────────────────────────
+6.2.6. Fallback Channels
+───────────────────────────────────────────────────────────────────────────────────
+Service Primary Channel Fallback Channel
+Wildberries API Direct API call Manual CSV upload via console (prices, orders, reviews)
+1С (cost)   Automatic import from folder    Manual upload via console
+Bank (statement)    Manual upload (future API)  Manual amount entry via console (for taxes)
+Weather OpenWeatherMap API  – (forecast not critical, can use averages)
+
+When switching to a fallback channel, the operator receives a notification in the console. After the primary channel is restored, data is synchronised (if necessary).
+
+═══════════════════════════════════════════════════════════════════════════════════
+NOTE: All external integrations are implemented through Scriptor #3, which
+provides a unified interface, caching, error handling, and logging.
+Agents do not have direct access to external APIs, which enhances security
+and simplifies debugging.

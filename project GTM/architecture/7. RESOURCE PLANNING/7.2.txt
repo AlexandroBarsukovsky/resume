@@ -1,0 +1,139 @@
+═══════════════════════════════════════════════════════════════════════════════════
+PROTOCOL: 7.2. TERRITORY DESIGN (MARKET SPLIT AMONG AEs)
+Version: 1.0 | Date: 2026-03-27 | Project: Sourcegraph GTM Infrastructure
+═══════════════════════════════════════════════════════════════════════════════════
+
+**7.2. TERRITORY DESIGN (MARKET SPLIT AMONG AEs)**
+
+────────────────────────────────────────────────────────────────────────────────────
+7.2.1. PURPOSE AND PRINCIPLES
+────────────────────────────────────────────────────────────────────────────────────
+
+Territory design defines how the market (accounts and opportunities) is distributed
+among Account Executives (AEs). The goal is to ensure balanced workload, minimize
+conflicts, maximize market coverage, and create conditions for quota attainment.
+
+**Key principles:**
+- **Fairness:** each AE receives a pool of accounts with comparable potential.
+- **Scalability:** the design must easily adapt to changes in AE headcount,
+  regional expansion, and the emergence of new segments.
+- **Transparency:** account assignment rules are documented and accessible
+  to all AEs (via the handbook and Salesforce interface).
+- **Flexibility:** RevOps operators can make adjustments in exceptional cases
+  (strategic accounts, temporary redistribution).
+
+────────────────────────────────────────────────────────────────────────────────────
+7.2.2. SPLIT CRITERIA
+────────────────────────────────────────────────────────────────────────────────────
+
+Market splitting is performed along three main dimensions, which can be combined
+depending on market size and region maturity.
+
+**1. Geographic split (primary level)**
+- **Regions:** US (further split into East, West, Central), EMEA (EMEA North, EMEA South),
+  APAC, LATAM.
+- Within a region – by country or groups of countries.
+- For the US, additional splitting by state or metro areas may be used.
+
+**2. Vertical split (for large markets)**
+- By industry: finance, technology, retail, manufacturing, healthcare.
+- By customer size: named accounts (enterprise), mid‑market (by territory),
+  SMB (self‑service, no AE).
+
+**3. Account‑based split (for top customers)**
+- The largest customers (e.g., Fortune 500) are assigned to specific AEs
+  (named accounts) regardless of geography. This ensures personal attention
+  and deep understanding of their needs.
+
+**Combination rules:**
+- In the US: geographic split first, then vertical specialists within each region
+  (e.g., a finance AE on the East Coast).
+- In EMEA and APAC: primarily geographic split (due to language and cultural diversity),
+  with named accounts for global customers.
+- In LATAM: a single region with several AEs covering the entire territory.
+
+────────────────────────────────────────────────────────────────────────────────────
+7.2.3. TOOLS AND AUTOMATION
+────────────────────────────────────────────────────────────────────────────────────
+
+**Salesforce Territory Management** is the primary tool for account and deal assignment.
+The following rules are configured:
+
+- **Territory hierarchy:** a tree is created corresponding to geographic and vertical
+  splits. Each territory is assigned one or more AEs (with primary / secondary roles).
+- **Automatic assignment:** when a new account is created (or its attributes change,
+  such as country, industry), Salesforce automatically determines the territory based
+  on the rules and assigns the owner (OwnerId).
+- **Escalation:** if an account cannot be automatically assigned (e.g., country not
+  specified), it goes into a queue for manual assignment by a RevOps operator.
+
+**Role of agents:**
+- **Analytic agents (Level 1)** monitor AE workload (number of accounts, pipeline value,
+  number of active deals). When a threshold is exceeded (e.g., >120% of average load),
+  an event is published for RevOps.
+- **Financial agents (Level 4)** quarterly model territory reallocation scenarios
+  when AE headcount or regional expansion changes. Results are stored in Snowflake
+  and available in the control panel.
+
+────────────────────────────────────────────────────────────────────────────────────
+7.2.4. PERIODIC REVIEW PROCESS
+────────────────────────────────────────────────────────────────────────────────────
+
+**Quarterly** (2 weeks before the end of the quarter) a territory review is conducted:
+
+1. **Data collection:** analytic agents generate a report for each AE:
+   - Number of accounts in the territory.
+   - Pipeline amount, pipeline coverage.
+   - Number of active deals, win rate.
+   - Quota attainment (YTD).
+2. **Analysis:** RevOps operators identify imbalances:
+   - Overloaded AEs (accounts >130% of average).
+   - Underloaded AEs (<70% of average).
+   - Regions/verticals with high customer density requiring expansion.
+3. **Adjustments:** based on the analysis, changes are made:
+   - Move accounts between AEs (manually via Territory Management UI or via bulk update).
+   - Modify automatic assignment rules (e.g., add new vertical specialists).
+   - If necessary, recommend headcount increase (via the headcount model, Section 7.1).
+4. **Communication:** changes are documented in the handbook, AEs are notified
+   via Salesforce (tasks) and Slack.
+
+────────────────────────────────────────────────────────────────────────────────────
+7.2.5. CONFLICT RESOLUTION
+────────────────────────────────────────────────────────────────────────────────────
+
+Conflicts arise when two AEs claim the same account (e.g., due to duplicate creation
+or territory overlap). Procedure:
+
+1. **Automatic detection:** when an Opportunity is created, Salesforce checks whether
+   there is already an active deal for the same account with a different AE. If so,
+   a task is created for RevOps with the tag “Conflict”.
+2. **Manual resolution:** a RevOps operator reviews the interaction history,
+   the primary contact, and account data. Resolution:
+   - Assign the account to the AE who first recorded activity (based on tasks or
+     SalesLoft activity).
+   - Split the account into two (if it involves different departments or regions).
+3. **Recording:** the resolution is recorded in the `Conflict_Resolution__c` field on the
+   account to prevent future disputes.
+
+────────────────────────────────────────────────────────────────────────────────────
+7.2.6. INTEGRATION WITH FORECASTING AND RESOURCE PLANNING
+────────────────────────────────────────────────────────────────────────────────────
+
+- **Revenue forecast (Section 6.4)** uses territory data to group deals and evaluate
+  win rates by region.
+- **Headcount model (Section 7.1)** relies on territory load information when calculating
+  the required number of AEs. If average load in a region exceeds 120% of the norm,
+  the model may recommend headcount increase.
+
+────────────────────────────────────────────────────────────────────────────────────
+**CONCLUSIONS ON TERRITORY DESIGN**
+
+- Territory design ensures a structured, fair, and scalable distribution of the market
+  among AEs.
+- Using Salesforce Territory Management automates account assignment and makes the
+  process transparent for the entire team.
+- Quarterly reviews with agent and RevOps participation enable timely adjustments
+  to boundaries and workload.
+- Clear conflict resolution rules minimize friction and improve sales efficiency.
+
+═══════════════════════════════════════════════════════════════════════════════════

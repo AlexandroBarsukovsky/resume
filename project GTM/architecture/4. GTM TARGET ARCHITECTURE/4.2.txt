@@ -1,0 +1,273 @@
+═══════════════════════════════════════════════════════════════════════════════════
+PROTOCOL: 4.2. MULTI‑LEVEL ORCHESTRATION (4 LEVELS)
+Project: Sourcegraph GTM Infrastructure
+═══════════════════════════════════════════════════════════════════════════════════
+
+**4.2. MULTI‑LEVEL ORCHESTRATION (4 LEVELS)**
+
+Multi‑level orchestration is the central mechanism of the target GTM architecture, implementing the principle of division of labor, which has proven its effectiveness in historical simulations X16 (from Roman quaestors to modern corporations) and X64 (agent holding). Each level has clearly defined functions, independent scaling, and standardized data exchange interfaces. Communication between levels is carried out via an event bus (AWS EventBridge + Kafka), ensuring asynchronicity, reliability, and traceability.
+
+────────────────────────────────────────────────────────────────────────────────────
+4.2.1. LEVEL 1: MASS ANALYSIS (COLLECTION, ENRICHMENT, SCORING)
+────────────────────────────────────────────────────────────────────────────────────
+
+**Purpose**
+Level 1 is responsible for processing raw data from all sources (intent, product, CRM, interactions) and converting it into structured, enriched features, as well as calculating primary metrics (Account Score, Health Score, risk flags). This is the “broadest” level, processing up to 10⁵ events/sec and operating in real time.
+
+**Composition**
+- **1,024 analyst agents** – horizontally scalable microservices, each responsible for processing a specific data stream (e.g., intent signals from 6sense, product events from Snowflake, updates from Salesforce).
+- **Data sources:**
+  - 6sense (intent signals) – via REST API (pull) or webhooks (push).
+  - Snowflake (product events) – via Snowpipe Streaming.
+  - Clearbit / ZoomInfo (enrichment) – via API.
+  - Salesforce (current state of Account, Opportunity) – via Platform Events.
+- **Storage:**
+  - **Redis** – cache for frequently used data (Intent_Strength, Health_Score, Account Score) with TTL 5 minutes.
+  - **Kafka** – buffer for passing results to subsequent levels.
+- **Orchestrator:** Kubernetes (EKS) with HPA (Horizontal Pod Autoscaler) configured based on Kafka queue load.
+
+**Functions**
+
+1. **Real‑time data collection**
+   - Subscription to all event sources via the event bus.
+   - Normalization of data into a unified format (event schema).
+   - Storage of raw events in Snowflake (for historical analysis and audit).
+
+2. **Data enrichment**
+   - For each account (by `account_id`) aggregation of features:
+     * **Intent_Strength** – weighted average of signal strength over the last 7 days, normalized by historical distribution:
+       `Intent_Strength = (∑ (intensity_i × weight_i)) / (∑ weight_i)`, where
+       `weight_i = exp(-age_in_days / 7)` (exponential decay).
+     * **Product_Usage** – normalized value:
+       `Usage = 0.6 × (DAU/MAU) + 0.4 × (active_features / total_features)`
+       (DAU/MAU – 30‑day moving average).
+     * **ICP_Fit** – 0/1 or continuous value based on rules:
+       `ICP_Fit = match(industry, target_industries) × 0.5 + match(technologies, target_stack) × 0.3 + match(employee_count_range) × 0.2`
+     * **Health_Score** (based on product activity, support, engagement):
+       `H = 0.5·U + 0.2·(1−Support_norm) + 0.2·Engagement + 0.1·NPS`
+       (Support_norm – normalized number of tickets; Engagement – email open rate, webinar participation; NPS – surveys if available).
+
+3. **Scoring and prioritization**
+   - **Account Score** (for outreach):
+     `S = 0.4·Intent + 0.3·Usage + 0.3·ICP_Fit`
+   - **Risk Flag** (for CS):
+     `Risk = (Health_Score < 0.5) OR (Activity_drop > 30% over the month)`
+   - **Expansion Signal** (for AM):
+     `Expansion = (Usage > 0.7) AND (new_users_growth > 30%) OR (feature_request)`
+
+4. **Queue formation**
+   - List of accounts with `S > 0.7` → queue for Sales Strategist.
+   - List of accounts with `Risk = True` → queue for CSM.
+   - List of accounts with `Expansion = True` → queue for AM.
+
+5. **Publishing results**
+   - Updating fields in Salesforce (via Hightouch reverse ETL) in real time.
+   - Sending aggregated data to Kafka for levels 2–4.
+   - Logging all calculations in CloudWatch for audit.
+
+**Technical implementation**
+
+- **Language:** Python 3.11.
+- **Framework:** FastAPI (for health checks, metrics).
+- **Libraries:** Pandas (aggregations), Scikit‑learn (normalization, scoring), Snowpark (direct access to Snowflake), redis‑py (caching).
+- **Deployment:** Docker containers in Kubernetes.
+- **Scaling:** HPA based on Kafka queue length (target 1000 messages per pod).
+- **Performance:**
+  - Throughput: 10⁵ events/sec.
+  - Processing time per event: <100 ms (p99).
+  - Latency from source to update in Salesforce: <2 sec.
+
+────────────────────────────────────────────────────────────────────────────────────
+4.2.2. LEVEL 2: STRATEGIC IDEOLOGIES
+────────────────────────────────────────────────────────────────────────────────────
+
+**Purpose**
+Level 2 implements the selection of a course of action (“ideology”) for each account (or group of accounts) based on current business objectives (OKRs) and macroeconomic indicators. Three agents, each with its own ideology, act as a “council,” making a decision that can be overridden by the operator.
+
+**Composition**
+- **3 strategist agents**, each implementing one ideology:
+  * **Conservative** – focus on retaining existing customers, low risk, long‑term contracts, minimal investment in new acquisition.
+  * **Balanced** – moderate growth, diversification, optimization between retention and market capture, standard terms.
+  * **Aggressive** – maximum expansion, high risk, priority on new customers, aggressive investment in marketing and sales, flexible pricing.
+
+- **Rules and models:**
+  - **Rule Engine** – based on business rules (e.g., if the NRR target >120%, shift toward conservative ideology).
+  - **Logistic regression** – to select ideology based on historical data on which strategy gave the best ROI for similar accounts.
+
+**Functions**
+
+1. **Receiving input data**
+   - Prioritized account lists from Level 1 (Account Score, Risk, Expansion).
+   - Current OKRs (ARR, NRR, win rate targets) from the planning system (e.g., via API from RevOps).
+   - Macroeconomic indicators: PMI (manufacturing and services), refinancing rate, technology index (S&P 500 IT), loaded monthly from external sources.
+
+2. **Ideology selection**
+   - For each account or group of accounts (e.g., by segment), the strategist agent calculates a “preference” for each ideology:
+     `pref = w₁·score_from_rules + w₂·macro_score + w₃·historical_success`
+   - The winning ideology (maximum `pref`) is assigned to the account.
+   - The result is recorded in the `Strategic_Ideology` field in Salesforce.
+
+3. **Resource allocation**
+   - Based on the selected ideology, the following are determined:
+     * **Marketing budget** (for ABM campaigns) – conservative: 0.5×, aggressive: 2×.
+     * **Number of AEs allocated to the account** – conservative: 0.2 FTE, aggressive: 1.0 FTE.
+     * **Sales channels** – conservative: direct (AE), aggressive: direct + partners.
+     * **Pricing policy** – conservative: standard prices, aggressive: discounts up to 20%.
+
+4. **Handover to Level 3**
+   - Accounts with assigned ideology and resource parameters are sent to Kafka for tactical groups.
+
+**Technical implementation**
+
+- **Language:** Go (high performance, concurrency).
+- **Libraries:** gocron (periodic recalculation), go‑rules (rule engine), go‑gorm (for working with PostgreSQL where rules are stored).
+- **Deployment:** Kubernetes, 3 pods (one per ideology) + 1 coordinator pod.
+- **Performance:**
+  - Processing up to 10⁴ accounts per minute.
+  - Decision time: <1 sec per account.
+
+────────────────────────────────────────────────────────────────────────────────────
+4.2.3. LEVEL 3: TACTICAL GROUPS
+────────────────────────────────────────────────────────────────────────────────────
+
+**Purpose**
+Tactical groups adapt the overall strategy (ideology) to the specifics of particular segments: industry, region, customer size. Each group specializes in a certain combination of these parameters and generates specific tasks for the execution cluster (Level 4).
+
+**Composition**
+- **96 tactical groups** – each is a container in Kubernetes, scaled independently. The number of groups is obtained as the product:
+  * 4 industries (finance, technology, retail, manufacturing) ×
+  * 4 regions (US, EMEA, APAC, LATAM) ×
+  * 3 customer sizes (SMB, mid‑market, enterprise) = 48 base groups.
+  Duplication for peak loads (2×) = 96 groups.
+
+- **Templates and settings:**
+  - **Messaging templates** (Jinja2) – personalized emails, LinkedIn.
+  - **Channels** – selection of preferred channels: email, calls, partners, self‑service.
+  - **Pricing rules** – base prices, discounts depending on ideology and segment.
+
+**Functions**
+
+1. **Receiving accounts with ideology**
+   - Subscription to the Kafka topic where Level 2 sends accounts.
+   - Filtering: each container receives only accounts that match its specialization (e.g., the “finance, US, enterprise” group).
+
+2. **Adapting tactics**
+   - **Messaging:** selecting a template from the library, substituting parameters (contact name, industry, use cases). Uses Jinja2.
+   - **Channels:** determining the sequence of contacts (email → LinkedIn → call) depending on the ideology (aggressive – fast escalation).
+   - **Pricing:** calculating the final price considering base price, discounts per ideology, regional coefficients.
+
+3. **Creating tasks**
+   - Creating tasks for the execution cluster in JSON format:
+
+```json
+{
+  "account_id": "001...",
+  "contact_ids": ["003..."],
+  "actions": [
+    {"type": "salesloft_sequence", "sequence_id": "seq_123", "priority": "high"},
+    {"type": "create_task", "assigned_to": "strategist@sourcegraph.com", "due_date": "2026-04-01"}
+  ],
+  "pricing": {"discount": 15, "term_months": 12}
+}
+
+Sending tasks to Kafka (topic for Level 4).
+
+**Feedback**
+
+Receiving execution results from Level 4 (success/error) and, if necessary, adjusting tasks (e.g., resending on temporary failure).
+
+**Technical implementation**
+
+- **Language:** Python (FastAPI) for ease of templating and integration with SalesLoft API.
+- **Templating:** Jinja2 with templates pre‑loaded from S3.
+- **Deployment:** Kubernetes, each pod is a separate group.
+- **Scaling:** HPA based on CPU load (target 70%), manual scaling also possible during seasonal peaks.
+- **Performance:**
+  - Processing up to 5000 tasks per minute per group.
+  - Task generation time: <200 ms per account.
+
+────────────────────────────────────────────────────────────────────────────────────
+4.2.4. LEVEL 4: EXECUTION CLUSTER
+────────────────────────────────────────────────────────────────────────────────────
+
+**Purpose**  
+The execution cluster performs specific operations prescribed by the tactical groups. This is the “broadest” level (3,000 agents), divided by functional areas. Agents interact with external APIs (Salesforce, SalesLoft, Gainsight, Tableau) and internal services.
+
+**Composition and functions**
+
+| Functional Area          | Number of Agents | Type of Operations                                                                 | Technology               |
+|--------------------------|------------------|------------------------------------------------------------------------------------|--------------------------|
+| **Intent signals**       | 500              | Enrich data from 6sense, update Intent_Strength in Salesforce,                      | AWS Lambda (Python)       |
+|                          |                  | run additional checks (ICP)                                                        |                          |
+| **Funnel management**    | 800              | Create/update Opportunities, demo tasks, follow‑ups, update stages,                | AWS Lambda + Kubernetes   |
+|                          |                  | send notifications in Slack, email                                                  | (for long‑running)       |
+| **Customer Success**     | 700              | Monitor Health Score, run playbooks (email, CSM task), track                       | AWS Lambda + Gainsight    |
+|                          |                  | expansion signals, update data in Gainsight                                        | API                      |
+| **Financial operations** | 600              | Calculate AE/CSM commissions, prepare forecasts (model), plan‑to‑actual analysis,  | Python (NumPy/Pandas)     |
+|                          |                  | generate reports for CFO                                                           | in Snowflake             |
+| **Reporting**            | 400              | Automatically prepare QBRs, board packs, dashboards in Tableau,                    | Tableau API, Python       |
+|                          |                  | generate insights for management, email distribution                                |                          |
+
+**Detailed operations by function**
+
+**Intent signals (500 agents)**
+- Subscribe to Kafka topic with raw intent events from 6sense.
+- For each event:
+  - Enrich via Clearbit/ZoomInfo (if needed).
+  - Update the `Intent_Strength` field in Salesforce via REST API.
+  - If `Intent_Strength` exceeds the threshold (0.7) – additionally send a notification to Slack for the Sales Strategist.
+- Processing one event takes <500 ms (p99).
+- Uses AWS Lambda (Python) triggered by Kafka (MSK). Maximum concurrent instances – 500.
+
+**Funnel management (800 agents)**
+- Two types of tasks:
+  * **Fast (Lambda):** create a task in Salesforce, send email, update a field. Execution time <1 sec.
+  * **Long‑running (Kubernetes):** create complex sequences in SalesLoft, generate contracts in Ironclad (may take up to 5 sec).
+- Executor agents receive tasks from Kafka topic, execute them, update status (success/error), and send acknowledgment back to Kafka.
+- To ensure idempotency, each task has a unique `task_id`; before execution, it is checked whether it has already been processed (via Redis).
+
+**Customer Success (700 agents)**
+- Health Score monitoring: periodic (every hour) calculation for all accounts using data from Gainsight and Snowflake.
+- When Health Score changes:
+  * If `H < 0.5` – launch retention playbook:
+    - Create a task for CSM in Salesforce.
+    - Send email to the client with an offer of help.
+    - Log the incident.
+  * If `H > 0.8` and activity is growing – launch expansion playbook:
+    - Create a task for AM.
+    - Prepare a commercial proposal (via financial agents).
+- Agents also track expansion signals (user growth, feature requests) and initiate corresponding actions.
+
+**Financial operations (600 agents)**
+- **Commission calculation:** monthly based on closed deals and actual revenue. Uses Python (NumPy) for calculations, data from Snowflake.
+- **Forecasting:** weekly run of the model (see section 6.4) updating `Forecast_Category`, `Win_Probability` fields in Salesforce.
+- **Plan‑to‑actual analysis:** compare actual revenue with forecast, generate reports for the CFO.
+- All calculations are performed in Kubernetes containers (long‑running tasks), results stored in Snowflake and Salesforce.
+
+**Reporting (400 agents)**
+- **Automatic QBR preparation:** 2 weeks before the end of the quarter, agents collect data from Salesforce, Snowflake, Gainsight, generate a PDF report (using LaTeX or ReportLab) and send it to management.
+- **Board pack:** similar, but with more detail and charts (Tableau API).
+- **Weekly dashboards:** update Tableau via API, send dashboard links by email.
+- **Insights:** based on data analysis, agents generate textual conclusions (e.g., “Win rate in the technology sector dropped by 5% due to decreased competitor activity”).
+
+**Technical implementation**
+
+- **Fast operations:** AWS Lambda, triggered by Kafka (MSK). Maximum concurrent invocations – 1000.
+- **Long‑running operations:** Kubernetes (EKS), pods with auto‑scaling based on CPU/RAM.
+- **Data exchange:** Kafka (MSK) for tasks and results.
+- **API calls:** using circuit breaker (resilience4j) to protect against failures of external services.
+- **Monitoring:** CloudWatch (logs, metrics), alerts when latency >1 sec or error rate >1%.
+
+────────────────────────────────────────────────────────────────────────────────────
+**CONCLUSIONS ON MULTI‑LEVEL ORCHESTRATION**
+
+The proposed four‑level structure provides:
+
+- **Scalability** – each level can be scaled independently (e.g., add tactical groups when entering new markets).
+- **Resilience** – a failure at one level (e.g., temporary unavailability of Salesforce) does not stop the others.
+- **Flexibility** – strategic ideologies and tactical groups are easily adapted to changing business objectives.
+- **Transparency** – all decisions are recorded and can be analyzed by operators.
+
+All quantitative parameters (number of agents, thresholds) were obtained from simulations that showed that this configuration provides an optimal balance between performance and complexity.
+
+═══════════════════════════════════════════════════════════════════════════════════

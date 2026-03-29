@@ -1,0 +1,135 @@
+═══════════════════════════════════════════════════════════════════════════════════
+PROTOCOL: 9.2. ACCOUNT EXECUTIVE (DEAL MANAGEMENT, MEDDPICC QUALIFICATION)
+Project: Sourcegraph GTM Infrastructure
+═══════════════════════════════════════════════════════════════════════════════════
+
+**9.2. ACCOUNT EXECUTIVE (DEAL MANAGEMENT, MEDDPICC QUALIFICATION)**
+
+────────────────────────────────────────────────────────────────────────────────────
+9.2.1. PURPOSE AND PLACE IN THE ORGANISATIONAL STRUCTURE
+────────────────────────────────────────────────────────────────────────────────────
+
+Account Executive (AE) is the central role in the sales cycle, responsible for turning
+qualified opportunities into closed deals. In the target GTM architecture, the AE
+works closely with the Sales Strategist (receives ready‑made Opportunities),
+but can also initiate deals independently through partner channels or direct contacts.
+The main task is to conduct complex enterprise negotiations, apply MEDDPICC methodology,
+and ensure accurate forecasting. The AE reports to the VP of Sales (or Sales Director),
+interacts with RevOps, Legal, and with the CSM after deal closure.
+
+**Key value:** closing large contracts that drive ARR growth,
+and maintaining forecast accuracy for business planning.
+
+────────────────────────────────────────────────────────────────────────────────────
+9.2.2. MAIN RESPONSIBILITIES AND AREAS OF ACCOUNTABILITY
+────────────────────────────────────────────────────────────────────────────────────
+
+| Area                         | Details                                                                  |
+|------------------------------|--------------------------------------------------------------------------|
+| **Acceptance and qualification** | Receive Opportunities from Strategist or create them independently. Perform in‑depth qualification using MEDDPICC (see below). |
+| **Deal management**          | Conduct product demonstrations (with SE involvement if needed), negotiate pricing, terms, timelines. Use standard contract templates. |
+| **MEDDPICC qualification**   | Fill structured MEDDPICC_Fields__c (JSON) in Salesforce: Metrics, Economic Buyer, Decision Criteria, Decision Process, Paper Process, Identify Pain, Champion, Competition. |
+| **Forecasting**              | Regularly (weekly) update deal stage, closing probability (Win_Probability__c), and forecast category (Forecast_Category__c). Participate in forecast sessions with management. |
+| **Contract work**            | Coordinate contract preparation with Legal (Ironclad), track signature. Ensure compliance with internal policies (discounts, terms). |
+| **Feedback**                 | Record loss reasons (Lost_Reason__c) to improve models and processes. Report data or automation issues to RevOps. |
+| **Interaction with CSM/AM**  | After deal closure, hand over information to CSM (onboarding). For expansion, coordinate with AM. |
+
+────────────────────────────────────────────────────────────────────────────────────
+9.2.3. COMPETENCIES AND REQUIREMENTS
+────────────────────────────────────────────────────────────────────────────────────
+
+| Competency                 | Requirements                                                             |
+|----------------------------|--------------------------------------------------------------------------|
+| **Negotiation skills**     | Proven experience in complex B2B negotiations, working with C‑level, legal departments. |
+| **MEDDPICC methodology**   | Strong command of MEDDPICC, ability to ask the right questions and record answers in a structured way. |
+| **Product expertise**      | Deep understanding of the code intelligence platform (Code Search, Deep Search, MCP), needs of developers and engineering teams. |
+| **Technical literacy**     | Experience with Salesforce (Opportunity, reports), ZoomInfo, Ironclad. Understanding of how technology products work. |
+| **Analytical skills**      | Ability to interpret data (win rates, deal cycles) and make prioritisation decisions. |
+| **Experience**             | 5+ years in enterprise sales in SaaS/technology companies. Experience with developer‑focused products is an advantage. |
+
+────────────────────────────────────────────────────────────────────────────────────
+9.2.4. TYPICAL WORKDAY
+────────────────────────────────────────────────────────────────────────────────────
+
+| Time        | Action                                                                   |
+|-------------|--------------------------------------------------------------------------|
+| 9:00–9:30   | Check Salesforce: new Opportunities, MEDDPICC tasks, updates from Strategist. |
+| 9:30–11:00  | Demos and meetings with potential customers (usually 2–3 meetings).      |
+| 11:00–12:00 | Meeting preparation: gather customer data, configure demo, coordinate with SE. |
+| 12:00–13:00 | Lunch.                                                                   |
+| 13:00–14:00 | Update deals in Salesforce: stages, Win_Probability, MEDDPICC fields.    |
+| 14:00–15:00 | Contract negotiations, communication with Legal, term alignment.         |
+| 15:00–16:00 | Internal calls: forecast session with management, information exchange with CSM. |
+| 16:00–17:00 | Work on incoming requests, log activities, plan next day.                |
+
+**Note:** distribution may vary depending on deal stage and region.
+
+────────────────────────────────────────────────────────────────────────────────────
+9.2.5. KEY PERFORMANCE INDICATORS (KPIs)
+────────────────────────────────────────────────────────────────────────────────────
+
+| KPI                                  | Formula / Measurement Method                     | Target Value                |
+|--------------------------------------|--------------------------------------------------|-----------------------------|
+| **ARR quota attainment**             | Closed revenue / quarterly quota                 | ≥100%                       |
+| **Win rate (enterprise)**            | (Closed Won) / (Closed Won + Closed Lost)        | >25%                        |
+| **Average sales cycle length**       | Average days from Opportunity creation to Closed Won | <96 days                    |
+| **Forecast accuracy (individual)**   | MAPE (forecast vs actual)                        | <15%                        |
+| **MEDDPICC completeness**            | Percentage of deals with MEDDPICC_Completeness__c >0.7 | >80%                        |
+| **Pipeline coverage**                | Pipeline sum / quarterly quota                   | >3×                         |
+
+All KPIs are tracked in Tableau and Salesforce; the AE has access to a personal
+dashboard with trends and comparisons to the plan.
+
+────────────────────────────────────────────────────────────────────────────────────
+9.2.6. INTERACTION WITH AUTOMATION AND AGENTS
+────────────────────────────────────────────────────────────────────────────────────
+
+| Automated component      | Role in AE’s work                                                        |
+|--------------------------|--------------------------------------------------------------------------|
+| **Analyst agents (Level 1)** | Provide customer data (Intent_Strength, Health_Score) that the AE can use when preparing for meetings. |
+| **Financial agents (Level 4)** | Weekly update Win_Probability__c (based on model) and Forecast_Category__c, helping the AE verify their own estimates. |
+| **Triggers (T12)**            | Remind to fill MEDDPICC fields if completeness is low.                   |
+| **Automated contract creation (T05)** | When moving to “Proposal” stage, the system creates a contract in Ironclad, reducing manual work for the AE. |
+| **Control panel**          | The AE can view their KPIs, load, forecasts; RevOps operators assist with issues. |
+| **SalesLoft integration**   | Sequences for follow‑up are automatically created, but the AE can manage them manually. |
+
+**Human actions not replaceable by automation:**
+- Conducting demos and negotiations – core skills requiring empathy and persuasion.
+- Interpreting complex customer requirements and adapting proposals.
+- Making decisions on discounts and contract terms (within delegated authority).
+- Engaging with C‑level customers.
+
+────────────────────────────────────────────────────────────────────────────────────
+9.2.7. INTERACTION WITH OTHER ROLES
+────────────────────────────────────────────────────────────────────────────────────
+
+| Role            | Interaction                                                              |
+|-----------------|--------------------------------------------------------------------------|
+| **Sales Strategist** | Receives qualified Opportunities; may participate in initial meetings for support. |
+| **RevOps**      | Collaborates with RevOps to adjust forecasts, reports data issues. RevOps configures Win_Probability models. |
+| **CSM**         | Hand over the customer after deal closure (onboarding); AE may participate in the handoff. |
+| **AM**          | When expansion signals appear during a deal (e.g., customer requests more licenses) – AE coordinates with AM to incorporate into the contract. |
+| **Legal**       | Interaction during contract preparation (via Ironclad and directly).     |
+
+────────────────────────────────────────────────────────────────────────────────────
+9.2.8. TRAINING AND ONBOARDING
+────────────────────────────────────────────────────────────────────────────────────
+
+- **Onboarding:** 4–6 weeks: familiarisation with the product (technical details), MEDDPICC methodology, tools (Salesforce, Ironclad), forecasting processes.
+- **Mentoring:** first 3 months the AE works with a mentor (experienced colleague) on large deals.
+- **Certification:** internal certification on MEDDPICC and product expertise.
+- **Continuing education:** quarterly training on negotiations, competitive analysis, using data in sales.
+
+────────────────────────────────────────────────────────────────────────────────────
+**CONCLUSIONS ON THE ACCOUNT EXECUTIVE ROLE**
+
+- The AE is a key link in converting opportunities into revenue, relying
+  on MEDDPICC methodology and accurate forecasting.
+- Automation (financial agents, reminders, contracts) frees the AE
+  from routine work, allowing focus on negotiations and strategy.
+- KPIs focus on quality (win rate, forecast accuracy) and efficiency
+  (cycle length), not just volume.
+- The role requires high proficiency in negotiations, technical literacy,
+  and the ability to work with data.
+
+═══════════════════════════════════════════════════════════════════════════════════

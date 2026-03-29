@@ -1,0 +1,217 @@
+═══════════════════════════════════════════════════════════════════════════════════
+SECTION 5. CRM DESIGN (SALESFORCE)
+Project: Sourcegraph GTM Infrastructure
+═══════════════════════════════════════════════════════════════════════════════════
+
+**5. CRM DESIGN (SALESFORCE)**
+
+Salesforce serves as the central system of record for all GTM operational data in the target architecture. Customer profiles, deals, activities, and forecasts are stored and updated here. All automated agent actions that require writing to the CRM are performed via the Salesforce API, and data changes are published through Platform Events, ensuring event‑driven connectivity with the rest of the system. This section details the CRM model enhancements required to support multi‑level orchestration, scoring models, and automation.
+
+────────────────────────────────────────────────────────────────────────────────────
+5.1. OBJECTS AND KEY FIELDS
+────────────────────────────────────────────────────────────────────────────────────
+
+**5.1.1. Account (ICP_Fit, Intent_Strength, Health_Score, Last_Activity)**
+
+The Account object is the primary container for customer (company) information. New fields are introduced and existing ones are extended to store data used by agents and models.
+
+| Field                      | Type           | Description                                                                 | Source / Update                               |
+|----------------------------|----------------|-----------------------------------------------------------------------------|------------------------------------------------|
+| **ICP_Fit__c**             | Number (0–1)   | Fit with ideal customer profile based on Clearbit/ZoomInfo                  | Analytic agents (Level 1) → Hightouch          |
+| **Intent_Strength__c**     | Number (0–1)   | Aggregated intent signal strength over the last 7 days                      | Analytic agents → Hightouch                    |
+| **Health_Score__c**        | Number (0–1)   | Composite customer health indicator (churn risk, expansion readiness)       | Analytic agents → Hightouch / Gainsight API    |
+| **Strategic_Ideology__c**  | Picklist       | Selected strategic ideology (Conservative / Balanced / Aggressive)          | Strategist agents (Level 2) → API              |
+| **Last_Activity_Date__c**  | DateTime       | Date of the last recorded activity (product, interaction)                   | Analytic agents (from Snowflake / SalesLoft)   |
+| **Risk_Flag__c**           | Boolean        | High‑risk flag (Health_Score < 0.5 or sharp activity drop)                  | Analytic agents → Hightouch                    |
+| **Expansion_Signal__c**    | Boolean        | Expansion readiness signal (Usage >0.7 and user growth >30%)                | Analytic agents → Hightouch                    |
+| **Owner_Assigned_By__c**   | Lookup(User)   | Who (agent or human) last assigned the account owner                        | Automatically when OwnerId is updated          |
+
+All these fields will be used in reports, dashboards, and triggers. They are synchronized in real time via reverse ETL (Hightouch) or direct API calls from agents.
+
+**5.1.2. Opportunity (Stage, Win_Probability, Forecast_Category, MEDDPICC fields)**
+
+The Opportunity object represents a deal at various stages of the lifecycle. Additional fields are introduced to improve forecast accuracy and automation.
+
+| Field                       | Type           | Description                                                                 | Source / Update                               |
+|-----------------------------|----------------|-----------------------------------------------------------------------------|------------------------------------------------|
+| **Win_Probability__c**      | Number (0–1)   | Model‑calculated probability of closing the deal                           | Financial agents (Level 4) → API               |
+| **Forecast_Category__c**    | Picklist       | Forecast category (Commit / Best Case / Pipeline)                           | Financial agents (based on Win_Probability)    |
+| **Forecast_Accuracy__c**    | Number (0–1)   | Historical forecast accuracy for the given stage/segment                    | Financial agents → API                         |
+| **MEDDPICC_Fields__c**      | Long Text      | Structured MEDDPICC data (JSON)                                             | AE (via custom interface) / API                |
+| **MEDDPICC_Completeness__c**| Number (0–1)   | Degree of MEDDPICC field completeness (for automated qualification)         | Analytic agents (JSON check) → API             |
+| **Days_In_Stage__c**        | Number         | Number of days the deal has been in the current stage                       | Automatic calculation (formula)                |
+| **Last_Stage_Change__c**    | DateTime       | Time of the last stage change                                                | Automatic (workflow)                           |
+| **Assigned_AE__c**          | Lookup(User)   | Responsible Account Executive (duplicates OwnerId for clarity)              | Upon creation / update                         |
+| **Agent_Task_ID__c**        | Text           | Task identifier of the agent that created/updated the record                | Agents when calling the API                    |
+
+MEDDPICC_Fields__c stores JSON in the following format:
+
+{
+  "Metrics": "$500k contract, budget approved",
+  "Economic_Buyer": "CTO John Smith",
+  "Decision_Criteria": "stability, Java support",
+  "Decision_Process": "board of directors vote",
+  "Paper_Process": "Ironclad contract, needs CTO signature",
+  "Identify_Pain": "time lost searching code, incidents",
+  "Champion": "Tech Lead Anna",
+  "Competition": "GitLab Code Search"
+}
+
+**5.1.3. Activity (Type, Outcome, Created_by_Agent_ID)**
+
+The Activity object (Task, Event) records interactions with the customer. Special fields are added for tracing automated actions.
+
+| Field                       | Type           | Description                                                                 | Source / Update                               |
+|-----------------------------|----------------|-----------------------------------------------------------------------------|------------------------------------------------|
+| **Created_by_Agent_ID__c**  | Text           | Unique identifier of the agent (or “human” for manual actions)              | Automatically upon creation                    |
+| **Agent_Task_ID__c**        | Text           | Task ID from the agent queue (to link with logs)                           | Agents when calling the API                    |
+| **Outcome__c**              | Text           | Outcome of the activity (e.g., “reply received”, “meeting scheduled”)       | Agents / users                                 |
+| **Automated__c**            | Boolean        | Flag indicating the activity was created automatically                      | Agents upon creation                           |
+
+All activities created by agents will have `Automated__c = true` and a populated `Created_by_Agent_ID__c` field. This allows reports to distinguish automated actions from manual ones and to analyze agent effectiveness.
+
+────────────────────────────────────────────────────────────────────────────────────
+5.2. AUTOMATION VIA TRIGGERS (PLATFORM EVENTS, PROCESS BUILDER, APEX)
+────────────────────────────────────────────────────────────────────────────────────
+
+In the target architecture, Salesforce automation is built on three layers: **Platform Events** (for event‑driven interaction with external systems), **Process Builder / Flow** (for simple internal automations), and **Apex Triggers** (for complex logic requiring high performance).
+
+**5.2.1. Platform Events**
+Platform Events are used to publish data changes that agents subscribe to (via EventBridge). This ensures asynchronicity and reliability.
+
+| Event Name                      | Fields                                                        | Trigger                                               |
+|----------------------------------|---------------------------------------------------------------|-------------------------------------------------------|
+| **Account_Change__e**            | Account_Id, Changed_Fields (JSON)                              | When ICP_Fit, Intent_Strength, Health_Score, Risk_Flag are updated |
+| **Opportunity_Change__e**        | Opportunity_Id, Stage, Win_Probability, Forecast_Category      | When Stage, Win_Probability, or Forecast_Category change |
+| **Task_Created__e**              | Task_Id, Account_Id, Created_by_Agent_ID                       | When a task is created by an agent                    |
+
+These events are published via Apex triggers (see below) and sent to EventBridge, where they trigger the corresponding agents.
+
+**5.2.2. Process Builder / Flow**
+For simple, fast actions that do not require external calls, Process Builder and Flow are used.
+
+- **When an Opportunity is created**:
+  - If `MEDDPICC_Completeness__c` < 0.7, a task is created for the AE: “Fill in MEDDPICC fields”.
+  - `Days_In_Stage__c` is automatically set to 0.
+
+- **When Stage is updated**:
+  - If the Stage changes to “Closed Won”, a Flow is triggered that creates a task for the CSM (with an onboarding template) and sends a Slack notification (via Incoming Webhook).
+
+- **When a Task is created with `Automated__c = true`**:
+  - The task is automatically linked to the corresponding Opportunity (if specified) and assigned “Medium” priority (manual tasks have higher priority).
+
+**5.2.3. Apex Triggers**
+Apex is used for complex logic that requires high performance and access to multiple objects.
+
+- **Trigger on Account (after update)**
+  - If any of the key fields (`ICP_Fit__c`, `Intent_Strength__c`, `Health_Score__c`, `Risk_Flag__c`) changes, a Platform Event `Account_Change__e` is published with the changed fields.
+  - If `Health_Score__c` < 0.5 and `Risk_Flag__c` is not set, the flag is set and a task is created for the CSM (if none was created in the last 7 days).
+  - If `Expansion_Signal__c` becomes true, a task is created for the AM.
+
+- **Trigger on Opportunity (after update)**
+  - When Stage, Win_Probability, or Forecast_Category change, a Platform Event `Opportunity_Change__e` is published.
+  - If Stage changes to “Closed Won”, a contract is created in Ironclad (via callout) and the `Contract_Status__c` field is updated.
+  - If a deal remains in the “Proposal” stage for more than 30 days, a task is created for the sales manager to escalate.
+
+- **Trigger on Task (after insert)**
+  - If the task was created by an agent (`Automated__c = true`), `Created_by_Agent_ID__c` and `Agent_Task_ID__c` are populated from the context passed via the API.
+  - If the task is related to an Opportunity, an activity counter on the Opportunity is incremented.
+
+All Apex code is covered by tests (coverage >90%), deployed via CI/CD (GitHub Actions), and uses `@future(callout=true)` for external calls to avoid synchronous call limits.
+
+────────────────────────────────────────────────────────────────────────────────────
+5.3. INTEGRATION WITH EXTERNAL SOURCES (HIGHTOUCH, 6SENSE, GAINSIGHT)
+────────────────────────────────────────────────────────────────────────────────────
+
+**5.3.1. Hightouch (Reverse ETL)**
+Hightouch is responsible for synchronizing data from Snowflake to Salesforce. All calculations performed by agents (Account Score, Health Score, etc.) are written to Snowflake, and Hightouch updates the corresponding fields in Salesforce in real time.
+
+- **Configuration:**
+  - **Source:** Snowflake (tables `account_scores`, `health_scores`, `expansion_signals`).
+  - **Target:** Salesforce (Account, Opportunity objects).
+  - **Mode:** Real‑time (webhooks) – when data is inserted/updated in Snowflake, Hightouch sends a webhook to the Salesforce REST API.
+  - **Mapping:** Table fields correspond to custom fields in Salesforce (see 5.1).
+
+- **Reliability:**
+  - Alerts are configured in Hightouch for synchronization errors.
+  - Idempotency is used for each update: records contain an `external_id` (Account_ID), preventing duplication.
+
+**5.3.2. 6sense**
+6sense provides intent data. Analytic agents periodically call the 6sense REST API to fetch signals for a list of accounts. After processing, the results (Intent_Strength) are saved to Snowflake, from where Hightouch syncs them to Salesforce.
+
+- **Mechanism:**
+  - Agents (Lambda) query the 6sense API every 30 minutes for accounts with `ICP_Fit__c` > 0.5 or that have not been updated for >6 hours.
+  - The received signals are aggregated, normalized, and stored in Snowflake.
+  - Hightouch updates the `Intent_Strength__c` field in Salesforce.
+
+**5.3.3. Gainsight**
+Gainsight is used to manage health scores and playbooks. The integration is bidirectional:
+
+- **From Salesforce to Gainsight:** The standard Gainsight Connector synchronizes Account and Opportunity objects, as well as custom fields (Health_Score, Risk_Flag). This allows Gainsight to display health scores and trigger playbooks.
+- **From Gainsight to Salesforce:** Gainsight can update health scores (if a playbook changes the score) via API; however, in the target architecture, health scores are calculated by agents, so the reverse flow is used only to synchronize playbook statuses (e.g., `Playbook_Executed__c`).
+
+- **Playbook:**
+  - When `Health_Score__c` < 0.5, Gainsight automatically launches the “Retention” playbook, which creates a task in Salesforce for the CSM and sends an email to the customer.
+  - Playbook execution results are recorded in Gainsight and update the `Last_Playbook_Date__c` field in Salesforce via API.
+
+────────────────────────────────────────────────────────────────────────────────────
+5.4. REPORTS AND DASHBOARDS (EXECUTIVE DASHBOARD, SALES DASHBOARD, CS DASHBOARD)
+────────────────────────────────────────────────────────────────────────────────────
+
+All dashboards are built in Tableau, but data is prepared in Salesforce and Snowflake. Simplified versions are also created in Salesforce for quick access. Key dashboards are described below.
+
+**5.4.1. Executive Dashboard (for CRO, CPO, investors)**
+
+| Block                    | Content                                                                 |
+|--------------------------|-------------------------------------------------------------------------|
+| **ARR and Growth**       | Current ARR, growth rate (YoY, QoQ), quarter‑end forecast               |
+| **Net Retention**        | NRR in %, segmented, trend over the last 4 quarters                     |
+| **Pipeline Coverage**    | Total pipeline / quarterly quota; color‑coded (>3× – green)             |
+| **Forecast Accuracy**    | Comparison of forecast (MAPE) and actual revenue; accuracy by segment   |
+| **Health Score**         | Customer distribution by zones (green/yellow/red)                       |
+| **Win Rate**             | Win rate by stage, segment, region                                      |
+| **Top Opportunities**    | List of the 10 largest deals in the pipeline with close probability     |
+| **Alerts**               | Critical: Pipeline Coverage <2×, Forecast Accuracy <80%, Churn Spike    |
+
+**5.4.2. Sales Dashboard (for VP Sales, AE, Sales Strategist)**
+
+| Block                    | Content                                                                 |
+|--------------------------|-------------------------------------------------------------------------|
+| **Quota and attainment** | AE quota attainment (YTD), performance ranking                          |
+| **Pipeline by AE**       | Pipeline amount, coverage, forecasted close per AE                      |
+| **Activity**             | Number of meetings, demos, emails sent; comparison with norm            |
+| **MEDDPICC completeness**| Percentage of deals with MEDDPICC fields filled, impact on win rate     |
+| **Intent signals**       | List of accounts with high Account Score (S>0.7) for immediate outreach |
+| **Deal cycle**           | Average deal duration by stage; identification of stalled deals         |
+| **Won / Lost**           | Analysis of lost reasons (competitors, price, timing)                   |
+
+**5.4.3. CS Dashboard (for VP CS, CSM, AM)**
+
+| Block                    | Content                                                                 |
+|--------------------------|-------------------------------------------------------------------------|
+| **Health Score**         | List of customers in red (H<0.5) and yellow (0.5≤H<0.8) zones, sorted by priority |
+| **Expansion Signals**    | Customers with Expansion_Signal flag, ready for upsell/cross‑sell       |
+| **Churn Risk**           | High‑risk customers (Health_Score <0.5 or sharp activity drop)          |
+| **Onboarding**           | Time from deal close to first active use (TTFV)                         |
+| **Playbook**             | Playbooks launched (retention, expansion) and their status              |
+| **NPS and feedback**     | NPS survey results, key complaints and suggestions                      |
+| **CSM activity**         | Number of meetings, tasks created, response time to alerts              |
+
+**Dashboard implementation:**
+- **Tableau** – main dashboards with live connection to Snowflake and Salesforce. Real‑time updates for critical panels; others refresh every 15 minutes.
+- **Salesforce Dashboards** – simplified versions for quick access inside CRM (using standard reports and dashboards). They also consume data from custom fields updated via reverse ETL.
+- **Distribution** – weekly digests (PDF) are automatically generated by reporting agents and sent to subscribed users.
+
+────────────────────────────────────────────────────────────────────────────────────
+**CONCLUSIONS ON CRM DESIGN**
+
+- The modifications to Salesforce objects (Account, Opportunity, Activity) ensure that all data required for agents and models is stored, with minimal changes to existing processes.
+- Automation through Platform Events, Process Builder, and Apex enables publishing events to external systems and performing internal automations without manual intervention.
+- Integration with Hightouch, 6sense, and Gainsight uses standard APIs and reverse ETL, guaranteeing real‑time synchronization and maintaining a single source of truth.
+- Dashboards provide transparency for all management levels – from executors to C‑level – based on data updated in real time.
+
+═══════════════════════════════════════════════════════════════════════════════════
+
+═══════════════════════════════════════════════════════════════════════════════════
+**Note:** Additional protocols for each subsection are provided in the current folder.
+═══════════════════════════════════════════════════════════════════════════════════

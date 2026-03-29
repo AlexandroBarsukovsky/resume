@@ -1,0 +1,155 @@
+═══════════════════════════════════════════════════════════════════════════════════
+SECTION 8. AUTOMATION: TRIGGERS AND WORKFLOWS
+Project: Sourcegraph GTM Infrastructure
+═══════════════════════════════════════════════════════════════════════════════════
+
+**8. AUTOMATION: TRIGGERS AND WORKFLOWS**
+
+Automation is the central mechanism of the target GTM architecture, ensuring
+reduced response time, elimination of manual work, and operational predictability.
+All automated actions are built on an event‑driven approach: events (data changes,
+intent signals, timers) trigger triggers, which launch predefined workflows (playbooks)
+and role handovers. This section describes the complete list of triggers, key playbooks,
+and the customer lifecycle with automated handovers.
+
+────────────────────────────────────────────────────────────────────────────────────
+8.1. COMPLETE LIST OF TRIGGERS (EVENT → ACTION)
+────────────────────────────────────────────────────────────────────────────────────
+
+Triggers are the core elements of event‑driven automation. Each trigger defines
+an event (or combination of events) and the corresponding action performed by an agent
+(or multiple agents). The full list of triggers to be implemented in the target
+architecture is provided below. Detailed descriptions of each trigger (including
+conditions, priorities, error handling) will be presented in a separate protocol (8.1).
+
+| ID  | Event                                                 | Action                                                                 |
+|-----|-------------------------------------------------------|------------------------------------------------------------------------|
+| T01 | Account Score > 0.7                                   | Create high‑priority task for Sales Strategist, add account to SalesLoft queue. |
+| T02 | New intent signal (6sense)                            | Update Intent_Strength in Salesforce, recalculate Account Score.       |
+| T03 | Health Score < 0.5                                    | Launch retention playbook (see 8.2.1).                                 |
+| T04 | Health Score > 0.8 and user growth >30%               | Launch expansion playbook (see 8.2.2).                                 |
+| T05 | Opportunity moves to “Proposal” stage                 | Create contract in Ironclad, notify Legal.                             |
+| T06 | Opportunity moves to “Closed Won”                     | Create task for CSM (onboarding), update forecast, launch onboarding playbook. |
+| T07 | Opportunity moves to “Closed Lost”                    | Record loss reason, update win rate model.                             |
+| T08 | Pipeline Coverage < 3× (weekly calculation)           | Send alert to CRO, create task for RevOps.                             |
+| T09 | Account inactive for 14 days (Last_Activity_Date)     | Automatically include in nurture campaign (SalesLoft).                 |
+| T10 | Expansion Signal = true                               | Launch expansion playbook (see 8.2.2).                                 |
+| T11 | Demo request created (Demo_Request)                   | Create task for AE, add to qualification queue.                        |
+| T12 | MEDDPICC_Completeness < 0.7 (Opportunity)             | Create task for AE reminding to fill fields.                           |
+| T13 | Contract renewal with amount >110% of previous        | Create task for AM, mark as expansion opportunity.                     |
+| T14 | Territory change (reassignment)                       | Recalculate AE quotas, notify AE and RevOps.                           |
+| T15 | Agent overload (errors >5% per hour)                  | Send alert to RevOps operators in control panel.                       |
+| T16 | New quarter (quarterly timer)                         | Launch forecast calculation (6.4), update OKRs, recalculate headcount. |
+
+All triggers are implemented through a combination of Salesforce Platform Events, Apex,
+processes in agents (Levels 1–4), and external webhooks. Technical implementation details
+will be provided in a separate protocol.
+
+────────────────────────────────────────────────────────────────────────────────────
+8.2. DESCRIPTION OF KEY PLAYBOOKS
+────────────────────────────────────────────────────────────────────────────────────
+
+Playbooks are sequences of automated actions triggered when certain conditions are met.
+Each playbook may include task creation, email sending, API calls, data updates in
+Salesforce/Gainsight, and escalation. Descriptions of the four key playbooks are provided
+below. Detailed step‑by‑step instructions, including entry conditions, exceptions,
+and success metrics, will be presented in separate protocols (8.2.1 – 8.2.4).
+
+**8.2.1. Playbook “Retention” (Health Score < 0.5)**
+- **Trigger:** Health_Score__c < 0.5 (automatically updated by agents).
+- **Actions:**
+  1. Create a high‑priority task for the CSM (Due: 24 hours).
+  2. Send an email to the customer offering help (Gainsight template).
+  3. Log the event in Gainsight.
+  4. If the task is not closed after 3 days – escalate to CSM manager.
+- **Output:** Health Score improvement or risk confirmation.
+
+**8.2.2. Playbook “Expansion” (Expansion Signal)**
+- **Trigger:** Expansion_Signal__c = true.
+- **Actions:**
+  1. Create a high‑priority task for the AM.
+  2. Prepare a commercial proposal (financial agents) based on
+     current consumption and requested features.
+  3. Send a notification to the Slack channel #expansion-opportunities.
+  4. If the task is not closed after 5 days – reminder and escalation.
+- **Output:** Creation of an expansion Opportunity or decline.
+
+**8.2.3. Playbook “Qualification” (Account Score > 0.7)**
+- **Trigger:** Account_Score__c > 0.7 (recalculated after intent signal).
+- **Actions:**
+  1. Create a task for the Sales Strategist (Priority High).
+  2. Add the account to the SalesLoft queue (personalised email).
+  3. Record in the Account history.
+- **Output:** Qualified account handed over to AE.
+
+**8.2.4. Playbook “Proactive Pipeline Alert” (Pipeline Coverage < 3×)**
+- **Trigger:** Weekly calculation of Pipeline Coverage (total pipeline / quarterly quota) < 3.
+- **Actions:**
+  1. Send an email to the CRO and VP Sales with a notification.
+  2. Create a task for RevOps (root cause analysis, proposed actions).
+  3. If coverage <2× – launch an emergency meeting (via calendar).
+- **Output:** Adjustment of acquisition strategy (increase marketing budget,
+  activation of ABM campaigns).
+
+────────────────────────────────────────────────────────────────────────────────────
+8.3. CUSTOMER LIFECYCLE AND AUTOMATED ROLE HANDOVERS
+────────────────────────────────────────────────────────────────────────────────────
+
+The customer lifecycle is automated so that handovers between stages and roles
+occur without manual intervention. Each handover is triggered by an event and managed
+by the relevant triggers and playbooks. The main stages and automated handovers are
+described below. Detailed breakdown of each handover (including conditions, responsible
+parties, KPIs) will be provided in separate protocols (8.3.1 – 8.3.4).
+
+**8.3.1. From Intent Signal to Qualification (Sales Strategist)**
+- **Input:** Intent signal from 6sense → Intent_Strength update → Account Score >0.7.
+- **Automated action:** T01 (create task for Strategist) and T02 (update scoring).
+- **Role:** Sales Strategist reviews the account, conducts initial outreach.
+- **Output:** Qualified Opportunity (handed over to AE) or rejection.
+
+**8.3.2. From Qualification to Deal (AE)**
+- **Input:** Strategist created an Opportunity, assigned AE.
+- **Automated action:** T11 (when demo request created), T12 (MEDDPICC reminder).
+- **Role:** AE manages the deal, uses MEDDPICC, updates stages.
+- **Output:** Closed Won deal or Closed Lost.
+
+**8.3.3. From Closed Deal to Onboarding (CSM)**
+- **Input:** Stage = Closed Won.
+- **Automated action:** T06 (create task for CSM, initialise onboarding in Gainsight).
+- **Role:** CSM conducts onboarding, trains the customer.
+- **Output:** Customer active (time to first value achieved).
+
+**8.3.4. From Successful Usage to Expansion (AM)**
+- **Input:** Health Score >0.8 and user growth >30% OR Expansion_Signal = true.
+- **Automated action:** T04 / T10 (launch expansion playbook, create task for AM).
+- **Role:** AM prepares a proposal, conducts upsell/cross‑sell negotiations.
+- **Output:** Closed expansion deal.
+
+────────────────────────────────────────────────────────────────────────────────────
+**CONCLUSIONS ON AUTOMATION**
+
+- The complete list of triggers covers all key events of GTM processes,
+  ensuring automated reaction to changes.
+- Playbooks standardise the handling of critical situations (retention, expansion,
+  qualification, proactive pipeline alert), reducing response time and increasing
+  execution quality.
+- The customer lifecycle is fully automated: role handovers occur without manual
+  involvement, reducing delays and information loss.
+- All automations are built on an event‑driven architecture and integrated
+  with Salesforce, Gainsight, SalesLoft, and the agent framework.
+
+────────────────────────────────────────────────────────────────────────────────────
+**NOTE:** Separate detailed protocols will follow for each subsection:
+- 8.1 – Complete list of triggers (details on conditions, priorities, error handling)
+- 8.2.1 – Playbook “Retention” (Health Score <0.5)
+- 8.2.2 – Playbook “Expansion” (Expansion Signal)
+- 8.2.3 – Playbook “Qualification” (Account Score >0.7)
+- 8.2.4 – Playbook “Proactive Pipeline Alert” (Pipeline Coverage <3×)
+- 8.3.1 – Handover from intent signal to qualification (Sales Strategist)
+- 8.3.2 – Handover from qualification to deal (AE)
+- 8.3.3 – Handover from closed deal to onboarding (CSM)
+- 8.3.4 – Handover from successful usage to expansion (AM)
+
+Each protocol will detail technical implementation, success metrics, and examples.
+
+═══════════════════════════════════════════════════════════════════════════════════

@@ -1,0 +1,67 @@
+# configs/triggers_config.yaml
+# Конфигурация триггеров GTM-инфраструктуры Sourcegraph
+
+triggers:
+  T01_account_score_high:
+    enabled: true
+    params:
+      threshold: 0.7
+      action: "create_task_for_strategist"
+      priority: "high"
+
+  T02_health_score_low:
+    enabled: true
+    params:
+      threshold: 0.5
+      action: "launch_retention_playbook"
+      priority: "critical"
+
+  T03_pipeline_coverage_low:
+    enabled: true
+    params:
+      threshold: 3.0
+      action: "alert_cro"
+      priority: "high"
+
+  T04_opportunity_stale:
+    enabled: true
+    params:
+      days_in_stage: 30
+      action: "escalate_to_manager"
+      priority: "medium"
+
+  T05_competitor_price_drop:
+    enabled: true
+    params:
+      drop_percent: 5
+      action: "review_pricing"
+      priority: "medium"
+
+  T06_new_intent_signal:
+    enabled: true
+    params:
+      min_intent: 0.6
+      action: "add_to_cadence"
+      priority: "medium"
+
+  T07_forecast_accuracy_low:
+    enabled: true
+    params:
+      mape_threshold: 15
+      action: "recalibrate_model"
+      priority: "medium"
+
+  T08_budget_exceed:
+    enabled: true
+    params:
+      warning_threshold: 0.8
+      block_threshold: 1.0
+      check_interval_minutes: 5
+    priority: "high"
+
+  T09_quarter_end:
+    enabled: true
+    params:
+      schedule: "0 0 * * *"  # ежедневно, но логика внутри проверит конец квартала
+      action: "run_financial_report"
+      priority: "medium"

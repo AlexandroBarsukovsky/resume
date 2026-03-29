@@ -1,0 +1,345 @@
+╔══════════════════════════════════════════════════════════════════════════════════╗
+║  PROTOCOL 11.2. SQL QUERIES FOR ANALYTICS                                         ║
+║  PROJECT: IRON KIT – 13,918 SALES                                                 ║
+║                                                                                  ║
+╚══════════════════════════════════════════════════════════════════════════════════╝
+
+═══════════════════════════════════════════════════════════════════════════════════
+**11.2. SQL QUERIES FOR ANALYTICS**
+───────────────────────────────────────────────────────────────────────────────────
+
+This protocol contains a set of SQL queries for PostgreSQL used by agents and the
+operator console. The queries cover sales aggregation, key metric calculation,
+competitor monitoring, review analysis, forecasting, and report generation.
+All queries are optimised using indexes, window functions, and materialised views.
+
+────────────────────────────────────────────────────────────────────────────────────
+**11.2.1. SALES AND REVENUE AGGREGATION**
+───────────────────────────────────────────────────────────────────────────────────
+
+**11.2.1.1. Daily sales by SKU**
+```sql
+CREATE OR REPLACE VIEW daily_sales AS
+SELECT
+    sku,
+    DATE(order_date) AS sale_date,
+    SUM(quantity) AS total_quantity,
+    SUM(total_amount) AS total_revenue,
+    COUNT(*) AS order_count
+FROM orders
+WHERE status IN ('completed', 'shipped')
+GROUP BY sku, DATE(order_date);
+
+11.2.1.2. Monthly revenue with dynamics
+sql
+
+CREATE OR REPLACE VIEW monthly_revenue AS
+SELECT
+    DATE_TRUNC('month', order_date) AS month,
+    SUM(total_amount) AS revenue,
+    LAG(SUM(total_amount), 1) OVER (ORDER BY DATE_TRUNC('month', order_date)) AS prev_month_revenue,
+    (SUM(total_amount) - LAG(SUM(total_amount), 1) OVER (ORDER BY DATE_TRUNC('month', order_date))) 
+        / NULLIF(LAG(SUM(total_amount), 1) OVER (ORDER BY DATE_TRUNC('month', order_date)), 0) * 100 AS growth_pct
+FROM orders
+WHERE status IN ('completed', 'shipped')
+GROUP BY DATE_TRUNC('month', order_date);
+
+────────────────────────────────────────────────────────────────────────────────────
+11.2.2. COMPETITOR ANALYSIS
+───────────────────────────────────────────────────────────────────────────────────
+
+11.2.2.1. Current competitor prices by category
+sql
+
+CREATE OR REPLACE VIEW competitor_prices_summary AS
+SELECT
+    c.sku,
+    s.category,
+    MIN(c.price) AS min_price,
+    MAX(c.price) AS max_price,
+    AVG(c.price) AS avg_price,
+    COUNT(DISTINCT c.competitor_sku) AS competitor_count
+FROM competitors c
+JOIN sku s ON c.sku = s.sku
+WHERE c.price IS NOT NULL
+GROUP BY c.sku, s.category;
+
+11.2.2.2. Price drop signals (last 24 hours)
+sql
+
+CREATE OR REPLACE VIEW price_drop_alerts AS
+SELECT
+    sku,
+    competitor_sku,
+    price,
+    updated_at
+FROM competitors
+WHERE updated_at >= NOW() - INTERVAL '1 day'
+  AND price < (
+      SELECT AVG(price) * 0.95
+      FROM competitors c2
+      WHERE c2.sku = competitors.sku
+        AND c2.updated_at >= NOW() - INTERVAL '7 days'
+  );
+
+────────────────────────────────────────────────────────────────────────────────────
+11.2.3. REVIEW ANALYSIS
+───────────────────────────────────────────────────────────────────────────────────
+
+11.2.3.1. Review statistics by SKU
+sql
+
+CREATE OR REPLACE VIEW review_stats AS
+SELECT
+    sku,
+    COUNT(*) AS total_reviews,
+    AVG(rating) AS avg_rating,
+    SUM(CASE WHEN rating <= 3 THEN 1 ELSE 0 END) AS negative_count,
+    SUM(CASE WHEN rating = 5 THEN 1 ELSE 0 END) AS positive_count,
+    (SUM(CASE WHEN rating <= 3 THEN 1 ELSE 0 END)::FLOAT / COUNT(*)) * 100 AS negative_pct
+FROM reviews
+GROUP BY sku;
+
+11.2.3.2. Reviews with detected defects (last 7 days)
+sql
+
+CREATE OR REPLACE VIEW defect_reviews AS
+SELECT
+    review_id,
+    sku,
+    rating,
+    text,
+    defect_type,
+    created_at
+FROM reviews
+WHERE defect_type IS NOT NULL
+  AND created_at >= NOW() - INTERVAL '7 days'
+ORDER BY created_at DESC;
+
+────────────────────────────────────────────────────────────────────────────────────
+11.2.4. INVENTORY MANAGEMENT AND FORECASTS
+───────────────────────────────────────────────────────────────────────────────────
+
+11.2.4.1. Current warehouse stock
+sql
+
+CREATE OR REPLACE VIEW current_stocks AS
+SELECT
+    sku,
+    stock_production,
+    stock_wb,
+    (stock_production + stock_wb) AS total_stock
+FROM sku
+WHERE is_active = true;
+
+11.2.4.2. SKUs at risk of shortage (stock < threshold s)
+sql
+
+-- Assume thresholds s are stored in stock_thresholds table
+CREATE OR REPLACE VIEW stock_risk AS
+SELECT
+    s.sku,
+    s.total_stock,
+    t.s_level AS threshold_s,
+    (s.total_stock - t.s_level) AS deficit_gap
+FROM current_stocks s
+JOIN stock_thresholds t ON s.sku = t.sku
+WHERE s.total_stock < t.s_level;
+
+11.2.4.3. Sales forecast for the next 30 days (latest forecast)
+sql
+
+CREATE OR REPLACE VIEW latest_forecast AS
+SELECT DISTINCT ON (sku)
+    sku,
+    forecast_date,
+    horizon_days,
+    predicted_qty,
+    lower_bound,
+    upper_bound,
+    mape,
+    created_at
+FROM sales_forecast
+WHERE horizon_days = 30
+ORDER BY sku, created_at DESC;
+
+────────────────────────────────────────────────────────────────────────────────────
+11.2.5. HEALTH SCORE CALCULATION
+───────────────────────────────────────────────────────────────────────────────────
+
+11.2.5.1. Health Score components for the current month
+sql
+
+WITH monthly_metrics AS (
+    SELECT
+        DATE_TRUNC('month', order_date) AS month,
+        SUM(total_amount) AS revenue,
+        SUM(quantity * cost) AS cogs,
+        AVG(CASE WHEN stock_production + stock_wb < s_level THEN 1 ELSE 0 END) AS deficit_days_ratio
+    FROM orders o
+    JOIN sku s ON o.sku = s.sku
+    JOIN stock_thresholds t ON s.sku = t.sku
+    WHERE status IN ('completed', 'shipped')
+      AND order_date >= DATE_TRUNC('month', CURRENT_DATE)
+    GROUP BY DATE_TRUNC('month', order_date)
+),
+avg_inventory AS (
+    SELECT
+        AVG(stock_production + stock_wb) AS avg_stock
+    FROM sku
+    WHERE is_active = true
+)
+SELECT
+    m.month,
+    (SELECT avg_stock FROM avg_inventory) / (m.cogs / 30) AS turnover_days,
+    m.deficit_days_ratio AS deficit,
+    (m.revenue - m.cogs) / NULLIF(m.revenue, 0) AS margin,
+    -- normalisation (target values: turnover_target=30, deficit_target=0.05, margin_target=0.35)
+    1 - LEAST(1, GREATEST(0, (turnover_days - 15) / (60 - 15))) AS turnover_norm,
+    1 - LEAST(1, GREATEST(0, deficit / 0.1)) AS deficit_norm,
+    LEAST(1, GREATEST(0, margin / 0.35)) AS margin_norm
+FROM monthly_metrics m;
+
+11.2.5.2. Health Score over time (daily)
+sql
+
+CREATE OR REPLACE VIEW daily_health_score AS
+SELECT
+    date,
+    health_score,
+    deficit_norm,
+    turnover_norm,
+    margin_norm,
+    status
+FROM health_score_history
+ORDER BY date DESC;
+
+────────────────────────────────────────────────────────────────────────────────────
+11.2.6. ADVERTISING CAMPAIGN PERFORMANCE ANALYSIS
+───────────────────────────────────────────────────────────────────────────────────
+
+11.2.6.1. ROMI by campaigns in the last month
+sql
+
+CREATE OR REPLACE VIEW campaign_romi AS
+SELECT
+    c.campaign_id,
+    c.sku,
+    c.budget,
+    c.spent,
+    c.orders,
+    c.ctr,
+    c.conversion,
+    c.romi,
+    (c.orders * s.current_price - c.spent) / NULLIF(c.spent, 0) * 100 AS calculated_romi
+FROM campaigns c
+JOIN sku s ON c.sku = s.sku
+WHERE c.end_date >= DATE_TRUNC('month', CURRENT_DATE);
+
+────────────────────────────────────────────────────────────────────────────────────
+11.2.7. TASKS FOR THE CONSOLE (ACCOUNT SCORE)
+───────────────────────────────────────────────────────────────────────────────────
+
+11.2.7.1. High‑priority tasks (S > 0.7)
+sql
+
+-- Assume tasks are stored in a `tasks` table with fields urgency, revenue_impact, resources_available
+CREATE OR REPLACE VIEW high_priority_tasks AS
+SELECT
+    task_id,
+    sku,
+    description,
+    urgency,
+    revenue_impact,
+    resources_available,
+    0.5 * urgency + 0.3 * revenue_impact + 0.2 * (1 - resources_available) AS task_score
+FROM tasks
+WHERE status = 'pending'
+  AND 0.5 * urgency + 0.3 * revenue_impact + 0.2 * (1 - resources_available) > 0.7
+ORDER BY task_score DESC;
+
+────────────────────────────────────────────────────────────────────────────────────
+11.2.8. MATERIALISED VIEWS FOR OPTIMISATION
+───────────────────────────────────────────────────────────────────────────────────
+
+For frequently used aggregates, it is recommended to create materialised views
+with periodic refresh.
+
+11.2.8.1. Daily sales (fresh data)
+sql
+
+CREATE MATERIALIZED VIEW mv_daily_sales AS
+SELECT
+    sku,
+    DATE(order_date) AS sale_date,
+    SUM(quantity) AS total_quantity,
+    SUM(total_amount) AS total_revenue
+FROM orders
+WHERE status IN ('completed', 'shipped')
+GROUP BY sku, DATE(order_date);
+
+-- Refresh (Celery task)
+REFRESH MATERIALIZED VIEW CONCURRENTLY mv_daily_sales;
+
+11.2.8.2. Average competitor prices by SKU
+sql
+
+CREATE MATERIALIZED VIEW mv_competitor_avg_price AS
+SELECT
+    sku,
+    AVG(price) AS avg_price,
+    MIN(price) AS min_price,
+    MAX(price) AS max_price
+FROM competitors
+GROUP BY sku;
+
+REFRESH MATERIALIZED VIEW mv_competitor_avg_price;
+
+────────────────────────────────────────────────────────────────────────────────────
+11.2.9. EXAMPLES OF USAGE IN AGENTS
+───────────────────────────────────────────────────────────────────────────────────
+
+Example for the “Demand analyst” agent (Python with SQLAlchemy)
+python
+
+from sqlalchemy import text
+
+def get_historical_sales(sku: str, days: int = 365):
+    query = text("""
+        SELECT sale_date, total_quantity
+        FROM daily_sales
+        WHERE sku = :sku AND sale_date >= CURRENT_DATE - :days
+        ORDER BY sale_date
+    """)
+    result = db.session.execute(query, {"sku": sku, "days": days})
+    return result.fetchall()
+
+Example for the “Risk manager” agent (Health Score calculation)
+python
+
+def compute_health_score():
+    query = text("""
+        SELECT turnover_norm, deficit_norm, margin_norm
+        FROM daily_health_score
+        WHERE date = CURRENT_DATE
+    """)
+    result = db.session.execute(query).fetchone()
+    if result:
+        return 0.4 * result.turnover_norm + 0.3 * result.deficit_norm + 0.3 * result.margin_norm
+    return None
+
+────────────────────────────────────────────────────────────────────────────────────
+11.2.10. QUERY OPTIMISATION
+───────────────────────────────────────────────────────────────────────────────────
+
+    Indexes – for all foreign keys and fields used in WHERE and JOIN (e.g., sku, order_date, created_at).
+
+    Partitioning – for large tables (orders, reviews) by date.
+
+    Materialised views – for aggregates updated once a day.
+
+    Explain Analyze – regular analysis of slow queries.
+
+═══════════════════════════════════════════════════════════════════════════════════
+NOTE: All SQL queries are adapted for PostgreSQL 15+. During operation,
+indexes and views may need to be adjusted to match real‑world load.

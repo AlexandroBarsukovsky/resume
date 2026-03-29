@@ -1,0 +1,189 @@
+═══════════════════════════════════════════════════════════════════════════════════
+PROTOCOL: 4.3. ROLE OF HUMAN OPERATORS (REVOPS, MANAGERS) AND THE CONTROL PANEL INTERFACE
+Project: Sourcegraph GTM Infrastructure
+═══════════════════════════════════════════════════════════════════════════════════
+
+**4.3. ROLE OF HUMAN OPERATORS (REVOPS, MANAGERS) AND THE CONTROL PANEL INTERFACE**
+
+Hybrid governance (people + AI agents) is one of the four cornerstones of the architecture (see 4.1.4). It ensures that automation does not become a “black box” and remains aligned with the culture of high agency, transparency, and remote‑first. Human operators do not merely monitor the system – they are an integral part of the orchestration, making strategic decisions, adjusting models, and handling exceptions. The Control Panel interface provides a single point of entry for all these actions.
+
+────────────────────────────────────────────────────────────────────────────────────
+4.3.1. GENERAL “HUMAN – AGENT” INTERACTION MODEL
+────────────────────────────────────────────────────────────────────────────────────
+
+Interaction is built on the following principles:
+
+- **Agents as assistants, not replacements.** Only routine, predictable operations are automated. Critical decisions and atypical situations remain with humans.
+- **Transparency.** Any automatic action can be traced back to the event that triggered it, and the decision‑making logic can be understood.
+- **Control and override.** Operators have the right to stop, modify, or cancel any agent action.
+- **Feedback.** Operators can “teach” agents by flagging incorrect decisions, which is used to retrain models.
+- **Asynchronicity.** All interfaces operate in a remote, asynchronous mode, aligning with Sourcegraph’s remote‑first culture.
+
+**Division of responsibilities (generalized)**
+
+| Area                                   | Agents (AI)                                             | People (operators, managers)                             |
+|----------------------------------------|---------------------------------------------------------|----------------------------------------------------------|
+| Data collection and enrichment         | Automatically from 6sense, Snowflake, Clearbit          | Source configuration, quality validation                 |
+| Scoring and account prioritization     | Automatically by formulas (Account Score)               | Adjust weights and thresholds (via Control Panel)        |
+| Qualification (primary)                | Create tasks for Sales Strategist                       | Sales Strategist makes final decision                    |
+| Task and notification creation         | Automatically by triggers                               | – (monitoring only)                                      |
+| Strategic ideology selection           | Strategist agents (3 ideologies)                        | Leaders set OKRs, adjust priorities                      |
+| Customer interaction                   | Automated emails (SalesLoft)                            | Personal contacts, complex negotiations                  |
+| Health score monitoring                | Automatic alerts, playbooks                             | CSM responds to alerts, conducts meetings                |
+| Forecasting                            | Model (VAR, weighted pipeline)                          | Adjust expert estimates, approval                        |
+| Reporting                              | Automatic generation (QBR, board pack)                  | Analysis, decision‑making                                |
+| Exception handling (DLQ)               | –                                                       | RevOps operators handle manually                         |
+| Model retraining                       | Automatic retraining                                    | Validate results, select training data                   |
+
+────────────────────────────────────────────────────────────────────────────────────
+4.3.2. ROLES OF HUMAN OPERATORS
+────────────────────────────────────────────────────────────────────────────────────
+
+**4.3.2.1. RevOps Operators**
+- **Headcount:** 3–5 people (depending on scale).
+- **Main functions:**
+  - Monitor agent work (load, success rate, errors).
+  - Process Dead Letter Queue (DLQ) – events not processed after 3 attempts.
+  - Adjust thresholds and model weights (Account Score, Health Score) via Control Panel.
+  - Analyze logs, detect anomalies (e.g., sudden drop in forecast accuracy).
+  - Coordinate with the technical team on integration failures.
+- **Required competencies:**
+  - Deep understanding of Sourcegraph’s GTM processes.
+  - Experience with Salesforce, Tableau, Snowflake.
+  - Basic SQL and data analysis skills.
+  - Ability to work in asynchronous mode (remote‑first).
+
+**4.3.2.2. Leaders (CRO, VP of Sales, VP of CS)**
+- **Functions:**
+  - Set global goals (OKRs) – e.g., target ARR, NRR, win rate.
+  - Approve changes to strategic ideologies (conservative, balanced, aggressive) based on market conditions.
+  - Receive aggregated reports (QBR, board packs) and make decisions based on them.
+  - Participate in foresight sessions (every six months) to adjust the roadmap.
+- **Tools:** Control Panel (high‑level dashboards), email digests.
+
+**4.3.2.3. Managers (Sales Managers, CS Managers)**
+- **Functions:**
+  - Monitor their teams’ performance via Control Panel (AE/CSM load, efficiency, problem areas).
+  - Override agent decisions in exceptional cases (e.g., manually assign an AE to a strategic account).
+  - Provide feedback on automation quality.
+- **Tools:** Control Panel (detailed dashboards by team).
+
+────────────────────────────────────────────────────────────────────────────────────
+4.3.3. CONTROL PANEL INTERFACE
+────────────────────────────────────────────────────────────────────────────────────
+
+**Purpose** – a single web panel for monitoring, controlling, and manually intervening in the agent holding’s work.
+
+**4.3.3.1. Architecture and technologies**
+- **Frontend:** React.js (TypeScript), charts – D3.js / Recharts.
+- **Backend:** Node.js (Express) or Go (for performance), connects to the same data sources (Salesforce, Snowflake, Kafka) and agent APIs.
+- **Real‑time updates:** WebSocket (Socket.IO) for instant display of agent status and events.
+- **Authentication:** SSO via Google (used by Sourcegraph) + role‑based model (admins, operators, managers, view‑only).
+
+**4.3.3.2. Main screens and functionality**
+
+**Dashboard**
+- **Agent summary:**
+  - Total number of active agents (by levels 1–4).
+  - Operation success rate (last 24 hours) – percentage of successful API calls, task creations, etc.
+  - Average event processing latency.
+- **Key GTM metrics:**
+  - Pipeline coverage (target >3×).
+  - Forecast accuracy (MAPE) – current value.
+  - Health score distribution (% in green/yellow/red zones).
+  - Number of accounts in queue for each role (Strategist, AE, CSM, AM).
+- **Alerts:** list of active issues (e.g., “Salesforce API latency >500 ms”, “Health Score for account X dropped to 0.3”).
+
+**Detailed agent monitoring**
+- **By level:** expandable panels for Level 1, Level 2, Level 3, Level 4.
+- **For each agent type:**
+  - Number of active instances (pods/Lambda).
+  - Load graph (number of tasks in queue).
+  - Error rate graph over the last 24 hours.
+  - Examples of recent tasks (with input/output viewing).
+- **Manual control options:**
+  - Pause agents of a certain type (e.g., temporarily disable analyst agents for debugging).
+  - Restart pods (via Kubernetes API call).
+
+**Exception handling (Dead Letter Queue)**
+- Table of unprocessed events with fields:
+  - `event_id`, `timestamp`, `source` (Salesforce, 6sense, etc.), `error_message`.
+  - Status (pending, in_progress, resolved).
+- Actions:
+  - **Replay** – resend the event.
+  - **Manual handling** – operator can perform the action manually (e.g., create a task in Salesforce via the interface) and mark the event as resolved.
+  - **Ignore** – if the event is no longer relevant.
+- Filtering by date, source, error type.
+
+**Model and threshold configuration**
+- Interface for adjusting formula weights:
+  - **Account Score:** sliders for `Intent`, `Usage`, `ICP_Fit` (weights automatically normalized).
+  - **Health Score:** weights for `Usage`, `Support`, `Engagement`, `NPS`.
+  - **Thresholds:** Account Score threshold for task creation (default 0.7), Health Score thresholds for color zones (green/yellow/red).
+- Each change is saved in history (who, when, new value) and can be rolled back.
+- Impact preview: after weight changes, the system shows how account distribution will change (e.g., how many accounts will move to the red zone).
+
+**Strategic ideology management**
+- View current distribution of accounts by ideology (conservative, balanced, aggressive) as a pie chart.
+- Adjust rule weights:
+  - For each ideology, parameters `w₁` (rules), `w₂` (macro), `w₃` (historical success) can be changed via sliders.
+  - Option to temporarily “freeze” an ideology for all accounts (e.g., during a strategy shift).
+
+**Manual override**
+- Search for an account by name or ID.
+- View current agent decisions (Account Score, Health Score, assigned ideology, recent tasks).
+- Buttons:
+  - **Recalculate scoring** – force‑run analyst agents.
+  - **Assign AE manually** – select an AE from the list, create an Opportunity.
+  - **Change ideology** – override strategy for a specific account.
+  - **Undo last action** – rollback (e.g., if an agent incorrectly created a task).
+- All manual actions are logged with operator comments.
+
+**Reports and dashboards**
+- **Pre‑built reports:**
+  - **Weekly digest** (automatically sent by email): key metrics, agent status, top issues.
+  - **QBR (quarterly business review):** detailed PDF generated by reporting agents, available for viewing and download.
+- **Dashboard customization:** users can save their own sets of charts and metrics (e.g., for a specific region).
+
+**4.3.3.3. Access model and roles**
+
+| Role               | Permissions                                                                        |
+|--------------------|------------------------------------------------------------------------------------|
+| **Administrator**  | Full access: manage agents, modify any settings, view all logs                     |
+| **RevOps Operator**| Monitor, process DLQ, adjust thresholds, manual intervention                       |
+| **Leader (CRO, VP)**| View dashboards, receive reports, modify global OKRs, approve strategies          |
+| **Manager (Sales, CS)**| View dashboards for their team, manual intervention within their responsibility area (e.g., override AE for their region) |
+| **Observer**       | View‑only (for audit, training)                                                    |
+
+────────────────────────────────────────────────────────────────────────────────────
+4.3.4. INTERACTION PROCEDURES AND TRAINING
+────────────────────────────────────────────────────────────────────────────────────
+
+**4.3.4.1. Typical day of a RevOps operator**
+1. **Morning check:** open Control Panel → review main dashboard (no critical alerts, agent load normal, DLQ not overflowing).
+2. **Process DLQ:** review queue, handle events requiring manual intervention (e.g., task creation failed due to API error).
+3. **Model adjustments:** if account distribution is skewed (e.g., too many accounts in red zone) – adjust thresholds via the interface.
+4. **Coordinate with teams:** respond to manager requests (via chat or email), provide access to detailed logs if needed.
+5. **Weekly digest:** prepare a brief report for leadership based on Control Panel data.
+
+**4.3.4.2. Training and adaptation**
+- **Workshops for all users:** explain agent logic, demonstrate the Control Panel, review typical scenarios.
+- **Documentation:** detailed guide (Handbook) describing each Control Panel function, DLQ handling rules, manual intervention procedures.
+- **Sandbox:** separate environment for learning, where experiments can be run without affecting real data.
+
+**4.3.4.3. Feedback and agent retraining**
+- Every time an operator overrides an agent decision or handles an exception, the system records:
+  - the agent’s original decision (and its confidence score),
+  - the operator’s action,
+  - the context (account, event).
+- This data is accumulated and used for monthly model retraining, gradually reducing the number of manual interventions.
+
+────────────────────────────────────────────────────────────────────────────────────
+**CONCLUSIONS ON THE ROLE OF PEOPLE AND THE CONTROL PANEL**
+
+- A clear division of responsibilities between agents and people ensures a balance of efficiency and control.
+- The Control Panel interface is the central tool for operators, managers, and leaders, providing transparency and flexible management.
+- Training and feedback procedures guarantee that the system does not become a “black box” but evolves together with the Sourcegraph team.
+- The implementation of the Control Panel using modern technologies (React, WebSocket, SSO) aligns with the remote‑first and high agency culture.
+
+═══════════════════════════════════════════════════════════════════════════════════

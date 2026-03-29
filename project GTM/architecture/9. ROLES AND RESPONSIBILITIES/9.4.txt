@@ -1,0 +1,140 @@
+═══════════════════════════════════════════════════════════════════════════════════
+PROTOCOL: 9.4. ACCOUNT MANAGER (EXPANSION, CONTRACT RENEWALS)
+Project: Sourcegraph GTM Infrastructure
+═══════════════════════════════════════════════════════════════════════════════════
+
+**9.4. ACCOUNT MANAGER (EXPANSION, CONTRACT RENEWALS)**
+
+────────────────────────────────────────────────────────────────────────────────────
+9.4.1. PURPOSE AND PLACE IN THE ORGANISATIONAL STRUCTURE
+────────────────────────────────────────────────────────────────────────────────────
+
+Account Manager (AM) is the role responsible for maximising revenue from existing
+customers through upsell and cross‑sell, as well as for successful contract renewals.
+In the target GTM architecture, the AM receives automatic signals about a customer’s
+readiness for expansion (Expansion Signal) and uses commercial proposals prepared
+by financial agents. The AM works closely with the Customer Success Manager (CSM)
+to ensure a positive customer experience and with the Account Executive (AE) when
+handing over new opportunities. The AM reports to the VP of Customer Success (or
+VP of Sales, depending on the organisational structure).
+
+**Key value:** increasing net retention, growing expansion ARR,
+strengthening long‑term relationships with key customers.
+
+────────────────────────────────────────────────────────────────────────────────────
+9.4.2. MAIN RESPONSIBILITIES AND AREAS OF ACCOUNTABILITY
+────────────────────────────────────────────────────────────────────────────────────
+
+| Area                         | Details                                                                  |
+|------------------------------|--------------------------------------------------------------------------|
+| **Opportunity identification** | Regularly track expansion signals (increased activity, feature requests, renewals with growth). Use data from the control panel and Gainsight. |
+| **Proposal preparation**     | Based on consumption data and input from financial agents, prepare commercial proposals for upsell/cross‑sell. Approve discounts within delegated authority. |
+| **Negotiations**             | Conduct negotiations with customers on expansion and renewals. Participate in new product demonstrations (jointly with SE). |
+| **Contract renewals**        | Track contract expiration dates, initiate the renewal process 90–120 days prior to expiry. Prepare renewal proposals, coordinate with Legal. |
+| **Coordination with CSM**    | Share information about customer health, jointly plan QBRs, participate in discussions of health score and expansion plans. |
+| **CRM updates**              | Create expansion and renewal Opportunities in Salesforce, update stages, amounts, probabilities. Record negotiation outcomes. |
+| **Feedback**                 | Provide RevOps with feedback on the quality of expansion signals (false positives, missed opportunities) to improve models. |
+| **Performance analysis**     | Regularly analyse conversion from expansion signals to closed deals, average expansion size, cycle time. |
+
+────────────────────────────────────────────────────────────────────────────────────
+9.4.3. COMPETENCIES AND REQUIREMENTS
+────────────────────────────────────────────────────────────────────────────────────
+
+| Competency                 | Requirements                                                             |
+|----------------------------|--------------------------------------------------------------------------|
+| **Negotiation skills**     | Proven experience in commercial negotiations for expansion and renewals, ability to work within customer budget constraints. |
+| **Analytical thinking**    | Interpret expansion signals, calculate ROI for the customer, assess expansion potential. |
+| **Product knowledge**      | Deep understanding of Code Search, Deep Search, MCP, including expansion capabilities (licensing, new modules). |
+| **Technical literacy**     | Experience with Salesforce (Opportunity), Gainsight, Tableau. Understanding of data principles. |
+| **Communication**          | Excellent written and verbal communication, ability to present commercial proposals, build relationships with C‑level. |
+| **Experience**             | 3+ years in Account Management, Sales, Customer Success in B2B SaaS. Experience with enterprise customers is an advantage. |
+
+────────────────────────────────────────────────────────────────────────────────────
+9.4.4. TYPICAL WORKDAY
+────────────────────────────────────────────────────────────────────────────────────
+
+| Time        | Action                                                                   |
+|-------------|--------------------------------------------------------------------------|
+| 9:00–9:30   | Check control panel: list of customers with expansion signals, upcoming renewals, open tasks. |
+| 9:30–11:00  | Customer meetings: expansion negotiations, new product presentations (1–2 meetings). |
+| 11:00–12:00 | Proposal preparation: analyse consumption data, calculate commercial terms, approve discounts. |
+| 12:00–13:00 | Lunch.                                                                   |
+| 13:00–14:00 | Internal calls: sync with CSM on customer status, discuss expansion strategy. |
+| 14:00–15:00 | Renewal work: send reminders, prepare renewal proposals, coordinate with Legal. |
+| 15:00–16:00 | Update Salesforce: create Opportunities, update stages, forecasts.       |
+| 16:00–17:00 | Analytics: review reports on expansion signal conversion, prepare for QBR. |
+
+**Note:** times may vary depending on deal stage and seasonality.
+
+────────────────────────────────────────────────────────────────────────────────────
+9.4.5. KEY PERFORMANCE INDICATORS (KPIs)
+────────────────────────────────────────────────────────────────────────────────────
+
+| KPI                                  | Formula / Measurement Method                     | Target Value                |
+|--------------------------------------|--------------------------------------------------|-----------------------------|
+| **Expansion ARR**                    | Total additional revenue from upsell/cross‑sell (annual) | >30% of base ARR (or per quota) |
+| **Renewal rate**                     | (Number of renewed contracts) / (Number of expiring) | >90%                        |
+| **Expansion signal conversion**      | (Number of closed expansion deals) / (Number of expansion signals) | >30%                        |
+| **Response time to expansion signal**| Time from signal appearance to first customer contact | <2 business days            |
+| **Average expansion size**           | Average additional contract value                | >20% of current ACV         |
+| **Pipeline coverage (expansion)**    | Expansion pipeline sum / quarterly target        | >3×                         |
+
+All KPIs are tracked in Tableau and Salesforce; the AM has access to a personal
+dashboard with per‑customer dynamics and trends.
+
+────────────────────────────────────────────────────────────────────────────────────
+9.4.6. INTERACTION WITH AUTOMATION AND AGENTS
+────────────────────────────────────────────────────────────────────────────────────
+
+| Automated component      | Role in AM’s work                                                        |
+|--------------------------|--------------------------------------------------------------------------|
+| **Analyst agents (Level 1)** | Daily compute expansion signals based on activity, user growth, requests. AM receives ready‑made signals. |
+| **Expansion playbook (8.2.2)** | When Expansion_Signal = true, a task is automatically created for the AM and a commercial proposal is prepared (by financial agents). The AM focuses on negotiations. |
+| **Financial agents (Level 4)** | Generate commercial proposals (preliminary calculations) that the AM can use as a basis. |
+| **Gainsight integration**      | Tracks renewals and expansion signals; the AM can launch the “Expansion” playbook from Gainsight. |
+| **Control panel**          | The AM sees the list of customers with expansion signals, upcoming renewals, KPIs. |
+| **Triggers (T13)**            | When a renewal with an increase >110% occurs, a task is automatically created for the AM. |
+
+**Human actions not replaceable by automation:**
+- Negotiations with C‑level customers, aligning expansion with customer business goals.
+- Deep understanding of needs, adapting proposals to specific situations.
+- Involvement in complex renewals (legal approvals, competitive bidding).
+
+────────────────────────────────────────────────────────────────────────────────────
+9.4.7. INTERACTION WITH OTHER ROLES
+────────────────────────────────────────────────────────────────────────────────────
+
+| Role            | Interaction                                                              |
+|-----------------|--------------------------------------------------------------------------|
+| **CSM**         | Regular syncs on customer status, joint identification of expansion signals. CSM helps prepare the customer for expansion. |
+| **AE**          | For cross‑selling new products, the AE may participate in demos and negotiations, especially if the customer is unfamiliar with the new module. |
+| **RevOps**      | Provides feedback on the quality of expansion signals, helps refine models. RevOps configures playbooks. |
+| **Legal**       | For renewals and large expansions, the AM coordinates with Legal to prepare contracts (Ironclad). |
+
+────────────────────────────────────────────────────────────────────────────────────
+9.4.8. TRAINING AND ONBOARDING
+────────────────────────────────────────────────────────────────────────────────────
+
+- **Onboarding:** 4 weeks: familiarisation with the product (focus on expansion
+  capabilities), tools (Salesforce, Gainsight), negotiation methodology,
+  playbooks.
+- **Mentoring:** first 2–3 months the AM works with a mentor on complex deals.
+- **Certification:** internal product and commercial process certification.
+- **Continuing education:** quarterly training on negotiations, financial
+  modelling, renewal management.
+
+────────────────────────────────────────────────────────────────────────────────────
+**CONCLUSIONS ON THE ACCOUNT MANAGER ROLE**
+
+- The AM is a key driver of revenue growth from existing customers,
+  using automated expansion signals and proposals prepared by financial
+  agents.
+- Automation (signal identification, task creation, calculation preparation)
+  frees the AM from routine work, allowing focus on negotiations and
+  strategic portfolio management.
+- KPIs focus on expansion (expansion ARR, conversion) and retention
+  (renewal rate).
+- The role requires high proficiency in negotiation, analytical thinking,
+  and deep product knowledge.
+
+═══════════════════════════════════════════════════════════════════════════════════

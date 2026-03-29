@@ -1,0 +1,204 @@
+╔══════════════════════════════════════════════════════════════════════════════════╗
+║  PROTOCOL 4.4. OPERATOR CONSOLE                                                   ║
+║  PROJECT: IRON KIT – 13,918 SALES                                                 ║
+║                                                                                  ║
+╚══════════════════════════════════════════════════════════════════════════════════╝
+
+═══════════════════════════════════════════════════════════════════════════════════
+**4.4. OPERATOR CONSOLE (INTERFACE IN THE STYLE OF A STRATEGY GAME)**
+───────────────────────────────────────────────────────────────────────────────────
+
+**Purpose**
+The Operator Console is the central interface for the business owner to interact with the AI ecosystem.
+It is designed in the style of a strategy game (similar to StarCraft, Age of Empires), where
+the owner acts as a “commander”, managing units (agents), resources
+(revenue, stock, budget) and a map (product groups). The interface provides:
+- full transparency of agent operations,
+- the ability for manual intervention and decision adjustment,
+- real‑time monitoring of key metrics,
+- training and adaptation without the need to learn complex CRM systems.
+
+────────────────────────────────────────────────────────────────────────────────────
+**4.4.1. INTERFACE PHILOSOPHY**
+───────────────────────────────────────────────────────────────────────────────────
+
+**Strategy game metaphor**
+- **Resources** – revenue, margin, warehouse stock, available budget.
+- **Units** – 38 agents (each represented by an icon with colour coding).
+- **Map** – product groups (pickets, angle brackets, wind strips, flashings) with health indicators (green/yellow/red).
+- **Missions** – tasks that agents propose to perform (change price, order raw materials, reply to a review).
+- **Control** – clicking on a unit opens its control panel, where parameters can be changed or orders issued.
+
+**Key principles**
+- **Intuitiveness** – all actions are accessible with a minimal number of clicks.
+- **Transparency** – every automated decision is displayed with an explanation (“Why did the agent suggest lowering the price?”).
+- **Control** – ability to cancel or change any agent action (“Intervene” button).
+- **Asynchronicity** – the console works in real time but does not require constant presence; notifications are sent via push/email.
+
+────────────────────────────────────────────────────────────────────────────────────
+**4.4.2. MAIN SCREENS AND FUNCTIONALITY**
+───────────────────────────────────────────────────────────────────────────────────
+
+**4.4.2.1. Main Dashboard**
+This is the start screen showing the overall business state and agent activity.
+
+| Element                     | Description                                                                 | Visualisation                |
+|-----------------------------|-----------------------------------------------------------------------------|------------------------------|
+| **Top resource panel**      | Current revenue (monthly, million RUB), margin (%), turnover (days), shortage (%) | Large numbers, trends (↑/↓)  |
+| **Product group map**       | 4 blocks (pickets, angle brackets, strips, flashings) with colour (green – OK, yellow – attention, red – critical). Clicking gives SKU‑level detail. | Colour cards with icons      |
+| **Agent list**              | Icons of the 6 main agents (analytics) + an “intervention required” indicator. Clicking goes to the agent screen. | Icons with indicators        |
+| **Task queue**              | List of agent proposals requiring owner confirmation (e.g., “Change picket price from 6200 to 5900?”). Buttons “Yes”, “No”, “Configure later”. | Cards with buttons           |
+| **Alerts**                  | Critical events: shortage, margin drop, unanswered reviews.                 | Red pop‑up notifications     |
+
+**4.4.2.2. Agent screen (example: Pricing Strategist)**
+Clicking on an agent icon opens a detailed panel.
+
+| Section                       | Content                                                                 |
+|-------------------------------|-------------------------------------------------------------------------|
+| **Status**                    | Active / Error / Requires attention. Time of last action.               |
+| **Dynamics graph**            | Change in recommended prices vs actual competitor prices over the last 30 days. |
+| **Model parameters**          | Sliders for configuration: minimum margin (20–50%), maximum deviation from competitor price (5–20%), aggressiveness (1–10). |
+| **Decision log**              | List of recent agent proposals with reason (e.g., “competitor price drop by 7%”) and result (accepted / rejected). |
+| **“Intervene” button**        | Opens a form to manually set the price for a selected SKU, blocks automatic changes for 24 hours. |
+
+**4.4.2.3. Business Health Screen (Health Score)**
+Displays the integral business health indicator and its components.
+
+| Component               | Weight | Current Value | Target | Status |
+|-------------------------|--------|---------------|--------|--------|
+| Shortage                | 40%    | 8%            | <5%    | Yellow |
+| Inventory turnover      | 30%    | 32 days       | <30 d  | Green  |
+| Margin                  | 30%    | 32%           | 35%    | Yellow |
+| **Overall Health Score**| –      | **0.68**      | >0.7   | Yellow |
+
+Clicking on a component navigates to detailed analysis (graphs, causes, recommendations).
+
+**4.4.2.4. Exception Handling Screen (Dead Letter Queue)**
+Displays events that could not be processed automatically after 3 attempts.
+
+| Column                 | Description                                   | Actions                          |
+|------------------------|-----------------------------------------------|----------------------------------|
+| Event type             | `price_update_failed`, `order_sync_error`     |                                  |
+| Time                   | Date and time                                 |                                  |
+| Reason                 | “WB API unavailable”, “invalid format”        |                                  |
+| Actions                |                                               | “Retry”, “Fix manually”          |
+
+Selecting “Fix manually” opens a data editing form (e.g., manually enter a price).
+
+**4.4.2.5. Settings**
+| Section                | Capabilities                                                                 |
+|------------------------|------------------------------------------------------------------------------|
+| Budget                 | Set limits by category (purchase, advertising, taxes). View expense history. |
+| Trigger thresholds     | Configuration: minimum stock for raw material order, minimum margin for price, maximum competitor price for reaction. |
+| Notifications          | Configure channels (console, email, Telegram), digest frequency.            |
+| Users                  | Add/remove operators (if a manager appears in the future).                   |
+| Export                 | Export reports (Excel, PDF) on revenue, stock, agent efficiency.             |
+
+────────────────────────────────────────────────────────────────────────────────────
+**4.4.3. TECHNICAL IMPLEMENTATION**
+───────────────────────────────────────────────────────────────────────────────────
+
+**Technology stack**
+| Component          | Technology                                                                 |
+|--------------------|----------------------------------------------------------------------------|
+| Frontend           | React 18, TypeScript, Redux Toolkit, WebSocket (Socket.IO), Chart.js / D3.js |
+| Backend API        | Python (FastAPI) – endpoints for agent data, metrics, task queue           |
+| Real‑time          | WebSocket (Socket.IO) – push notifications for new tasks, alerts, metric changes |
+| Authentication     | JWT, two‑factor (optional), role‑based model (owner, observer)             |
+| Storage            | PostgreSQL (agent data, tasks, history), Redis (cache, queues)             |
+
+**API endpoints (main)**
+| Endpoint                         | Method | Description                                      |
+|----------------------------------|--------|--------------------------------------------------|
+| `/api/v4/dashboard/metrics`      | GET    | Get current metrics for the main dashboard       |
+| `/api/v4/agents/status`          | GET    | List of agents with their statuses               |
+| `/api/v4/tasks/pending`          | GET    | Tasks requiring confirmation                     |
+| `/api/v4/tasks/{task_id}/approve`| POST   | Approve a task                                   |
+| `/api/v4/tasks/{task_id}/reject` | POST   | Reject a task                                    |
+| `/api/v4/healthscore`            | GET    | Get Health Score and its components              |
+| `/api/v4/dlq`                    | GET    | Get list of unprocessed events                   |
+| `/api/v4/dlq/{event_id}/retry`   | POST   | Retry event processing                           |
+| `/api/v4/settings`               | GET/PUT | Get/update settings (budget, thresholds)         |
+
+**WebSockets**
+- Client connects to `ws://backend/v4/ws`.
+- Server sends events:
+  - `new_task` – new task requiring confirmation.
+  - `alert` – critical notification (shortage, API error).
+  - `metric_update` – update of key metrics (every 30 sec).
+  - `agent_status_change` – change in agent status.
+
+**Example React component for displaying the task queue**
+```tsx
+import React, { useEffect, useState } from 'react';
+import { useWebSocket } from '../hooks/useWebSocket';
+
+interface Task {
+  id: string;
+  description: string;
+  proposed_action: string;
+  confidence: number;
+}
+
+const TaskQueue: React.FC = () => {
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const { lastMessage } = useWebSocket('ws://backend/v4/ws');
+
+  useEffect(() => {
+    if (lastMessage?.type === 'new_task') {
+      setTasks(prev => [lastMessage.payload, ...prev]);
+    }
+  }, [lastMessage]);
+
+  const approve = async (taskId: string) => {
+    await fetch(`/api/v4/tasks/${taskId}/approve`, { method: 'POST' });
+    setTasks(prev => prev.filter(t => t.id !== taskId));
+  };
+
+  return (
+    <div className="task-queue">
+      {tasks.map(task => (
+        <div key={task.id} className="task-card">
+          <p>{task.description}</p>
+          <p>Proposal: {task.proposed_action}</p>
+          <div className="buttons">
+            <button onClick={() => approve(task.id)}>Accept</button>
+            <button onClick={() => reject(task.id)}>Reject</button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+────────────────────────────────────────────────────────────────────────────────────
+4.4.4. TRAINING AND DOCUMENTATION
+───────────────────────────────────────────────────────────────────────────────────
+
+Built‑in tooltips
+
+    On first login – interactive tour (element highlights, brief explanations).
+
+    On each panel – a “?” button that opens context‑sensitive help.
+
+Video tutorials (within the console)
+
+    5 short videos (2–3 min each): “How to set up the budget”, “How to understand Health Score”, “How to undo an agent decision”, etc.
+
+Simple language documentation
+
+    A separate section in the console with plain‑language texts (see Appendix 11.5).
+
+────────────────────────────────────────────────────────────────────────────────────
+4.4.5. CONSOLE PERFORMANCE METRICS
+───────────────────────────────────────────────────────────────────────────────────
+Metric  Target Value
+Decision time for a task (from appearance to confirmation)  < 2 hours
+Share of tasks resolved automatically (without intervention)  > 80%
+Owner satisfaction (NPS, monthly survey)  > 70
+Time the owner spends on the console per day  < 30 min
+
+═══════════════════════════════════════════════════════════════════════════════════
+NOTE: The Operator Console is the key interface for maintaining human control.
+All agent actions are transparent, and the owner can always intervene.
+The game metaphor reduces cognitive load and makes business management intuitive.

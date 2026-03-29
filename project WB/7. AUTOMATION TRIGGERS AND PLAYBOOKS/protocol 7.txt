@@ -1,0 +1,154 @@
+╔══════════════════════════════════════════════════════════════════════════════════╗
+║  SECTION 7. AUTOMATION: TRIGGERS AND WORKFLOWS (MASTER)                          ║
+║  PROJECT: IRON KIT – 13,918 SALES                                                 ║
+║                                                                                  ║
+╚══════════════════════════════════════════════════════════════════════════════════╝
+
+═══════════════════════════════════════════════════════════════════════════════════
+**7. AUTOMATION: TRIGGERS AND WORKFLOWS**
+───────────────────────────────────────────────────────────────────────────────────
+
+Automation is the heart of the AI ecosystem. This section describes triggers – events
+that initiate automated actions – and workflows (playbooks) that implement chains
+of such actions. It also outlines the end‑to‑end customer lifecycle (from initial
+interest to expansion), where all role (agent) handovers are automated. All triggers
+and playbooks are implemented through an event‑driven architecture based on Redis
+Streams and are executed by agents at levels 1–4.
+
+────────────────────────────────────────────────────────────────────────────────────
+**7.1. COMPLETE LIST OF TRIGGERS (EVENT → ACTION)**
+───────────────────────────────────────────────────────────────────────────────────
+
+Triggers are the basic building blocks of automation. Each trigger defines which
+action is taken when a certain event occurs. Actions can be chains (calling a
+playbook). All triggers are idempotent and have retry mechanisms and error handling
+(DLQ). The following is the full list of triggers implemented in the system.
+
+| ID  | Event                                                  | Action                                                                 | Priority | Event Source                    |
+|-----|--------------------------------------------------------|------------------------------------------------------------------------|----------|---------------------------------|
+| T01 | Stock (production + WB) falls below minimum threshold (s) | “Inventory manager” agent (D3) creates a production / raw material order. Publishes `stock_low` event. | High     | WB API Monitor (A2)             |
+| T02 | Competitor price drop >5% within 24 hours               | “Pricing strategist” agent (B1) recalculates optimal price. If deviation ≤5%, price updates automatically; otherwise, operator task. | High     | Competitive Intelligence (A1)   |
+| T03 | New negative review (rating ≤3)                        | “Review processor” agent (A4) classifies, extracts topics. “Customer service” agent (D7) generates a reply (LLM) and sends it. If reply fails, escalate to operator. | High     | WB API Monitor (A2)             |
+| T04 | New order received                                     | “Logistics dispatcher” agent (D4) creates a shipment request. “Financial controller” agent (D5) records revenue. | High     | WB API Monitor (A2)             |
+| T05 | 30‑day demand forecast updated and shows shortage in 2 weeks | “Production scheduler” agent (L3) creates a production task. “Inventory manager” agent (D3) adjusts raw material purchases. | Medium   | Demand Analyst (A3)             |
+| T06 | Health Score < 0.5 (red zone)                          | Launch “Retention” playbook: operator notification, halt automatic purchases, root‑cause analysis. | Critical | Risk Manager (B3)               |
+| T07 | New idea from GENESIS (E1)                              | “Test analyst” agent (E4) starts an A/B test (pilot batch of 10–20 units). | Medium   | Assortment Strategist (B2)      |
+| T08 | Budget category exceeded 80% of limit (spent > limit × 0.8) | Warning to operator in console. If 100% exceeded, block new spending in that category until confirmation. | High     | Scriptor #2 (Treasury)          |
+| T09 | New product listed on WB (first time)                  | “Creative marketer” agent (E3) generates description and creatives. “Ad optimiser” agent (D2) starts a test campaign. | Low      | Assortment Strategist (B2)      |
+| T10 | Tax payment deadline approaching (5 days left)         | “Tax calculator” agent (D1) creates a payment order, notifies operator. | Medium   | Financial Controller (D5)       |
+| T11 | Account not active (Health Score) / low margin          | “Risk manager” agent (B3) initiates root‑cause analysis, suggests price or assortment adjustments. | Medium   | Risk Manager (B3)               |
+| T12 | Start of seasonal peak (per forecast)                   | “Ad optimiser” agent (D2) increases budget. “Production scheduler” agent (L3) ramps up volumes. | Medium   | Seasonal Forecaster (A6)        |
+| T13 | New bank statement received                            | “Financial controller” agent (D5) reconciles with expected payments, updates budget. | Low      | Manual upload / API             |
+| T14 | Wildberries API failure (error >3 times consecutively) | “Supervisor” agent (L3) switches system to fallback channel (manual CSV input), notifies operator. | Critical | Scriptor #3                     |
+| T15 | New competitor appears in category (product with high sales volume) | “Competitive intelligence” agent (A1) publishes signal, “Pricing strategist” agent (B1) reviews prices. | Medium   | Competitive Intelligence (A1)   |
+| T16 | Weekly timer (Sunday, 23:00)                           | Recalculate forecasts, update Health Score, analyse agent performance. | Low      | Celery Beat                     |
+
+────────────────────────────────────────────────────────────────────────────────────
+**7.2. DESCRIPTION OF KEY PLAYBOOKS**
+───────────────────────────────────────────────────────────────────────────────────
+
+A playbook is a sequence of automated actions triggered by a specific event.
+Each playbook has a clear goal, steps, responsible parties, and success metrics.
+
+**7.2.1. “Retention” Playbook (Health Score < 0.5)**
+- **Goal:** stabilise the business, prevent further deterioration.
+- **Trigger:** T06 (Health Score < 0.5).
+- **Steps:**
+  1. Notify operator in console (push, email).
+  2. Pause automatic purchases and ad campaigns (requires manual confirmation).
+  3. “Risk manager” agent (B3) analyses Health Score components, identifies root cause (shortage / turnover / margin).
+  4. Generate recommendations: e.g., reduce prices on slow‑moving stock, increase advertising to speed turnover.
+  5. If Health Score does not return to yellow zone within 3 days – escalate (create task for external consultant).
+- **Success metrics:** time to recover Health Score (<3 days), reduce shortage to <5%.
+
+**7.2.2. “Price War” Playbook (competitor price drop >5%)**
+- **Goal:** maintain competitiveness without losing margin.
+- **Trigger:** T02.
+- **Steps:**
+  1. “Pricing strategist” agent (B1) calculates new optimal price.
+  2. If deviation from current price ≤5% – automatically update on WB (via Scriptor #3).
+  3. If deviation >5% – operator task for confirmation (shown in console).
+  4. After price change – monitor competitor reaction for 24 hours; if another drop occurs, recalculate.
+- **Success metrics:** maintain sales volume, margin not decreased by more than 2 percentage points.
+
+**7.2.3. “Assortment Expansion” Playbook (new idea from GENESIS)**
+- **Goal:** rapidly launch new products with minimal risk.
+- **Trigger:** T07.
+- **Steps:**
+  1. “Test analyst” agent (E4) launches a pilot batch (10–20 units) on WB.
+  2. Simultaneously, “Creative marketer” agent (E3) creates descriptions and creatives, “Ad optimiser” agent (D2) starts a test campaign with a budget of 5–10 thousand RUB.
+  3. Collect data for 2 weeks: conversion, reviews, ROMI.
+  4. If success (ROMI > 50%) – scale up (increase production, permanent listing). If not – return to idea generation.
+- **Success metrics:** share of successful ideas (>30%), time from idea to scaling (<30 days).
+
+**7.2.4. “Shortage” Playbook (stock below threshold s)**
+- **Goal:** prevent revenue loss due to product unavailability.
+- **Trigger:** T01.
+- **Steps:**
+  1. “Inventory manager” agent (D3) checks if a production/purchase order already exists; if not, creates one.
+  2. “Production scheduler” agent (L3) adjusts the schedule, adds a high‑priority task.
+  3. If shortage is forecast within 3 days, “Ad optimiser” agent (D2) pauses advertising for that SKU to avoid creating unsatisfied demand.
+  4. Notify operator of the risk.
+- **Success metrics:** percentage of days without shortage for fast‑moving SKUs (>95%), time to resolve shortage (<3 days).
+
+────────────────────────────────────────────────────────────────────────────────────
+**7.3. CUSTOMER LIFECYCLE AND AUTOMATED HANDOVERS**
+───────────────────────────────────────────────────────────────────────────────────
+
+In the AI ecosystem, handovers between stages of customer engagement (from initial
+interest to expansion) are automated. Although the business operates through
+Wildberries rather than direct B2B customers, the analogy applies to managing
+product categories and their “lifecycle”.
+
+**7.3.1. From intent signal (demand) to qualification (Demand Analyst)**
+- **Input:** demand forecast (from A3) shows increased interest in a certain category.
+- **Automated action:** “Assortment strategist” agent (B2) checks whether a product already exists in that category. If not, it triggers GENESIS to generate ideas. If yes, it checks stock availability; if low, T01.
+- **Output:** decision to replenish stock or create a new product.
+
+**7.3.2. From qualification to deal (Pricing Strategist → Executors)**
+- **Input:** new product listed on WB or price changed.
+- **Automated action:** T02, T04, T09 – launch ads, adjust price.
+- **Output:** sales, reviews.
+
+**7.3.3. From closed deal (sale) to onboarding (Customer Service)**
+- **Input:** order received (T04).
+- **Automated action:** “Customer service” agent (D7) sends an automatic email (via console) thanking the customer and providing documentation (for construction teams, installation instructions). When a review arrives, T03.
+- **Output:** improved rating, fewer negative reviews.
+
+**7.3.4. From successful usage to expansion (Assortment Strategist)**
+- **Input:** sales growth in a category, positive reviews, high demand forecast.
+- **Automated action:** “Assortment strategist” agent (B2) proposes expanding the line (new sizes, colours, designs) – T07.
+- **Output:** new SKUs launched, increased market share.
+
+**Handover diagram (textual):**
+Demand forecast (A3) → Assortment Strategist (B2) → [if new product] GENESIS (E1) → Test Analyst (E4) → Ad Optimiser (D2) → Sales (T04) → Customer Service (D7) → Reviews (T03) → Quality Control (B5) → Assortment Strategist (B2) → expansion.
+
+────────────────────────────────────────────────────────────────────────────────────
+**7.4. INTEGRATION OF TRIGGERS AND PLAYBOOKS WITH THE ARCHITECTURE**
+───────────────────────────────────────────────────────────────────────────────────
+
+All triggers are implemented by agents subscribing to Redis Streams. Each trigger
+has its own topic (e.g., `stock_events`, `price_events`). When an event occurs, a
+message is published and processed by the corresponding agent. For critical playbooks,
+alerts and logging are configured in the console.
+
+**Example flow for T01:**
+1. “WB API monitor” agent (A2) receives stock update → publishes `stock_updated` event to Redis Stream.
+2. “Inventory manager” agent (D3) subscribed to this topic receives the message and checks stock for each SKU.
+3. If stock is below threshold s, the agent creates a production task (in the `production_tasks` table) and publishes a `stock_low` event.
+4. “Production scheduler” agent (L3) subscribed to `stock_low` adds the task to the schedule.
+5. If a shortage is forecast within 3 days (according to A3 data), an additional notification is sent to the operator.
+
+────────────────────────────────────────────────────────────────────────────────────
+**7.5. RELIABILITY GUARANTEES**
+───────────────────────────────────────────────────────────────────────────────────
+
+- **Dead Letter Queue (DLQ):** events not processed after 3 attempts are moved to the DLQ (Redis Stream named `dlq`). The operator can view and reprocess them via the console.
+- **Exponential backoff retry:** for transient failures (API errors, brief database unavailability), tenacity is used with parameters `stop_after_attempt=3, wait=exponential(multiplier=1, min=2, max=10)`.
+- **Monitoring:** the console displays the number of active triggers, DLQ size, trigger frequency, and error rates. Alerts are triggered when thresholds are exceeded.
+
+═══════════════════════════════════════════════════════════════════════════════════
+**NOTE:** All triggers and playbooks can be modified by the operator via the
+console: adjusting thresholds, weights, enabling/disabling individual rules.
+Subsequent protocols (7.1–7.3) will detail trigger lists, playbook descriptions,
+and the customer lifecycle.

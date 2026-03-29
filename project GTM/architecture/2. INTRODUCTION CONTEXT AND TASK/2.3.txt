@@ -1,0 +1,140 @@
+═══════════════════════════════════════════════════════════════════════════════════
+PROTOCOL: 2.3. PROJECT GOALS AND CONSTRAINTS
+Project: Sourcegraph GTM Infrastructure
+═══════════════════════════════════════════════════════════════════════════════════
+
+**2.3. PROJECT GOALS AND CONSTRAINTS**
+
+────────────────────────────────────────────────────────────────────────────────────
+2.3.1. STRATEGIC GOALS
+────────────────────────────────────────────────────────────────────────────────────
+
+The project to create the target GTM infrastructure for Sourcegraph is aimed at systematically overcoming the limitations of the current model (PLG) and building a scalable, automated platform for enterprise sales. The main strategic goals are:
+
+1. **Complete the GTM transformation**  
+   Transition from a manual, fragmented organization to a unified event‑driven system where all actions are triggered by data, and people focus on strategy and exceptions.
+
+2. **Ensure scalability**  
+   Create an architecture capable of supporting ARR growth to $100M+ and handling up to 10⁵ events per second without a proportional increase in manual labor.
+
+3. **Improve management accuracy**  
+   Implement mathematical scoring and forecasting models that provide transparency and predictability of the business.
+
+4. **Strengthen competitive advantage**  
+   Through speed of response to market signals (intent), proactive customer experience management, and accurate resource planning.
+
+5. **Preserve and strengthen culture**  
+   All automation must align with the principles of high agency, remote‑first, written transparency, enhancing team capabilities rather than limiting them.
+
+────────────────────────────────────────────────────────────────────────────────────
+2.3.2. OPERATIONAL GOALS (KPIs)
+────────────────────────────────────────────────────────────────────────────────────
+
+| Metric                                     | Baseline Value | Target Value                         |
+|---------------------------------------------|----------------|--------------------------------------|
+| Reaction time to intent signal              | up to 2 days   | ≤2 hours                             |
+| Win rate (enterprise)                       | ~20%           | >25% (+15–20% relative increase)     |
+| Deal cycle                                  | 90–120 days    | ≤96 days (-20%)                      |
+| Net retention (NRR)                         | 100–110%       | >120%                                |
+| Share of customers in green health score zone| not measured  | >80%                                 |
+| Quarterly forecast accuracy (MAPE)          | 20–30%         | <10% (accuracy >90%)                 |
+| Pipeline coverage                           | <2×            | >3×                                  |
+| Churn rate (enterprise)                     | 5–10%          | <5%                                  |
+| CAC Payback                                 | >24 months     | <18 months                           |
+| Rule of 40 (ARR Growth + EBITDA Margin)     | <30%           | >40%                                 |
+
+All target values are based on benchmarking of enterprise‑segment leaders (SaaS companies with similar models) and have been validated through multi‑variant simulations.
+
+────────────────────────────────────────────────────────────────────────────────────
+2.3.3. FINANCIAL AND ECONOMIC GOALS
+────────────────────────────────────────────────────────────────────────────────────
+
+- **Return on investment** – payback period no more than 12 months.
+- **Profitability** – ROI >300% over three years (conservative scenario).
+- **Net present value (NPV)** – at least $25 million over five years.
+- **Budget compliance** – CAPEX within $2.0–2.5M, OPEX ≤$2.0M/year.
+- **Efficiency** – each dollar invested in automation must yield at least $3 in additional revenue over three years.
+
+────────────────────────────────────────────────────────────────────────────────────
+2.3.4. TECHNICAL GOALS
+────────────────────────────────────────────────────────────────────────────────────
+
+- **Single source of truth** – integration of Salesforce, Snowflake, Hightouch,
+  6sense, Gainsight, SalesLoft, Tableau into a unified data fabric.
+- **Event‑driven architecture** – all data changes generate events that automatically trigger actions (triggers).
+- **Automation of routine operations** – at least 80% of repetitive tasks (task creation, field updates, notification sending) must be performed by agents without human involvement.
+- **Scalability** – the system must withstand loads of up to 10⁵ events per second and 3,000 simultaneously active agents.
+- **Reliability** – 99.9% availability, automatic recovery after failures, recovery time (RTO) <1 hour.
+- **Security** – encryption at rest and in transit, compliance with SOC2 Type II and GDPR, audit of all actions.
+
+────────────────────────────────────────────────────────────────────────────────────
+2.3.5. ORGANIZATIONAL GOALS
+────────────────────────────────────────────────────────────────────────────────────
+
+- **Reduce manual labor** – reduce the time RevOps spends preparing reports by 80% (from 20 hours per month to 4 hours).
+- **Transparency** – ensure access to up‑to‑date data on pipeline, health score, and forecasts for all management levels in real time.
+- **Training and adaptation** – develop documentation and playbooks that enable new employees to reach full effectiveness twice as fast.
+- **Team satisfaction** – prevent a drop in engagement due to automation; instead, increase it by eliminating routine.
+
+────────────────────────────────────────────────────────────────────────────────────
+2.3.6. PROJECT CONSTRAINTS
+────────────────────────────────────────────────────────────────────────────────────
+
+**Budget constraints**
+- CAPEX (one‑time costs for development, integration, training) – no more than $2.5M. Preliminary estimate: $2.0M (agent development, integration, training).
+- OPEX (annual operating costs) – no more than $2.0M. Preliminary estimate: $1.7M (cloud resources, licenses, support).
+
+**Timeline**
+- Phase 1 (pilot) – no more than 2 months.
+- Full implementation (all 4 phases) – within 12 months from start.
+- Key milestones: after 6 months – scaling to all enterprise accounts.
+
+**Technical constraints**
+- Preserve the existing stack: cannot replace Salesforce, Snowflake, Hightouch, 6sense, Gainsight, SalesLoft, Tableau. Modifications via API, custom objects, and asynchronous integrations are allowed.
+- All integrations must use official APIs and comply with request rate limits.
+- The system must be deployed in AWS (current cloud provider) using services already approved by security (Lambda, Kubernetes, EventBridge, KMS).
+- Compatibility with the current version of Salesforce (API version 58+).
+
+**Cultural constraints**
+- Automation must not create a “police” feeling; all rules must be transparent, and people must have the ability to override agent decisions in exceptional cases.
+- Written communication remains a priority; interfaces and documentation must be self‑sufficient.
+- High agency – the system should provide tools, not impose rigid scenarios; agents are assistants, not replacements.
+
+**Security and compliance**
+- All data processed by the system must comply with SOC2 Type II and GDPR requirements.
+- Access to critical functions (changing model weights, manual intervention) must be restricted and logged.
+- Agents must not be able to perform actions beyond their authority (principle of least privilege).
+
+**Volume constraints**
+- The system must support at least 3,000 simultaneously active agents and up to 10⁵ events per second at peak loads.
+- The data warehouse (Snowflake) must be designed to accommodate volume growth of 50% per year.
+
+────────────────────────────────────────────────────────────────────────────────────
+2.3.7. SUCCESS CRITERIA
+────────────────────────────────────────────────────────────────────────────────────
+
+The project is considered successfully implemented if, after 12 months, the following results are achieved:
+
+1. **Operational** – all target KPIs from section 2.3.2 are met or exceeded.
+2. **Technical** – the system operates stably under load, recovery time after failures <1 hour, no security incidents.
+3. **Financial** – CAPEX and OPEX within budget, payback <12 months.
+4. **Organizational** – Sales, CS, and RevOps teams confirm a reduction in manual labor and increased satisfaction (survey).
+5. **Scalability** – the system is ready for further growth without requiring architectural changes.
+
+────────────────────────────────────────────────────────────────────────────────────
+2.3.8. DEPENDENCIES AND PREREQUISITES
+────────────────────────────────────────────────────────────────────────────────────
+
+The following prerequisites are necessary for successful project implementation:
+
+- Availability of up‑to‑date data in Salesforce and Snowflake (historical depth of at least 2 years for model calibration).
+- Access to the APIs of 6sense, Gainsight, SalesLoft with the necessary permissions.
+- Dedicated RevOps team (at least 2 people) to participate in setup and acceptance of results.
+- Approval of budget and resources by management (CRO, CPO, CFO).
+- Coordination of the implementation plan with Sales, CS, and Marketing teams.
+
+────────────────────────────────────────────────────────────────────────────────────
+**PROJECT CONCLUSIONS**
+- The project goals and constraints are clearly defined, measurable, and aligned with the company’s current state.
+- The success of the project depends on the balance between automation and the preservation of human control, as well as the teams’ readiness for change.
+- Subsequent sections of the document (architecture, models, roadmap) are built upon these goals and within the specified constraints.

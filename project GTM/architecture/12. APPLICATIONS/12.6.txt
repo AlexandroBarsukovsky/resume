@@ -1,0 +1,215 @@
+═══════════════════════════════════════════════════════════════════════════════════
+PROTOCOL: 12.6. GLOSSARY OF TERMS
+Project: Sourcegraph GTM Infrastructure
+═══════════════════════════════════════════════════════════════════════════════════
+
+**12.6. GLOSSARY OF TERMS**
+
+This glossary contains definitions of key terms used in the architectural
+document and during the implementation of the target GTM infrastructure.
+Terms are listed in alphabetical order. Each term includes a brief definition
+and references to document sections where it is discussed in detail.
+
+────────────────────────────────────────────────────────────────────────────────────
+**Account Executive (AE)** – sales manager responsible for closing enterprise deals.
+Conducts negotiations, uses MEDDPICC methodology, updates forecasts.
+(*sections 9.2, 8.3.2*)
+
+**Account Manager (AM)** – manager responsible for expansion and contract renewals.
+Responsible for upsell and cross‑sell to existing customers, as well as contract
+renewals. (*sections 9.4, 8.3.4*)
+
+**Account Score** – numerical indicator (0–1) determining account priority for
+outreach. Calculated based on intent signals, product activity, and ICP fit.
+(*sections 6.1, 12.1.1*)
+
+**Agent** – software component (AI assistant) that performs automated actions
+within the GTM architecture. Agents are divided into levels (1–4) by functionality.
+(*sections 4.2, 10*)
+
+**Agent Holding** – the totality of all agents (3,000+), organised into a
+four‑level hierarchy for mass analysis, strategy, tactics, and execution.
+(*sections 4.2, 12.5.1*)
+
+**Apex** – programming language on the Salesforce platform, used for complex
+business logic, triggers, and external API calls.
+(*sections 5.2, 12.3.3*)
+
+**ARR (Annual Recurring Revenue)** – annual recurring revenue from subscriptions
+and contracts. Key growth metric. (*sections 2.3, 6.4*)
+
+**CAPEX (Capital Expenditure)** – capital expenditures, one‑time investments
+in development, integrations, training. For the project – $2.0M.
+(*sections 2.3, 10*)
+
+**CRM (Customer Relationship Management)** – customer relationship management
+system. In the project – Salesforce, the central system of truth.
+(*sections 4.4, 5*)
+
+**Customer Success Manager (CSM)** – customer success manager responsible for
+onboarding, retention, and customer health.
+(*sections 9.3, 8.3.3*)
+
+**CVaR (Conditional Value at Risk)** – conditional value at risk; average
+losses in the tail of the distribution (worst 5% of scenarios).
+(*sections 11.3, 12.1.4*)
+
+**DCF (Discounted Cash Flow)** – investment valuation method, discounting
+cash flows. Used to calculate NPV. (*sections 11.3, 12.1.4*)
+
+**Dead Letter Queue (DLQ)** – queue of unprocessed events that could not be
+delivered or processed after several attempts. Handled by control panel operators.
+(*sections 8.1, 11.2*)
+
+**Event‑driven architecture** – architecture where actions are triggered by
+events (data changes, signals). Implemented via AWS EventBridge + Kafka.
+(*sections 4.1, 4.4, 12.4.1*)
+
+**EventBridge (AWS)** – event routing service from various sources to target
+systems. Used as the central event bus. (*sections 4.4, 12.4.1*)
+
+**Expansion ARR** – additional revenue from existing customers through upsell
+and cross‑sell. Target growth – >30%. (*sections 7.3, 9.4*)
+
+**Expansion Signal** – automatically detected indicator of customer readiness
+for expansion (increased activity, feature requests, renewal with growth).
+(*sections 6.3, 8.2.2*)
+
+**Forecast Accuracy** – revenue forecast accuracy, measured as 1 – MAPE.
+Target value >90%. (*sections 2.3, 6.4*)
+
+**Gainsight** – customer experience management platform (Customer Success).
+Used for health score, playbooks, NPS surveys.
+(*sections 4.4, 5.3, 6.2*)
+
+**GDPR (General Data Protection Regulation)** – European data protection
+regulation. Requires special handling of personal data.
+(*sections 11.4*)
+
+**Health Score** – composite indicator of customer health (0–1). Based on
+product activity, support tickets, engagement, and NPS.
+(*sections 6.2, 12.1.2*)
+
+**Hightouch** – reverse ETL tool, synchronising data from Snowflake to
+Salesforce in real time. (*sections 4.4, 5.3*)
+
+**ICP (Ideal Customer Profile)** – ideal customer profile. Used to assess
+account alignment with target criteria (industry, size, technology stack).
+(*sections 6.1, 12.1.1*)
+
+**Intent signal** – data about a potential customer’s expressed interest
+(searching for solutions, visiting the site, requests). Provided by 6sense.
+(*sections 6.1, 8.1*)
+
+**Kafka (Apache Kafka)** – distributed streaming platform. Used as an event
+buffer and job queue between agent levels.
+(*sections 4.4, 12.4.1*)
+
+**KPI (Key Performance Indicator)** – key performance indicators used to
+evaluate the performance of roles and the system as a whole.
+(*sections 2.3, 9*)
+
+**MAPE (Mean Absolute Percentage Error)** – mean absolute percentage error
+of the forecast. Target value <10%. (*sections 6.4, 12.1.3*)
+
+**MEDDPICC** – deal qualification methodology: Metrics, Economic Buyer,
+Decision Criteria, Decision Process, Paper Process, Identify Pain,
+Champion, Competition. (*sections 5.1, 9.2*)
+
+**Net Retention (NRR)** – revenue retention metric, accounting for expansion
+and churn. Target value >120%. (*sections 2.3, 6.2*)
+
+**NPS (Net Promoter Score)** – customer loyalty metric. Used in Health Score
+and for satisfaction measurement. (*sections 6.2, 9.3*)
+
+**NPV (Net Present Value)** – net present value of investments.
+Calculated value – from $28.4M to $42.1M. (*sections 2.3, 12.1.4*)
+
+**OPEX (Operational Expenditure)** – operating expenses (cloud resources,
+licenses, support). Annual $1.7M. (*sections 2.3, 10*)
+
+**Payback period** – investment payback period. Target – 8–12 months.
+(*sections 2.3, 12.1.4*)
+
+**Pipeline Coverage** – ratio of open pipeline sum to quarterly quota.
+Target value >3×. (*sections 2.3, 8.2.4*)
+
+**Platform Events** – Salesforce mechanism for publishing events that can
+be processed by external systems. Used for event‑driven integration.
+(*sections 5.2, 12.3.1*)
+
+**Playbook** – predefined sequence of automated actions (task creation,
+email sending, API calls) triggered by a specific event.
+(*sections 8.2, 8.3*)
+
+**Process Builder / Flow** – Salesforce tools for automating simple processes
+without writing code. (*sections 5.2, 12.3.2*)
+
+**Reverse ETL** – process of synchronising data from a data warehouse (Snowflake)
+to operational systems (Salesforce). Implemented via Hightouch.
+(*sections 4.4, 5.3*)
+
+**RevOps (Revenue Operations)** – department responsible for managing automation,
+data, reporting, and resource planning. (*sections 9.5, 10*)
+
+**ROI (Return on Investment)** – return on investment. Target value >300% over 3 years.
+(*sections 2.3, 12.1.4*)
+
+**Sales Strategist** – analytical role using intent data and product activity
+to qualify accounts and hand off to AE. (*sections 9.1, 8.3.1*)
+
+**Salesforce** – CRM system, the central system of truth for all operational
+GTM data. (*sections 4.4, 5*)
+
+**SalesLoft** – outreach automation platform (email, sequences).
+(*sections 4.4, 5.3*)
+
+**Snowflake** – cloud data warehouse. Used for event storage, analytics,
+data marts. (*sections 4.4, 12.2*)
+
+**SOC2** – security standard for cloud services. Sourcegraph and the system
+must comply. (*sections 11.4*)
+
+**Tableau** – business intelligence and data visualisation platform.
+Used for dashboards and reports. (*sections 4.4, 5.4*)
+
+**Territory design** – market division among AEs by geographic, vertical,
+or account‑based principles. (*sections 7.2*)
+
+**Time to First Value (TTFV)** – time from deal closure to first active
+product usage. Target value <30 days. (*sections 7.4, 9.3*)
+
+**Upsell / Cross‑sell** – expansion: upsell – increasing the volume of the
+current product, cross‑sell – selling additional products (Deep Search, MCP).
+(*sections 6.3, 9.4*)
+
+**VaR (Value at Risk)** – value at risk; the maximum loss that will not be
+exceeded with a given probability (95%). (*sections 11.3, 12.1.4*)
+
+**VAR model (Vector Autoregression)** – time series model linking ARR growth
+with macroeconomic indicators (PMI, interest rate, technology index). Used to
+adjust forecasts. (*sections 6.4, 12.1.3*)
+
+**WACC (Weighted Average Cost of Capital)** – weighted average cost of capital.
+Used in DCF (12%). (*sections 12.1.4*)
+
+**Win Rate** – share of won deals from total. Target value >25%.
+(*sections 2.3, 6.4*)
+
+**Win Probability** – deal closing probability calculated by a logistic
+regression model. Used in revenue forecasting. (*sections 6.4, 12.1.3*)
+
+**6sense** – intent signal collection platform. Provides data on which
+companies are searching for solutions related to code intelligence.
+(*sections 4.4, 5.3*)
+
+────────────────────────────────────────────────────────────────────────────────────
+**CONCLUSIONS ON THE GLOSSARY**
+
+- The glossary covers all key terms used in the architectural document
+  and ensures a common understanding for all project participants.
+- Each definition includes references to the relevant sections of the document
+  for deeper study.
+- Terms are presented in alphabetical order, facilitating search.
+
+═══════════════════════════════════════════════════════════════════════════════════

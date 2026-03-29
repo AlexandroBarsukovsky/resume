@@ -1,0 +1,243 @@
+╔══════════════════════════════════════════════════════════════════════════════════╗
+║  SECTION 4. TARGET ARCHITECTURE OF THE AI ECOSYSTEM (MASTER PROTOCOL)            ║
+║  PROJECT: IRON KIT – 13,918 SALES                                                 ║
+║                                                                                  ║
+╚══════════════════════════════════════════════════════════════════════════════════╝
+
+═══════════════════════════════════════════════════════════════════════════════════
+**4.1. DESIGN PRINCIPLES**
+───────────────────────────────────────────────────────────────────────────────────
+
+The target architecture is based on four fundamental principles, proven effective in simulation cycles and historical analysis of management evolution.
+
+**4.1.1. Data Atomicity**
+Every significant event is recorded as an indivisible unit, complete with full context. This is the foundation for subsequent aggregation, analysis and automated reaction.
+
+| Event Type                | Recorded Fields                                                                 | Source                       |
+|---------------------------|----------------------------------------------------------------------------------|------------------------------|
+| Wildberries order         | `order_id`, `timestamp`, `sku`, `quantity`, `price`, `customer_rating`          | WB API (FBS/FBO)              |
+| Competitor price change   | `competitor_sku`, `new_price`, `timestamp`, `old_price`                         | Parsing / 6sense (simulated) |
+| Review                    | `review_id`, `timestamp`, `rating`, `text`, `author`, `answered`                | WB API (reviews)              |
+| Warehouse stock           | `sku`, `quantity`, `warehouse`, `timestamp`                                     | WB API + Excel (manual backup)|
+| Production task           | `task_id`, `sku`, `quantity`, `deadline`, `assigned_to`, `status`               | System (planner agent)        |
+| Payment                   | `payment_id`, `amount`, `purpose`, `timestamp`, `counterparty`                  | Bank client (statement)       |
+
+All events are stored in **PostgreSQL** (primary storage) with unique identifiers and indexes on `sku`, `timestamp`, `account_id`. This enables:
+- reconstructing the timeline for any product,
+- building forecasting models on detailed data,
+- auditing all automated actions.
+
+**4.1.2. Event‑driven Automation**
+Instead of periodic (batch) or manual actions, the system reacts to events in real time. The architecture is built around a central **event bus** (Redis Streams / Kafka), where each event source publishes messages and agents subscribe to relevant topics.
+
+**Example event‑driven chain:**
+1. WB API records a new order → event `order.created` is published.
+2. “Logistics dispatcher” agent subscribed to this event → creates a shipping task, updates stock.
+3. Simultaneously, “Inventory manager” agent recalculates forecast and, if stock falls below threshold, initiates raw material purchase (event `stock.low`).
+4. “Financial controller” agent records revenue, updates dashboard.
+
+All events are processed asynchronously, with guaranteed delivery (retry, DLQ). Time from event to action is less than 5 seconds (compared to days in manual mode).
+
+**4.1.3. Multi‑Level Orchestration (4 Levels)**
+Functions are separated by degree of abstraction and scale, allowing each level to scale independently and adapt to growing assortment or new channels.
+
+| Level | Name                 | Number of Agents | Function                                                         |
+|-------|----------------------|------------------|------------------------------------------------------------------|
+| **L1**| Analytical agents    | 6                | Collection, enrichment, normalisation, initial scoring           |
+| **L2**| Strategic agents     | 6                | Decision‑making based on analytics (pricing, assortment, risks) |
+| **L3**| Tactical coordinators| 8 (4 groups + 4) | Strategy adaptation to product groups, coordination of execution |
+| **L4**| Executive agents     | 18               | Performing concrete operations (API calls, accounting, shipping, creativity) |
+
+Detailed composition of each level is given in Section 4.2.
+
+**4.1.4. Hybrid Governance (Human + AI Agents)**
+Agents perform routine, predictable operations, but final decisions at critical points remain with the human. The business owner interacts with the system through the **“Operator Console”** – an interface in the style of a strategy game (similar to StarCraft / Age of Empires), where they can:
+- see the status of all agents and key metrics,
+- override agent decisions (“Intervene” button),
+- adjust thresholds and model weights,
+- handle exceptions (Dead Letter Queue).
+
+Division of responsibilities:
+
+| Area                     | Agents (AI)                                          | Human (Owner)                                    |
+|--------------------------|------------------------------------------------------|--------------------------------------------------|
+| Data collection          | Automatic from WB API, parsing                       | Source setup, verification                       |
+| Demand forecast          | ARIMA/Prophet model, seasonal coefficients           | Adjustment for force majeure (lockdowns)         |
+| Pricing                  | Dynamic adjustment based on competitors              | Approval of large changes (>20%)                 |
+| Raw material procurement | Generate order when stock falls                      | Confirm amounts > 200k RUB                       |
+| Review management        | Auto‑replies to positive reviews, classification of negative | Personal involvement in complex conflicts        |
+| Advertising budgets      | Bid optimisation, allocation across campaigns        | Approval of monthly total budget                 |
+| New product generation   | Idea generation, A/B tests                           | Final decision on serial production              |
+
+────────────────────────────────────────────────────────────────────────────────────
+**4.2. MULTI‑LEVEL ORCHESTRATION (4 LEVELS)**
+───────────────────────────────────────────────────────────────────────────────────
+
+**4.2.1. Level 1 – Analytical Agents (6)**
+| ID | Agent Name           | Input Data                               | Output Data                                            | Frequency       |
+|----|----------------------|------------------------------------------|--------------------------------------------------------|-----------------|
+| A1 | Competitive intelligence | Parsing WB product cards (by category) | Competitor price table, discount signals               | Every 30 min    |
+| A2 | WB API Monitor       | WB API (orders, stock, reviews)          | Structured events in DB                                | real‑time       |
+| A3 | Demand Analyst       | Sales history, seasonality               | Sales forecast (7/30/90 days), MAPE                    | Daily           |
+| A4 | Review Processor (NLP) | Review texts (NLP)                     | Classification (positive/negative), topics, embeddings | real‑time       |
+| A5 | News Monitor         | RSS, Telegram channels, WB news          | Digest (rule changes, promotions)                      | Hourly          |
+| A6 | Seasonal Forecaster  | Weather data, holiday calendar           | Seasonal coefficients per SKU                          | Monthly         |
+
+**Implementation highlights:**
+- A2 uses **official Wildberries API** (FBS/FBO) with access tokens stored encrypted.
+- A4 is built on **ruBERT** (fine‑tuned model for metal product reviews) with embeddings in **pgvector** for similar complaint search.
+- A3 uses **Prophet** (Facebook) with multiplicative seasonality, calibrated monthly.
+
+**4.2.2. Level 2 – Strategic Agents (6)**
+| ID | Agent Name           | Input Data                               | Output Data                                            | Model / Rules             |
+|----|----------------------|------------------------------------------|--------------------------------------------------------|---------------------------|
+| B1 | Pricing Strategist   | Cost, competitor prices, elasticity      | Recommended price (optimal margin)                     | Logit model               |
+| B2 | Assortment Strategist| Trends, reviews, sales by SKU            | Proposals for new SKUs, removal of unprofitable ones   | Rules + GENESIS           |
+| B3 | Risk Manager         | Stock, lead times, shortages             | Risk assessment (red/yellow/green flag)                | Health Score formula      |
+| B4 | Marketing Analyst    | ROMI of past campaigns, seasonality      | Advertising budget allocation by channel               | Linear optimisation       |
+| B5 | Quality Control      | Reviews, defect reports                  | Defect report, improvement suggestions                 | Clustering                |
+| B6 | Expansion Analyst    | Ozon, Yandex.Market data, trends         | Recommendations for entering new platforms             | Comparative analysis      |
+
+**Key models:**
+- **Pricing Strategist** uses a logit model: `P(purchase) = 1/(1+exp(-(β₀+β₁·price+β₂·competitor_price+β₃·rating)))`. Coefficients recalculated monthly.
+- **Risk Manager** computes Health Score: `H = 0.4·(1-shortage_norm) + 0.3·(turnover_norm) + 0.3·margin_norm`. When H < 0.5, initiates retention playbook.
+
+**4.2.3. Level 3 – Tactical Coordinators (8)**
+- **4 product group coordinators** (pickets, angle brackets, wind strips, flashings) – each group consists of one coordinator agent which:
+  – receives strategy from level 2,
+  – adapts it to its group (e.g., more aggressive pricing for pickets in peak season),
+  – distributes tasks to executive agents.
+- **4 special coordinators:**
+  – **Scriptor #1** – link between core and coalition (data transfer, task queues).
+  – **Archivist** – indexing all reports, storing history, preparing data for dashboards.
+  – **Supervisor** – monitoring agent load, restarting failed ones, load balancing.
+  – **Production Scheduler** – generating production tasks based on forecasts and stock.
+
+**4.2.4. Level 4 – Executive Agents (18)**
+Divided into three functional groups:
+
+*Operational Core group (10 basic agents):*
+| ID | Agent Name           | Function                                                                 |
+|----|----------------------|--------------------------------------------------------------------------|
+| D1 | Tax Calculator       | Calculate simplified tax/VAT, advance payments, generate payment orders  |
+| D2 | Ad Optimiser         | Manage WB bids, start/stop campaigns                                     |
+| D3 | Inventory Manager    | Create supplier orders when stock falls, track deliveries                |
+| D4 | Logistics Dispatcher | Create WB shipment requests (FBO/FBS), print labels                      |
+| D5 | Financial Controller | Record revenue, commissions, cost, generate P&L                         |
+| D6 | Legal Assistant      | Check contracts, generate claims, monitor legal risks                    |
+| D7 | Customer Service     | Auto‑replies to reviews (templates + LLM), escalate complex cases       |
+| D8 | Document Flow        | Generate invoices, waybills, certificates (PDF/Excel)                    |
+| D9 | Scriptor #2 (Treasury)| Budget management, allocate funds across categories                     |
+| D10| Scriptor #3 (Execution)| Integration with WB API, 1С, bank (external API calls)                  |
+
+*Creative Pool group (8 agents – emergent, added in Phase 4):*
+| ID | Agent Name           | Function                                                                 |
+|----|----------------------|--------------------------------------------------------------------------|
+| E1 | Creative Designer    | Generate 3D models and drawings of new products (based on trends)       |
+| E2 | Process Engineer     | Check manufacturability, calculate cost, select materials               |
+| E3 | Creative Marketer    | Create names, descriptions, creatives for new products                  |
+| E4 | Test Analyst         | Run A/B tests for new products, assess potential                        |
+| E5 | Trend Scout          | Analyse social media, search queries to detect emerging trends          |
+| E6 | System Architect     | Optimise agent hierarchy, self‑learning                                 |
+| E7 | Partner Integrator   | Search for and automatically connect new suppliers, marketplaces        |
+| E8 | Quantum Synthesizer  | Create hybrid products (e.g., pickets with solar panels)                |
+
+────────────────────────────────────────────────────────────────────────────────────
+**4.3. SCRIPTOR CHAIN (CRITICAL COMPONENTS)**
+───────────────────────────────────────────────────────────────────────────────────
+
+**Scriptor #1 – Core‑Coalition Link**
+- **Function:** transfer analytical reports from level 1 to levels 2–3, and back – execution results.
+- **Implementation:** REST API on FastAPI, Redis queue (limit 10,000 messages).
+- **Data format:** JSON with fields `event_id`, `timestamp`, `source`, `target`, `payload`.
+- **Reliability:** retry 3 times, DLQ after 3 failures, operator notification.
+
+**Scriptor #2 – Budget Management (Treasury)**
+- **Function:** control limits by categories (raw material purchase, advertising, taxes, reserve).
+- **Rules:** when 80% of limit is exceeded – warning to operator; when 100% exceeded – block new spending until confirmation.
+- **Integration:** bank client (statement), Excel (plan), accounting.
+
+**Scriptor #3 – Execution via External APIs**
+- **Function:** unified call to Wildberries, Ozon, 1С, bank APIs.
+- **Features:**
+  – response caching (TTL 5 min),
+  – automatic token renewal on expiry,
+  – fallback to manual input via Excel on API failure.
+- **Example:** `POST /api/wb/price/update` – update product price.
+
+────────────────────────────────────────────────────────────────────────────────────
+**4.4. OPERATOR CONSOLE (INTERFACE IN THE STYLE OF A STRATEGY GAME)**
+───────────────────────────────────────────────────────────────────────────────────
+
+**4.4.1. General Concept**
+The interface is designed for the business owner without deep technical knowledge. Stylistically reminiscent of a strategy game (Age of Empires, StarCraft), where:
+- **resources** – revenue, margin, stock,
+- **units** – agents (each represented by an icon),
+- **map** – dashboards with colour coding,
+- **missions** – tasks that agents propose to perform.
+
+**4.4.2. Main Screens**
+
+*Main screen (Dashboard)*
+- Top panel: key metrics (revenue, margin, turnover, shortage) – large numbers with trends.
+- Centre: interactive “current state” map – product groups (4 blocks) with colour coding (green/yellow/red). Clicking on a block gives SKU‑level detail.
+- Left panel: list of agents with status indicators (active, error, intervention required). Clicking opens detailed log.
+- Right panel: task queue (tasks requiring confirmation) and alerts.
+
+*Agent screen (example: Pricing Strategist)*
+- Graph of competitor price dynamics and recommended price.
+- Sliders for adjusting thresholds (minimum margin, maximum deviation).
+- “Intervene” button – manual price setting, blocks automation for 24 hours.
+
+*Exception handling screen (DLQ)*
+- Table of unprocessed events with filters by type, date.
+- Actions: “Retry”, “Fix manually”, “Ignore”.
+- Ability to edit data (e.g., manual stock update).
+
+*Settings*
+- Editing model weights (via sliders), trigger thresholds.
+- User management (owner, possibly a future manager).
+- Report export (PDF, Excel).
+
+**4.4.3. Technical Implementation**
+- **Frontend:** React + TypeScript, Redux Toolkit, WebSocket (Socket.IO) for real‑time updates.
+- **Backend:** Node.js (Express) or Python (FastAPI) for console API.
+- **Security:** password authentication (two‑factor optional), HTTPS, role‑based model (owner only).
+
+────────────────────────────────────────────────────────────────────────────────────
+**4.5. INTEGRATION WITH EXISTING STACK**
+───────────────────────────────────────────────────────────────────────────────────
+
+**4.5.1. Overall Scheme**
+The target architecture does not replace existing tools but sits on top of them:
+
+[WB API] ←→ [Scriptor #3] ←→ [PostgreSQL] ←→ [Console] ←→ [Owner]
+  ↑           ↑               ↑                ↑
+[Excel] ←→ [Fallback Script] ←→ [1С (basic)] ←→ [Bank client]
+
+
+**4.5.2. Integration with Wildberries API**
+- **Endpoints used:**
+  – `GET /api/v2/orders` – orders,
+  – `GET /api/v2/stocks` – stock,
+  – `PUT /api/v2/price` – price update,
+  – `GET /api/v2/reviews` – reviews,
+  – `POST /api/v2/upload` – create shipment requests.
+- **Frequency:** according to rate limits (max 100 requests/min). Uses token pool and caching.
+
+**4.5.3. Working with Excel**
+- **Export:** agents can export reports to Excel (on operator request).
+- **Import:** fallback channel – if WB API is unavailable, the owner can upload a CSV file (manual export from personal account) via the console interface; agents will read it as events.
+
+**4.5.4. Integration with 1С**
+- Uses standard exchange via **CSV/XML** (monthly export of cost, purchases).
+- Direction: from 1С → PostgreSQL (via script run daily). Reverse direction not required (data from WB is already present).
+
+**4.5.5. Security and Backup**
+- All data in PostgreSQL is encrypted (AES-256), access via VPN.
+- Daily backup to Yandex Object Storage (S3).
+- In case of WB API failure, the system switches to “manual input” mode via Excel, notifying the operator.
+
+═══════════════════════════════════════════════════════════════════════════════════
+**NOTE:** This master protocol of Section 4 is the foundation for subsequent detailing. Each subsection (4.1–4.5) will be expanded in separate detailed protocols.
+

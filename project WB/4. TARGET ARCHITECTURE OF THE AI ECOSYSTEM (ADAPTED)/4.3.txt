@@ -1,0 +1,336 @@
+╔══════════════════════════════════════════════════════════════════════════════════╗
+║  PROTOCOL 4.3. SCRIPTOR CHAIN (CRITICAL COMPONENTS)                              ║
+║  PROJECT: IRON KIT – 13,918 SALES                                                 ║
+║                                                                                  ║
+╚══════════════════════════════════════════════════════════════════════════════════╝
+
+═══════════════════════════════════════════════════════════════════════════════════
+**4.3. SCRIPTOR CHAIN (CRITICAL COMPONENTS)**
+───────────────────────────────────────────────────────────────────────────────────
+
+The scriptor chain consists of three critical components that ensure reliable
+interaction between the system core (levels 1–3) and the outside world (executive
+level 4, marketplace APIs, accounting, bank). Each script performs a strictly
+defined function and has built‑in fault‑tolerance mechanisms.
+
+────────────────────────────────────────────────────────────────────────────────────
+**4.3.1. SCRIPTOR #1 – CORE–COALITION LINK**
+───────────────────────────────────────────────────────────────────────────────────
+
+**Purpose**
+Provides two‑way asynchronous data transfer between the analytical‑strategic
+core (levels 1–3) and the executive cluster (level 4). Guarantees message
+delivery, maintains logs, handles failures.
+
+**Architecture**
+- **Protocol:** HTTP (REST) for synchronous requests + Redis Streams for asynchronous queue.
+- **Entry points:**
+  - `POST /api/v1/tasks` – receive tasks from levels 1–3.
+  - `GET /api/v1/results` – retrieve results from level 4.
+  - `POST /api/v1/events` – publish events from external sources (webhooks).
+- **Storage:** PostgreSQL (table `task_queue`), Redis Streams (for real‑time).
+
+**Functional capabilities**
+| Function                     | Description                                                                 |
+|------------------------------|-----------------------------------------------------------------------------|
+| **Task reception**           | Accepts JSON tasks from strategic agents, assigns `task_id`, saves to DB and sends to Redis Stream. |
+| **Routing**                  | Based on the `target` field, determines which executive agent should process the task. |
+| **Delivery control**         | Tracks receipt acknowledgment (`ack`). If missing – retry.                  |
+| **Dead Letter Queue (DLQ)**  | If a task fails after 3 attempts, moves it to DLQ and notifies the operator. |
+| **Logging**                  | Stores full task history (statuses, time, errors) for audit.               |
+| **Health check**             | Provides `/health` endpoint for monitoring.                                 |
+
+**Task structure (JSON)**
+```json
+{
+  "task_id": "uuid",
+  "timestamp": "2026-03-28T10:00:00Z",
+  "source": "pricing_strategist",
+  "target": "price_updater",
+  "priority": "high",
+  "payload": {
+    "sku": "PICKET-001",
+    "new_price": 6200,
+    "old_price": 5900,
+    "reason": "competitor_price_drop"
+  },
+  "ttl": 3600,
+  "retry_count": 0,
+  "status": "pending"
+}
+
+Implementation (Python + FastAPI)
+python
+
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+import redis
+import json
+import uuid
+from datetime import datetime
+
+app = FastAPI()
+redis_client = redis.Redis(host='redis', port=6379, decode_responses=True)
+
+class Task(BaseModel):
+    source: str
+    target: str
+    payload: dict
+    priority: str = "normal"
+    ttl: int = 3600
+
+@app.post("/api/v1/tasks")
+async def create_task(task: Task):
+    task_id = str(uuid.uuid4())
+    task_dict = task.dict()
+    task_dict.update({
+        "task_id": task_id,
+        "timestamp": datetime.utcnow().isoformat(),
+        "retry_count": 0,
+        "status": "pending"
+    })
+    # Save to PostgreSQL (omitted for brevity)
+    # Send to Redis Stream
+    redis_client.xadd("tasks_stream", {"data": json.dumps(task_dict)})
+    return {"task_id": task_id, "status": "accepted"}
+
+# Handling acknowledgements from executors
+@app.post("/api/v1/ack/{task_id}")
+async def ack_task(task_id: str):
+    # Update status in DB
+    return {"status": "ok"}
+
+# Dead Letter Queue – view and retry
+@app.get("/api/v1/dlq")
+async def get_dlq():
+    # Return list of tasks not processed after 3 attempts
+    pass
+
+Metrics
+
+    Number of tasks in the queue (Redis: llen tasks_stream).
+
+    Processing time (p95, p99).
+
+    Success/error rate.
+
+    DLQ size.
+
+────────────────────────────────────────────────────────────────────────────────────
+4.3.2. SCRIPTOR #2 – BUDGET MANAGEMENT (TREASURY)
+───────────────────────────────────────────────────────────────────────────────────
+
+Purpose
+Centralised control of financial limits by expense categories: raw material purchase,
+advertising, taxes, contingency fund. Ensures that no agent can initiate an expense
+exceeding the allocated limits.
+
+Budget structure
+Category    Monthly Limit (RUB) Current Spend   Available Balance   Warning Threshold
+Raw material purchase   800,000 450,000 350,000 80% (640,000)
+Advertising (WB)    150,000 80,000  70,000  80% (120,000)
+Taxes (reserve) 100,000 0   100,000 –
+Contingency fund    200,000 0   200,000 –
+TOTAL   1,250,000   530,000 720,000 
+
+Functional capabilities
+Function    Description
+Expense registration    Agents (e.g., D3 “Inventory Manager”) request permission via Scriptor #2 API before placing an order.
+Limit check Script checks whether the requested amount would exceed the available balance.
+Block / approve If exceeded – returns denial; agent cannot perform the operation.
+Automatic notifications When 80% of limit is reached – warning to operator in the console. When 100% exceeded – block and urgent notification.
+Transaction history Stores all expense requests (approved and rejected) for audit.
+
+API endpoints
+
+    POST /api/v2/budget/check – check availability for a given category.
+
+    POST /api/v2/budget/commit – record expense (after execution).
+
+    GET /api/v2/budget/status – current budget status.
+
+    PUT /api/v2/budget/limit – adjust limits (operator only).
+
+Implementation (Python + FastAPI)
+python
+
+from fastapi import FastAPI, HTTPException, Depends
+from pydantic import BaseModel
+import asyncpg
+import os
+
+app = FastAPI()
+
+class BudgetRequest(BaseModel):
+    article: str
+    amount: float
+    reason: str
+    source_agent: str
+
+# Limits table in PostgreSQL
+async def get_budget_status(article: str):
+    conn = await asyncpg.connect(os.getenv("DATABASE_URL"))
+    row = await conn.fetchrow("SELECT limit_amount, spent FROM budget WHERE article = $1", article)
+    await conn.close()
+    return row
+
+@app.post("/api/v2/budget/check")
+async def check_budget(req: BudgetRequest):
+    status = await get_budget_status(req.article)
+    if not status:
+        raise HTTPException(404, "Budget category not found")
+    limit, spent = status
+    available = limit - spent
+    if req.amount > available:
+        return {"allowed": False, "available": available, "message": "Limit exceeded"}
+    # Warning at 80%
+    if spent + req.amount > limit * 0.8:
+        # Send notification to operator
+        pass
+    return {"allowed": True, "available": available - req.amount}
+
+@app.post("/api/v2/budget/commit")
+async def commit_budget(req: BudgetRequest):
+    # Record after successful expense
+    conn = await asyncpg.connect(os.getenv("DATABASE_URL"))
+    await conn.execute(
+        "UPDATE budget SET spent = spent + $1 WHERE article = $2",
+        req.amount, req.article
+    )
+    # Write to history
+    await conn.execute(
+        "INSERT INTO budget_history (article, amount, reason, source_agent, timestamp) VALUES ($1, $2, $3, $4, NOW())",
+        req.article, req.amount, req.reason, req.source_agent
+    )
+    await conn.close()
+    return {"status": "committed"}
+
+Integration with agents
+
+    Agent D3 (“Inventory Manager”) calls check before placing a supplier order, gets allowed, then after order confirmation calls commit.
+
+    Agent D2 (“Ad Optimiser”) checks budget before launching a campaign.
+
+    Agent D1 (“Tax Calculator”) reserves the tax amount (but does not spend).
+
+Security
+
+    All requests are authenticated using agent API keys.
+
+    Operator (owner) can manually increase limits via the console (logged).
+
+    On block, the agent receives a denial and must notify the operator.
+
+────────────────────────────────────────────────────────────────────────────────────
+4.3.3. SCRIPTOR #3 – EXECUTION VIA EXTERNAL APIS
+───────────────────────────────────────────────────────────────────────────────────
+
+Purpose
+Unified layer for calling external APIs: Wildberries, Ozon, 1С, bank.
+Provides automatic token renewal, caching, fallback to manual input, logging.
+
+Supported APIs
+Service Operations
+Wildberries API Price update, order retrieval, shipment request creation, review replies
+Ozon API    Similarly (future expansion)
+1С (via CSV)    Export cost, import purchases
+Bank (statement)    Load statements (CSV/Excel), generate payment orders
+
+Functional capabilities
+Function    Description
+Unified interface   All calls go through Scriptor #3; agents do not call APIs directly.
+Token management    Automatic renewal of WB tokens (every 24 hours), stored in Secrets Manager.
+Caching Results of frequently used queries (e.g., stock) cached in Redis (TTL 5 min).
+Retry and circuit breaker   On failures – retries with exponential backoff; if error threshold exceeded – temporary disable.
+Fallback to Excel   If API is unavailable, the agent can request manual input via Excel (CSV upload through console).
+Logging All calls are saved to log (table api_calls).
+
+Scriptor #3 API endpoints (internal, for agents)
+Endpoint    Method  Description
+/api/v3/wb/price/update POST    Update price on Wildberries
+/api/v3/wb/stock    GET Get WB warehouse stock
+/api/v3/wb/order/create POST    Create shipment request
+/api/v3/wb/review/answer    POST    Reply to a review
+/api/v3/1c/cost/import  POST    Import cost from 1С (CSV)
+/api/v3/bank/statement  GET Get statement (latest transactions)
+
+Implementation (Python)
+python
+
+import requests
+import redis
+import json
+from tenacity import retry, stop_after_attempt, wait_exponential
+
+redis_client = redis.Redis(host='redis', port=6379, decode_responses=True)
+
+class WBClient:
+    def __init__(self):
+        self.token = self._get_token()
+
+    def _get_token(self):
+        # Get from Secrets Manager or environment variable
+        return os.getenv("WB_API_TOKEN")
+
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
+    def update_price(self, sku, price):
+        url = "https://suppliers-api.wildberries.ru/api/v2/price"
+        headers = {"Authorization": f"Bearer {self.token}"}
+        data = {"data": [{"nmId": sku, "price": int(price * 100)}]}
+        response = requests.post(url, json=data, headers=headers)
+        response.raise_for_status()
+        return response.json()
+
+    def get_stocks(self):
+        # Caching
+        cached = redis_client.get("wb_stocks")
+        if cached:
+            return json.loads(cached)
+        # API call
+        response = requests.get("https://suppliers-api.wildberries.ru/api/v2/stocks", headers={"Authorization": f"Bearer {self.token}"})
+        data = response.json()
+        redis_client.setex("wb_stocks", 300, json.dumps(data))
+        return data
+
+# FastAPI endpoints
+from fastapi import FastAPI, HTTPException
+app = FastAPI()
+wb = WBClient()
+
+@app.post("/api/v3/wb/price/update")
+async def update_price(sku: str, price: float):
+    try:
+        result = wb.update_price(sku, price)
+        return {"status": "ok", "result": result}
+    except Exception as e:
+        # Place in fallback queue for manual input
+        redis_client.xadd("fallback_requests", {"sku": sku, "price": price, "error": str(e)})
+        raise HTTPException(503, "API temporarily unavailable, request forwarded to manual processing")
+
+Fallback to Excel
+
+    On API failure, the request goes to the fallback_requests queue.
+
+    The operator sees the list of pending actions in the console and can upload a CSV file with the necessary changes (prices, orders).
+
+    Scriptor #3 then imports the data from Excel and executes it in normal mode.
+
+Monitoring
+
+    All call logs are stored in the api_calls table with fields: timestamp, endpoint, status_code, response_time, error_message.
+
+    Console dashboard: number of successful/error calls, average time, number of tasks in fallback queue.
+
+────────────────────────────────────────────────────────────────────────────────────
+SUMMARY CHARACTERISTICS OF SCRIPTS
+───────────────────────────────────────────────────────────────────────────────────
+Script  Purpose Technologies    Criticality
+No.1    Core‑coalition link FastAPI, Redis Streams, PostgreSQL  High
+No.2    Budget management (Treasury)    FastAPI, PostgreSQL, notifications  Critical
+No.3    Execution via external APIs FastAPI, requests, tenacity, Redis  Critical
+
+═══════════════════════════════════════════════════════════════════════════════════
+NOTE: The scriptor chain is the single integration point for all external
+systems. Any change in marketplace or bank APIs must be made only in Scriptor #3,
+without modifying the agents. This ensures flexibility and reduces risks.
+

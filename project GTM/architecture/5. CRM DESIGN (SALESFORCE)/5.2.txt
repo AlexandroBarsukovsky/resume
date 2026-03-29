@@ -1,0 +1,290 @@
+═══════════════════════════════════════════════════════════════════════════════════
+PROTOCOL: 5.2. AUTOMATION VIA TRIGGERS (PLATFORM EVENTS, PROCESS BUILDER, APEX)
+Project: Sourcegraph GTM Infrastructure
+═══════════════════════════════════════════════════════════════════════════════════
+
+**5.2. AUTOMATION VIA TRIGGERS (PLATFORM EVENTS, PROCESS BUILDER, APEX)**
+
+In the target architecture, automation within Salesforce is built on three levels, each used for its own type of tasks. All mechanisms work in a unified event‑driven model, ensuring data consistency and triggering external processes.
+
+1. **Platform Events** – for publishing changes that need to be processed by external systems (agents) or subscribers inside Salesforce.
+2. **Process Builder / Flow** – for simple internal automations that do not require complex logic or calls to external APIs.
+3. **Apex Triggers** – for complex business logic requiring high performance, access to multiple objects, or external callouts.
+
+All three levels are interconnected: Apex can publish Platform Events, Process Builder can call Apex methods, and Platform Events can activate both Process Builder and Apex.
+
+────────────────────────────────────────────────────────────────────────────────────
+5.2.1. PLATFORM EVENTS
+────────────────────────────────────────────────────────────────────────────────────
+
+Platform Events enable asynchronous data transfer from Salesforce to the outside world. In the target architecture they are the primary channel through which changes in the CRM trigger agent activity (via EventBridge). Each event is published when key fields in Account, Opportunity, or Activity change.
+
+**5.2.1.1. Event Definitions**
+
+| Event Name                     | Fields                                                      | Publish Trigger                                                                 |
+|--------------------------------|-------------------------------------------------------------|---------------------------------------------------------------------------------|
+| **Account_Change__e**           | `Account_Id__c`, `Changed_Fields__c` (JSON)                 | Update of any of: `ICP_Fit__c`, `Intent_Strength__c`, `Health_Score__c`, `Risk_Flag__c`, `Strategic_Ideology__c` |
+| **Opportunity_Change__e**       | `Opportunity_Id__c`, `Stage__c`, `Win_Probability__c`, `Forecast_Category__c`, `Amount__c` | Change of `StageName`, `Win_Probability__c`, `Forecast_Category__c`, `Amount` |
+| **Task_Created__e**             | `Task_Id__c`, `Account_Id__c`, `Created_by_Agent_ID__c`, `Automated__c` | Task creation (in Apex trigger) |
+| **Opportunity_Closed__e**       | `Opportunity_Id__c`, `Account_Id__c`, `Amount__c`, `Close_Date__c` | When Stage transitions to `Closed Won` or `Closed Lost` |
+
+**5.2.1.2. Publishing Events from Apex**
+
+Example Apex code for publishing Account_Change__e:
+
+```apex
+public class AccountTriggerHandler {
+    public static void publishChangeEvent(Map<Id, Account> newMap, Map<Id, Account> oldMap) {
+        List<Account_Change__e> events = new List<Account_Change__e>();
+        for (Id accId : newMap.keySet()) {
+            Account newAcc = newMap.get(accId);
+            Account oldAcc = oldMap.get(accId);
+            // Determine which fields changed
+            Set<String> changedFields = new Set<String>();
+            if (newAcc.ICP_Fit__c != oldAcc.ICP_Fit__c) changedFields.add('ICP_Fit__c');
+            if (newAcc.Intent_Strength__c != oldAcc.Intent_Strength__c) changedFields.add('Intent_Strength__c');
+            if (newAcc.Health_Score__c != oldAcc.Health_Score__c) changedFields.add('Health_Score__c');
+            if (newAcc.Risk_Flag__c != oldAcc.Risk_Flag__c) changedFields.add('Risk_Flag__c');
+            if (newAcc.Strategic_Ideology__c != oldAcc.Strategic_Ideology__c) changedFields.add('Strategic_Ideology__c');
+            
+            if (!changedFields.isEmpty()) {
+                Account_Change__e ev = new Account_Change__e();
+                ev.Account_Id__c = accId;
+                ev.Changed_Fields__c = JSON.serialize(changedFields);
+                events.add(ev);
+            }
+        }
+        if (!events.isEmpty()) {
+            EventBus.publish(events);
+        }
+    }
+}
+
+5.2.1.3. Subscribing to Events
+
+External systems (AWS EventBridge) subscribe to Platform Events via the standard Salesforce → EventBridge connector. A Platform Event Channel is configured in Salesforce, and a rule is created in AWS that captures events and routes them to handlers (agents). Inside Salesforce, Process Builder or Apex can also subscribe to events (via EventBus.subscribe), but this is not used in the target architecture.
+
+────────────────────────────────────────────────────────────────────────────────────
+5.2.2. PROCESS BUILDER / FLOW
+────────────────────────────────────────────────────────────────────────────────────
+
+Process Builder (and its successor, Flow) is used for simple internal automations that do not require complex calculations or calls to external APIs. They run synchronously within a transaction.
+
+5.2.2.1. Automation on Opportunity Creation
+
+Objective: Provide initial qualification and notifications.
+
+Trigger                             |                          Action
+Opportunity created                 |                        1. Set Days_In_Stage__c = 0.
+                                    |                        2. If MEDDPICC_Completeness__c < 0.7,
+                                    |                          create a task for the AE with the template “  Fill in MEDDPICC fields”.
+Opportunity updated                 |                        
+                                                            When StageName changes, update Last_Stage_Change__c and recalculate Days_In_Stage__c (formula field).
+
+Implementation (Flow):
+
+    Create a Record‑Triggered Flow on the Opportunity object.
+
+    Condition: $Record.StageName changed.
+
+    Update Last_Stage_Change__c to current date/time.
+
+    Calculate Days_In_Stage__c as the difference between current date and Last_Stage_Change__c.
+
+5.2.2.2. Automation on Deal Close
+
+Objective: Create a task for the CSM and notify Slack.
+
+Trigger                                    |            Action
+Opportunity moves to Closed Won            |          1. Create a task for the CSM (Owner = onboarding manager).
+                                           |          2. Send a Slack notification (via Incoming Webhook) with deal information.
+
+Implementation (Flow):
+
+    Record‑Triggered Flow on Opportunity, condition: $Record.StageName changed and new value = Closed Won.
+
+    Create a task: Type = Task, Subject = “Customer Onboarding”, AssignTo = default CSM (can be looked up from Account).
+
+    Call an Apex method (via Invocable) to send the Slack notification (see Apex section).
+
+5.2.2.3. Automation on Health Score Change
+
+Objective: Create tasks for the CSM when churn risk is detected.
+
+Trigger                                             |       Action
+Health_Score__c < 0.5 and Risk_Flag__c set          |       If no task was created in the last 7 days, create a high‑priority task for the CSM.
+
+Implementation (Flow):
+
+    Record‑Triggered Flow on Account, condition: $Record.Health_Score__c < 0.5 and $Record.Risk_Flag__c == true.
+
+    Check whether an open task exists for this account in the last 7 days (via Get Records).
+
+    If not, create a task.
+
+────────────────────────────────────────────────────────────────────────────────────
+5.2.3. APEX TRIGGERS
+────────────────────────────────────────────────────────────────────────────────────
+
+Apex is used for complex logic that cannot be implemented in Flow due to performance limits, the need to call external APIs (callouts), or complex calculations.
+
+5.2.3.1. Trigger on Account (after update)
+
+Objectives:
+
+    Publish Platform Events when key fields change.
+
+    Manage risk flags and tasks for CSM.
+
+apex
+
+trigger AccountTrigger on Account (after update) {
+    // Handler for publishing events
+    AccountTriggerHandler.publishChangeEvent(Trigger.newMap, Trigger.oldMap);
+    
+    // Risk handling
+    List<Task> tasksToCreate = new List<Task>();
+    for (Account acc : Trigger.new) {
+        Account oldAcc = Trigger.oldMap.get(acc.Id);
+        if (acc.Health_Score__c < 0.5 && !acc.Risk_Flag__c) {
+            acc.Risk_Flag__c = true;
+            // Create a task if none exists recently
+            // (logic similar to Flow, but can be kept in Flow for consistency)
+        }
+        if (acc.Expansion_Signal__c && !oldAcc.Expansion_Signal__c) {
+            // Create a task for the AM
+            Task t = new Task(
+                Subject = 'Expansion opportunity for ' + acc.Name,
+                WhatId = acc.Id,
+                OwnerId = getAMForAccount(acc.Id),
+                Priority = 'High',
+                Status = 'Not Started'
+            );
+            tasksToCreate.add(t);
+        }
+    }
+    if (!tasksToCreate.isEmpty()) insert tasksToCreate;
+}
+
+5.2.3.2. Trigger on Opportunity (after update)
+
+Objectives:
+
+    Publish events when stage, probability, or amount change.
+
+    Handle deal closure (call external systems).
+
+apex
+
+trigger OpportunityTrigger on Opportunity (after update) {
+    List<Opportunity_Change__e> events = new List<Opportunity_Change__e>();
+    List<Opportunity> closedWon = new List<Opportunity>();
+    
+    for (Opportunity opp : Trigger.new) {
+        Opportunity oldOpp = Trigger.oldMap.get(opp.Id);
+        if (opp.StageName != oldOpp.StageName ||
+            opp.Win_Probability__c != oldOpp.Win_Probability__c ||
+            opp.Forecast_Category__c != oldOpp.Forecast_Category__c ||
+            opp.Amount != oldOpp.Amount) {
+            Opportunity_Change__e ev = new Opportunity_Change__e();
+            ev.Opportunity_Id__c = opp.Id;
+            ev.Stage__c = opp.StageName;
+            ev.Win_Probability__c = opp.Win_Probability__c;
+            ev.Forecast_Category__c = opp.Forecast_Category__c;
+            ev.Amount__c = opp.Amount;
+            events.add(ev);
+        }
+        if (opp.StageName == 'Closed Won' && oldOpp.StageName != 'Closed Won') {
+            closedWon.add(opp);
+        }
+    }
+    if (!events.isEmpty()) EventBus.publish(events);
+    
+    // Handle closed deals
+    if (!closedWon.isEmpty()) {
+        // Call external service to create a contract in Ironclad
+        // Use @future(callout=true) for asynchronous call
+        OpportunityCalloutHelper.createContract(closedWon);
+    }
+}
+
+5.2.3.3. Helper Classes
+
+OpportunityCalloutHelper – asynchronous call to Ironclad API.
+apex
+
+public class OpportunityCalloutHelper {
+    @future(callout=true)
+    public static void createContract(List<Id> oppIds) {
+        List<Opportunity> opps = [SELECT Id, Name, AccountId, Amount, CloseDate, Contract_Status__c FROM Opportunity WHERE Id IN :oppIds];
+        for (Opportunity opp : opps) {
+            // Assemble contract data
+            Map<String, Object> payload = new Map<String, Object>{
+                'opportunityId' => opp.Id,
+                'accountId' => opp.AccountId,
+                'amount' => opp.Amount,
+                'closeDate' => opp.CloseDate
+            };
+            // Call Ironclad API (using Named Credential)
+            HttpRequest req = new HttpRequest();
+            req.setEndpoint('callout:Ironclad/api/contracts');
+            req.setMethod('POST');
+            req.setHeader('Content-Type', 'application/json');
+            req.setBody(JSON.serialize(payload));
+            Http http = new Http();
+            HttpResponse res = http.send(req);
+            if (res.getStatusCode() == 200) {
+                // Update Contract_Status__c field
+                opp.Contract_Status__c = 'Created';
+                update opp;
+            }
+        }
+    }
+}
+
+5.2.3.4. Trigger on Task (after insert)
+
+Objective: Record automated activities and update related accounts.
+apex
+
+trigger TaskTrigger on Task (after insert) {
+    Set<Id> accountIds = new Set<Id>();
+    for (Task t : Trigger.new) {
+        if (t.WhatId != null && t.WhatId.getSObjectType() == Account.SObjectType) {
+            accountIds.add(t.WhatId);
+        }
+    }
+    if (!accountIds.isEmpty()) {
+        List<Account> accountsToUpdate = new List<Account>();
+        for (Account acc : [SELECT Id, Last_Activity_Date__c FROM Account WHERE Id IN :accountIds]) {
+            acc.Last_Activity_Date__c = System.now();
+            accountsToUpdate.add(acc);
+        }
+        update accountsToUpdate;
+    }
+}
+
+────────────────────────────────────────────────────────────────────────────────────
+5.2.4. ENSURING RELIABILITY AND SECURITY
+────────────────────────────────────────────────────────────────────────────────────
+
+    Idempotency: Platform Events may be delivered multiple times. External handlers (agents) must use event_id for deduplication.
+
+    Limits: Salesforce has limits on the number of published events (e.g., 250000 events per day for Platform Events). For peak loads, buffering via Kafka (agents process batches) is used.
+
+    Testing: All Apex code is covered by unit tests (coverage >90%). Tests create test data and verify that triggers perform expected actions (task creation, event publication).
+
+    Security: Named Credentials are used for external calls, storing credentials securely (not in code). API keys for Ironclad, Slack, and other services are stored in protected settings.
+
+────────────────────────────────────────────────────────────────────────────────────
+CONCLUSIONS ON AUTOMATION
+
+    Using Platform Events, Process Builder, and Apex enables all necessary automation within Salesforce without replacing the existing stack.
+
+    Platform Events are the primary integration channel with external agents, providing asynchronicity and reliability.
+
+    Process Builder / Flow are used for simple internal automations, reducing the load on Apex.
+
+    Apex is applied for complex logic, external API calls, and event publication, ensuring high performance and flexibility.
+
+═══════════════════════════════════════════════════════════════════════════════════

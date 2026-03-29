@@ -1,0 +1,96 @@
+═══════════════════════════════════════════════════════════════════════════════════
+PROTOCOL: 11.4. SECURITY AND COMPLIANCE RISKS
+Project: Sourcegraph GTM Infrastructure
+═══════════════════════════════════════════════════════════════════════════════════
+
+**11.4. SECURITY AND COMPLIANCE RISKS**
+
+────────────────────────────────────────────────────────────────────────────────────
+11.4.1. DESCRIPTION AND CONTEXT
+────────────────────────────────────────────────────────────────────────────────────
+
+The GTM architecture system processes sensitive data: commercial contracts,
+financial information, product metrics, and customer personal data (names,
+contact details, job titles). A security breach could lead to data leaks,
+legal consequences, reputational damage, and inability to work with enterprise
+customers that require compliance with SOC2, GDPR, and other standards.
+Managing security and compliance risks requires integrating protective mechanisms
+at all levels of the architecture: from data encryption to access control and auditing.
+
+────────────────────────────────────────────────────────────────────────────────────
+11.4.2. KEY SECURITY AND COMPLIANCE RISKS
+────────────────────────────────────────────────────────────────────────────────────
+
+| Risk                                     | Likelihood | Impact | Mitigation                                                                 | Responsible |
+|------------------------------------------|-------------|--------|----------------------------------------------------------------------------|-------------|
+| **Data leak through agents**             | Low         | Critical| • All agents run in isolated environments (containers, Lambda).<br>• API access via IAM and secrets (AWS Secrets Manager).<br>• Encryption at rest (AES‑256) and in transit (TLS 1.3).<br>• Audit of all agent actions (CloudTrail). | Security, Engineers |
+| **Unauthorised access to control panel** | Low         | High   | • Multi‑factor authentication (SSO + MFA).<br>• Role‑based model (admin, operator, viewer).<br>• Log all control panel actions.<br>• Session restrictions (timeout, IP filtering). | Security, RevOps |
+| **SOC2 / GDPR violation**                | Low         | High   | • Regular compliance audits (external, annually).<br>• Automatic PII masking in logs.<br>• Data storage in compliant regions (US/EU).<br>• Retention policy (data deletion after 7 years). | Security, Legal |
+| **Quantum encryption pilot failure**     | Low         | Medium | • Use hybrid mode (quantum + classical).<br>• Fallback channel with classical encryption.<br>• Thorough sandbox testing before deployment.<br>• Rollback plan to classical encryption. | Engineers, Security |
+| **Unauthorised data modification**       | Low         | High   | • Integrity control via hashing of critical records (SHA‑256).<br>• Change audit in Salesforce (Field History).<br>• Backup in Snowflake with 7‑year retention.<br>• Restrict agent write permissions (only necessary fields). | RevOps, Security |
+| **Agent code vulnerabilities**           | Medium      | High   | • Code vulnerability scanning (SAST, Snyk).<br>• Regular dependency updates.<br>• Use of least‑privilege IAM roles.<br>• Pentest before launch (external audit). | Engineers, Security |
+| **Phishing / social engineering on employees** | Medium | High | • Regular employee training (phishing simulations).<br>• MFA for all critical systems.<br>• Zero‑trust policy. | Security, HR |
+| **Data loss due to infrastructure failure** | Low      | Critical| • Data backup (Snowflake, Salesforce) with geographic replication.<br>• Automated recovery from backups (RPO <1 hour).<br>• Disaster Recovery Plan (DRP). | Engineers, RevOps |
+| **Non‑compliance with enterprise customer requirements** | Medium | High | • Document all security measures in handbook.<br>• Provide security reports (SOC2, Pentest) to customers on request.<br>• Implement transparency mechanism for customers (audit of their data). | Legal, RevOps |
+
+────────────────────────────────────────────────────────────────────────────────────
+11.4.3. SECURITY MONITORING AND METRICS
+────────────────────────────────────────────────────────────────────────────────────
+
+| Metric                                     | Source                               | Target / Alert Condition               |
+|--------------------------------------------|--------------------------------------|----------------------------------------|
+| **Number of security incidents**           | SIEM (Splunk, CloudTrail)            | 0 (critical), >1 – investigation       |
+| **Mean Time to Detect (MTTD)**             | SIEM / alerts                        | <15 minutes (target), >1 hour – alert  |
+| **Mean Time to Recover (MTTR)**            | Incident logs                        | <1 hour (target), >4 hours – alert     |
+| **Percentage of successful attacks (phishing)** | Simulation results               | <5% (target), >10% – retraining        |
+| **Data encryption coverage**               | Data inventory                       | 100% (at rest and in transit)          |
+| **Percentage of agents with least privilege** | IAM policies                      | 100%                                   |
+| **Number of access policy violations**     | CloudTrail, Salesforce logs          | 0                                      |
+| **SOC2 / GDPR audit success**              | External audit results               | No critical findings                   |
+
+────────────────────────────────────────────────────────────────────────────────────
+11.4.4. SECURITY INCIDENT RESPONSE PLAN
+────────────────────────────────────────────────────────────────────────────────────
+
+| Criticality Level | Example Incident                              | Action                                                                 | Response Time |
+|-------------------|-----------------------------------------------|------------------------------------------------------------------------|---------------|
+| **Critical**      | Leak of confidential data, account compromise | • Immediate escalation to Security Response Team.<br>• Disable compromised accounts.<br>• Collect evidence (logs, dumps).<br>• Notify leadership and Legal.<br>• Notify customers (if necessary). | 15 minutes    |
+| **High**          | Malware detected in agents, suspicious API calls | • Isolate affected components.<br>• Analyse logs, identify source.<br>• Update signatures, block.<br>• Notify RevOps. | 1 hour        |
+| **Medium**        | Attempted unauthorised access (blocked)       | • Analyse IP, login attempts.<br>• Tighten rules (blacklist).<br>• Train employee if it was their account. | 2 hours       |
+| **Low**           | Incorrect access permission settings          | • Adjust IAM policies.<br>• Conduct audit.                            | 24 hours      |
+
+────────────────────────────────────────────────────────────────────────────────────
+11.4.5. FALLBACK MEASURES AND PREVENTION
+────────────────────────────────────────────────────────────────────────────────────
+
+| Area                                     | Measures                                                                 |
+|------------------------------------------|--------------------------------------------------------------------------|
+| **Encryption**                           | All data at rest – AES‑256 (S3, RDS, Snowflake). In transit – TLS 1.3. Keys in AWS KMS with 90‑day rotation. |
+| **Access control**                       | IAM roles with least privilege, MFA for all users. Regular access rights audits. |
+| **Monitoring and auditing**              | CloudTrail for AWS, Salesforce Field History, agent logs in CloudWatch. SIEM for correlation. |
+| **Backup**                               | Daily Snowflake dumps, Salesforce Backup. Replication to another region. RPO <1 hour, RTO <4 hours. |
+| **Employee training**                    | Quarterly security training, phishing simulations. New hire training.   |
+| **Vulnerability management**             | Monthly code scanning (Snyk), dependency updates. Pentest once per year. |
+
+────────────────────────────────────────────────────────────────────────────────────
+11.4.6. STANDARDS COMPLIANCE (SOC2, GDPR)
+────────────────────────────────────────────────────────────────────────────────────
+
+| Standard | Requirements                                     | Implementation in Architecture                                            |
+|----------|--------------------------------------------------|----------------------------------------------------------------------------|
+| **SOC2** | Security, availability, confidentiality         | • Encryption, IAM, auditing.<br>• Availability monitoring (>99.9%).<br>• Confidentiality policy. |
+| **GDPR** | Data subject rights, consent, deletion          | • PII masking in logs.<br>• Ability to delete customer data upon request.<br>• Store data in EU for EU customers. |
+| **ISO 27001** | Information Security Management System          | • Documented policies.<br>• Risk management.<br>• Regular internal audits. |
+
+────────────────────────────────────────────────────────────────────────────────────
+**CONCLUSIONS ON SECURITY AND COMPLIANCE RISKS**
+
+- Security and compliance are embedded in the architecture at all levels: from data
+  encryption to access management and auditing.
+- Key measures: multi‑factor authentication, least privilege,
+  centralised logging, regular backups.
+- Compliance with SOC2, GDPR, and other standards is achieved through process
+  transparency and regular external audits.
+- The incident response plan minimises consequences even in critical situations.
+
+═══════════════════════════════════════════════════════════════════════════════════

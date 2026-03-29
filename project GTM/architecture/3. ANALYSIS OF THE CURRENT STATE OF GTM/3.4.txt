@@ -1,0 +1,68 @@
+═══════════════════════════════════════════════════════════════════════════════════
+PROTOCOL: 3.4. KEY METRICS AND THEIR RELIABILITY
+Project: Sourcegraph GTM Infrastructure
+═══════════════════════════════════════════════════════════════════════════════════
+
+**3.4. KEY METRICS AND THEIR RELIABILITY**
+
+────────────────────────────────────────────────────────────────────────────────────
+3.4.1. LIST OF KEY METRICS (COLLECTION METHOD AND ACCURACY)
+────────────────────────────────────────────────────────────────────────────────────
+
+| Metric                      | Current Value         | Collection Method / Frequency          | Reliability (Issues)                     |
+|-----------------------------|-----------------------|----------------------------------------|------------------------------------------|
+| ARR (Annual Recurring Revenue)| $50–100M (estimate) | Post‑factum, based on closed contracts | No forecasting model, delays             |
+| Net retention (NRR)         | 100–110%              | Quarterly, from Salesforce data        | Calculated manually, reasons for changes not analyzed |
+| Win rate (enterprise)       | ~20%                  | Based on historical data (Closed Won / Closed Lost) | Not segmented, seasonality and macro factors not considered |
+| Deal cycle (days)           | 90–120                | Manual extraction from Salesforce (date difference) | No automatic tracking, no alerts for delays |
+| Pipeline coverage           | <2×                   | Calculated manually before QBR          | No regular monitoring, data often outdated |
+| Forecast accuracy (MAPE)    | 20–30%                | Subjective AE estimates + weighted pipeline | Macro factors, seasonality, stage win rates not considered |
+| Health score                | Not measured          | –                                      | Absent                                   |
+| Churn rate (enterprise)     | 5–10%                 | Post‑factum (Lost ARR)                 | Causes not analyzed, no early warning    |
+| CAC Payback                 | >24 months            | Not calculated regularly               | Rough estimate                           |
+| Time to first value (days)  | 30–45                 | Manual CSM survey                      | No objective data                        |
+| Expansion rate              | Not measured          | –                                      | Absent                                   |
+
+────────────────────────────────────────────────────────────────────────────────────
+3.4.2. ISSUES WITH RELIABILITY AND TIMELINESS
+────────────────────────────────────────────────────────────────────────────────────
+
+1. **Data lag** – most metrics are calculated post‑factum (quarterly or monthly),
+   preventing timely response.
+2. **Subjectivity of forecasts** – AEs assess close probability based on intuition,
+   without historical data.
+3. **Fragmented sources** – ARR from Salesforce, activity from Snowflake,
+   intent from 6sense – no unified view.
+4. **Lack of automatic alerts** – deviations from plan are not automatically flagged.
+5. **No forecasting models** – a simple weighted pipeline does not account for
+   macroeconomics, seasonality, or segment‑level win rates.
+
+────────────────────────────────────────────────────────────────────────────────────
+3.4.3. EXAMPLES OF INACCURACIES
+────────────────────────────────────────────────────────────────────────────────────
+
+- **Example 1:** An AE forecasts a deal will close in the current quarter with
+  80% probability, but the deal is delayed due to the client’s budget constraints.
+  The macroeconomic factor (PMI) was not considered in the model.
+- **Example 2:** The quarterly forecast shows 95% of the target achieved,
+  but actual closing is 80% because several large deals were not included in the pipeline.
+- **Example 3:** A CSM does not notice a decline in client activity because
+  product usage data is not synchronized with CRM. The client churns without receiving attention.
+
+────────────────────────────────────────────────────────────────────────────────────
+3.4.4. IMPACT OF INACCURATE METRICS ON THE BUSINESS
+────────────────────────────────────────────────────────────────────────────────────
+
+- **Resource planning** – forecast errors lead to premature hiring or shortage of AEs.
+- **Investment decisions** – investors rely on ARR and forecasts; inaccuracies can affect the company’s valuation.
+- **Operational decisions** – without a health score, CSMs cannot prioritize clients, increasing churn.
+- **Team motivation** – incorrect forecasts distort performance evaluation.
+
+────────────────────────────────────────────────────────────────────────────────────
+**PROJECT CONCLUSIONS**
+- A unified real‑time metrics collection system is required.
+- Forecasting models must account for macroeconomics, seasonality, and historical win rates.
+- Health score and expansion signals must be automated.
+- All metrics should be accessible through dashboards with drill‑down capability.
+
+═══════════════════════════════════════════════════════════════════════════════════

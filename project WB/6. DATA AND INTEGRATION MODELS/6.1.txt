@@ -1,0 +1,462 @@
+╔══════════════════════════════════════════════════════════════════════════════════╗
+║  PROTOCOL 6.1. DATA OBJECTS (DETAILED DESCRIPTION)                               ║
+║  PROJECT: IRON KIT – 13,918 SALES                                                 ║
+║                                                                                  ║
+╚══════════════════════════════════════════════════════════════════════════════════╝
+
+═══════════════════════════════════════════════════════════════════════════════════
+**6.1. DATA OBJECTS (DETAILED DESCRIPTION)**
+───────────────────────────────────────────────────────────────────────────────────
+
+This protocol details the structure of the data storage used by the agents.
+All tables are in the `public` schema of the PostgreSQL database. For performance,
+indexes, foreign keys, and integrity constraints are defined.
+
+────────────────────────────────────────────────────────────────────────────────────
+**6.1.1. Product (SKU)**
+───────────────────────────────────────────────────────────────────────────────────
+
+```sql
+CREATE TABLE sku (
+    sku             VARCHAR(50) PRIMARY KEY,
+    name            VARCHAR(200) NOT NULL,
+    category        VARCHAR(50) NOT NULL CHECK (category IN ('pickets', 'angle_brackets', 'strips', 'flashings')),
+    cost            NUMERIC(10,2) NOT NULL CHECK (cost >= 0),
+    current_price   NUMERIC(10,2) NOT NULL CHECK (current_price >= 0),
+    min_margin      NUMERIC(5,2) DEFAULT 25.0 CHECK (min_margin BETWEEN 0 AND 100),
+    target_margin   NUMERIC(5,2) DEFAULT 35.0 CHECK (target_margin BETWEEN 0 AND 100),
+    stock_production INTEGER NOT NULL DEFAULT 0 CHECK (stock_production >= 0),
+    stock_wb        INTEGER NOT NULL DEFAULT 0 CHECK (stock_wb >= 0),
+    rating          NUMERIC(3,2) DEFAULT 0 CHECK (rating BETWEEN 0 AND 5),
+    is_active       BOOLEAN DEFAULT true,
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Indexes
+CREATE INDEX idx_sku_category ON sku(category);
+CREATE INDEX idx_sku_active ON sku(is_active);
+
+Fields:
+
+    sku – unique SKU (string, e.g., “PICKET-001”).
+
+    name – full product name, used in reports.
+
+    category – product category, affects seasonal coefficients and competitive analysis.
+
+    cost – unit cost (updated from 1С).
+
+    current_price – current price on Wildberries (synchronised via API).
+
+    min_margin – minimum allowable margin (used in pricing).
+
+    target_margin – target margin for Health Score normalisation.
+
+    stock_production – stock at production warehouse (updated manually or via scripts).
+
+    stock_wb – stock at Wildberries warehouse (synchronised via API).
+
+    rating – average rating (updated by the review processing agent).
+
+    is_active – active flag (if false, the product is excluded from automated processes).
+
+    created_at, updated_at – timestamps.
+
+Relationships:
+
+    One SKU can have many orders, reviews, campaigns, production tasks, and competitor records.
+
+────────────────────────────────────────────────────────────────────────────────────
+6.1.2. Order
+───────────────────────────────────────────────────────────────────────────────────
+sql
+
+CREATE TABLE orders (
+    order_id        VARCHAR(50) PRIMARY KEY,
+    sku             VARCHAR(50) NOT NULL REFERENCES sku(sku),
+    quantity        INTEGER NOT NULL CHECK (quantity > 0),
+    price           NUMERIC(10,2) NOT NULL CHECK (price >= 0),
+    total_amount    NUMERIC(10,2) GENERATED ALWAYS AS (quantity * price) STORED,
+    status          VARCHAR(20) NOT NULL DEFAULT 'created' CHECK (status IN ('created', 'shipped', 'completed', 'cancelled')),
+    order_date      TIMESTAMP NOT NULL,
+    shipped_date    TIMESTAMP,
+    customer_rating INTEGER CHECK (customer_rating BETWEEN 1 AND 5),
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Indexes
+CREATE INDEX idx_orders_sku ON orders(sku);
+CREATE INDEX idx_orders_date ON orders(order_date);
+CREATE INDEX idx_orders_status ON orders(status);
+
+Fields:
+
+    order_id – Wildberries order identifier.
+
+    sku – reference to product.
+
+    quantity – number of units.
+
+    price – price per unit at the time of order (stored historically).
+
+    total_amount – computed field (quantity * price).
+
+    status – order status (tracked via WB API).
+
+    order_date – order creation date.
+
+    shipped_date – shipment date (filled later).
+
+    customer_rating – rating left by the customer (if any).
+
+Relationships:
+
+    sku → sku(sku)
+
+────────────────────────────────────────────────────────────────────────────────────
+6.1.3. Review
+───────────────────────────────────────────────────────────────────────────────────
+sql
+
+CREATE TABLE reviews (
+    review_id       VARCHAR(50) PRIMARY KEY,
+    sku             VARCHAR(50) NOT NULL REFERENCES sku(sku),
+    author          VARCHAR(100),
+    rating          INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
+    text            TEXT,
+    sentiment       VARCHAR(10) CHECK (sentiment IN ('positive', 'neutral', 'negative')),
+    topics          TEXT[],
+    defect_type     VARCHAR(50),
+    embedding       VECTOR(768),
+    answered        BOOLEAN DEFAULT false,
+    answer_text     TEXT,
+    created_at      TIMESTAMP NOT NULL,
+    processed_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Indexes
+CREATE INDEX idx_reviews_sku ON reviews(sku);
+CREATE INDEX idx_reviews_created ON reviews(created_at);
+CREATE INDEX idx_reviews_sentiment ON reviews(sentiment);
+-- For pgvector (embedding search)
+CREATE INDEX idx_reviews_embedding ON reviews USING ivfflat (embedding vector_cosine_ops) WITH (lists = 100);
+
+Fields:
+
+    review_id – Wildberries review identifier.
+
+    sku – reference to product.
+
+    author – author’s name (anonymised if necessary).
+
+    rating – rating.
+
+    text – review text.
+
+    sentiment – sentiment (determined by the “Review processor” agent).
+
+    topics – extracted topics (array of strings).
+
+    defect_type – defect type (if detected).
+
+    embedding – vector representation (768‑dimensional) for similarity search.
+
+    answered – flag indicating whether a reply has been given.
+
+    answer_text – reply text.
+
+    created_at – review date (from WB).
+
+    processed_at – date processed by the agent.
+
+Relationships:
+
+    sku → sku(sku)
+
+────────────────────────────────────────────────────────────────────────────────────
+6.1.4. Competitor
+───────────────────────────────────────────────────────────────────────────────────
+sql
+
+CREATE TABLE competitors (
+    id              SERIAL PRIMARY KEY,
+    sku             VARCHAR(50) NOT NULL REFERENCES sku(sku),
+    competitor_sku  VARCHAR(100) NOT NULL,
+    price           NUMERIC(10,2),
+    promotion       VARCHAR(200),
+    in_stock        BOOLEAN,
+    rating          NUMERIC(3,2),
+    updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(sku, competitor_sku)
+);
+
+-- Indexes
+CREATE INDEX idx_competitors_sku ON competitors(sku);
+CREATE INDEX idx_competitors_updated ON competitors(updated_at);
+
+Fields:
+
+    id – surrogate key.
+
+    sku – our SKU.
+
+    competitor_sku – competitor’s SKU.
+
+    price – competitor’s current price.
+
+    promotion – promotion description (if any).
+
+    in_stock – availability in stock.
+
+    rating – competitor’s rating.
+
+    updated_at – last update time.
+
+Relationships:
+
+    sku → sku(sku)
+
+────────────────────────────────────────────────────────────────────────────────────
+6.1.5. Advertising Campaign
+───────────────────────────────────────────────────────────────────────────────────
+sql
+
+CREATE TABLE campaigns (
+    campaign_id     VARCHAR(50) PRIMARY KEY,
+    sku             VARCHAR(50) NOT NULL REFERENCES sku(sku),
+    budget          NUMERIC(10,2) NOT NULL CHECK (budget >= 0),
+    spent           NUMERIC(10,2) DEFAULT 0 CHECK (spent >= 0),
+    impressions     INTEGER DEFAULT 0,
+    clicks          INTEGER DEFAULT 0,
+    orders          INTEGER DEFAULT 0,
+    ctr             NUMERIC(5,2) GENERATED ALWAYS AS (CASE WHEN impressions > 0 THEN (clicks * 100.0 / impressions) ELSE 0 END) STORED,
+    conversion      NUMERIC(5,2) GENERATED ALWAYS AS (CASE WHEN clicks > 0 THEN (orders * 100.0 / clicks) ELSE 0 END) STORED,
+    romi            NUMERIC(5,2) GENERATED ALWAYS AS (CASE WHEN spent > 0 THEN ((orders * price_avg - spent) / spent) * 100 ELSE 0 END) STORED,
+    start_date      TIMESTAMP NOT NULL,
+    end_date        TIMESTAMP,
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Indexes
+CREATE INDEX idx_campaigns_sku ON campaigns(sku);
+CREATE INDEX idx_campaigns_dates ON campaigns(start_date, end_date);
+
+Fields:
+
+    campaign_id – campaign identifier from WB.
+
+    sku – product targeted by the campaign.
+
+    budget – allocated budget.
+
+    spent – amount actually spent.
+
+    impressions, clicks, orders – performance metrics.
+
+    ctr, conversion, romi – computed indicators (stored in table but can be recalculated).
+
+    start_date, end_date – campaign period.
+
+Relationships:
+
+    sku → sku(sku)
+
+────────────────────────────────────────────────────────────────────────────────────
+6.1.6. Production Task
+───────────────────────────────────────────────────────────────────────────────────
+sql
+
+CREATE TABLE production_tasks (
+    task_id         VARCHAR(50) PRIMARY KEY,
+    sku             VARCHAR(50) NOT NULL REFERENCES sku(sku),
+    quantity        INTEGER NOT NULL CHECK (quantity > 0),
+    deadline        TIMESTAMP NOT NULL,
+    status          VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'in_progress', 'completed', 'cancelled')),
+    assigned_to     VARCHAR(100),
+    completed_at    TIMESTAMP,
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Indexes
+CREATE INDEX idx_production_tasks_sku ON production_tasks(sku);
+CREATE INDEX idx_production_tasks_status ON production_tasks(status);
+CREATE INDEX idx_production_tasks_deadline ON production_tasks(deadline);
+
+Fields:
+
+    task_id – unique identifier (system‑generated).
+
+    sku – which product to produce.
+
+    quantity – number of units.
+
+    deadline – completion deadline.
+
+    status – current status.
+
+    assigned_to – responsible team/person.
+
+    completed_at – actual completion date.
+
+    created_at – task creation date.
+
+Relationships:
+
+    sku → sku(sku)
+
+────────────────────────────────────────────────────────────────────────────────────
+6.1.7. Budget
+───────────────────────────────────────────────────────────────────────────────────
+sql
+
+CREATE TABLE budget (
+    article         VARCHAR(50) PRIMARY KEY CHECK (article IN ('raw_materials', 'advertising', 'taxes', 'reserve')),
+    limit_amount    NUMERIC(10,2) NOT NULL CHECK (limit_amount >= 0),
+    spent           NUMERIC(10,2) NOT NULL DEFAULT 0 CHECK (spent >= 0),
+    updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Expense history
+CREATE TABLE budget_history (
+    id              SERIAL PRIMARY KEY,
+    article         VARCHAR(50) NOT NULL REFERENCES budget(article),
+    amount          NUMERIC(10,2) NOT NULL CHECK (amount != 0),
+    reason          TEXT,
+    source_agent    VARCHAR(50),
+    timestamp       TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Indexes
+CREATE INDEX idx_budget_history_article ON budget_history(article);
+CREATE INDEX idx_budget_history_date ON budget_history(timestamp);
+
+budget fields:
+
+    article – expense category (raw materials, advertising, taxes, reserve).
+
+    limit_amount – monthly limit.
+
+    spent – amount spent in the current month (reset on recalculation).
+
+    updated_at – last update time.
+
+budget_history fields:
+
+    id – primary key.
+
+    article – category.
+
+    amount – amount (positive – expense, negative – refund).
+
+    reason – reason for the transaction.
+
+    source_agent – identifier of the agent that initiated the transaction.
+
+    timestamp – time of transaction.
+
+Relationships:
+
+    budget_history.article → budget.article
+
+────────────────────────────────────────────────────────────────────────────────────
+6.1.8. Health Score History
+───────────────────────────────────────────────────────────────────────────────────
+sql
+
+CREATE TABLE health_score_history (
+    id              SERIAL PRIMARY KEY,
+    date            DATE NOT NULL UNIQUE,
+    health_score    NUMERIC(5,2) NOT NULL CHECK (health_score BETWEEN 0 AND 1),
+    deficit_norm    NUMERIC(5,2) NOT NULL CHECK (deficit_norm BETWEEN 0 AND 1),
+    turnover_norm   NUMERIC(5,2) NOT NULL CHECK (turnover_norm BETWEEN 0 AND 1),
+    margin_norm     NUMERIC(5,2) NOT NULL CHECK (margin_norm BETWEEN 0 AND 1),
+    status          VARCHAR(10) CHECK (status IN ('green', 'yellow', 'red')),
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Indexes
+CREATE INDEX idx_health_score_date ON health_score_history(date);
+
+Fields:
+
+    id – surrogate key.
+
+    date – calculation date.
+
+    health_score – composite indicator (0–1).
+
+    deficit_norm, turnover_norm, margin_norm – normalised components.
+
+    status – colour zone (for quick filtering).
+
+    created_at – calculation time.
+
+────────────────────────────────────────────────────────────────────────────────────
+6.1.9. Additional Auxiliary Tables
+───────────────────────────────────────────────────────────────────────────────────
+
+a) Cost history per period (sku_cost_history)
+sql
+
+CREATE TABLE sku_cost_history (
+    id              SERIAL PRIMARY KEY,
+    sku             VARCHAR(50) NOT NULL REFERENCES sku(sku),
+    cost            NUMERIC(10,2) NOT NULL,
+    effective_date  DATE NOT NULL,
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_sku_cost_history_sku ON sku_cost_history(sku);
+CREATE INDEX idx_sku_cost_history_date ON sku_cost_history(effective_date);
+
+b) Sales forecast (sales_forecast)
+sql
+
+CREATE TABLE sales_forecast (
+    id              SERIAL PRIMARY KEY,
+    sku             VARCHAR(50) NOT NULL REFERENCES sku(sku),
+    forecast_date   DATE NOT NULL,
+    horizon_days    INTEGER NOT NULL,
+    predicted_qty   INTEGER NOT NULL,
+    lower_bound     INTEGER,
+    upper_bound     INTEGER,
+    model_weights   JSONB,
+    mape            NUMERIC(5,2),
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_forecast_sku ON sales_forecast(sku);
+CREATE INDEX idx_forecast_date ON sales_forecast(forecast_date);
+
+────────────────────────────────────────────────────────────────────────────────────
+SUMMARY RELATIONSHIP SCHEMA
+───────────────────────────────────────────────────────────────────────────────────
+┌─────────────┐       ┌─────────────┐       ┌─────────────┐
+│    sku      │───┐   │   orders    │       │  campaigns  │
+└─────────────┘   │   └─────────────┘       └─────────────┘
+       │          ├───│   reviews    │               │
+       │          │   └─────────────┘               │
+       │          ├───│ competitors │               │
+       │          │   └─────────────┘               │
+       │          ├───│ production_tasks│           │
+       │          │   └─────────────┘               │
+       │          └───│ sku_cost_history│           │
+       │               └─────────────┘               │
+       │               ┌─────────────┐               │
+       └───────────────│sales_forecast│──────────────┘
+                       └─────────────┘
+
+┌─────────────┐       ┌─────────────┐
+│   budget    │───┐   │budget_history│
+└─────────────┘   └───┘─────────────┘
+
+┌─────────────────────┐
+│health_score_history │
+└─────────────────────┘
+
+NOTE: All tables are created in the PostgreSQL database using the provided
+DDL scripts. Foreign keys with cascade constraints are set (ON DELETE RESTRICT for
+critical tables, ON DELETE CASCADE for history tables). Indexes were chosen based
+on the query frequency of agents (analytics, strategic, executive). During operation,
+additional indexes may be required based on slow query analysis.

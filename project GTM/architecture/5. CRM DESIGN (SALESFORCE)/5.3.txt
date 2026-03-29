@@ -1,0 +1,180 @@
+═══════════════════════════════════════════════════════════════════════════════════
+PROTOCOL: 5.3. INTEGRATION WITH EXTERNAL SOURCES (HIGHTOUCH, 6SENSE, GAINSIGHT)
+Project: Sourcegraph GTM Infrastructure
+═══════════════════════════════════════════════════════════════════════════════════
+
+**5.3. INTEGRATION WITH EXTERNAL SOURCES (HIGHTOUCH, 6SENSE, GAINSIGHT)**
+
+In the target architecture, Salesforce is not the only data source. Three key external services provide data enrichment, real‑time synchronization, and customer experience automation. The integration is built on event‑driven principles, minimal latency, and maintaining a single source of truth.
+
+────────────────────────────────────────────────────────────────────────────────────
+5.3.1. HIGHTOUCH (REVERSE ETL)
+────────────────────────────────────────────────────────────────────────────────────
+
+**Role in the architecture:**  
+Hightouch performs reverse ETL – synchronizing data from Snowflake (where agent calculation results are aggregated) to Salesforce in real time. This allows updating custom fields on Account, Opportunity, and Activity without complex Apex calls and with guaranteed delivery.
+
+**Integration architecture**
+
+[Snowflake] → (Streams / Change Data Capture) → [Hightouch] → (Webhooks / Bulk API) → [Salesforce]
+
+- **Source:** Snowflake – data marts created by analytic agents (Level 1) and financial agents (Level 4). Tables contain `account_id`, `opportunity_id`, and field values to be synchronized.
+- **Hightouch engine:** Syncs are configured in real‑time mode (webhooks). When a new record is inserted into the data mart, Hightouch immediately sends an HTTP request to the Salesforce REST API.
+- **Target:** Salesforce (Account, Opportunity objects). Uses the custom fields created in 5.1.
+
+**Key synchronizations**
+
+| Snowflake data mart           | Target Salesforce object / field                               | Frequency      |
+|-------------------------------|----------------------------------------------------------------|----------------|
+| `account_scores`              | Account.ICP_Fit__c, Account.Intent_Strength__c, Account.Health_Score__c, Account.Risk_Flag__c, Account.Expansion_Signal__c | real‑time (webhook) |
+| `opportunity_forecasts`       | Opportunity.Win_Probability__c, Opportunity.Forecast_Category__c | real‑time      |
+| `account_strategic_ideology`  | Account.Strategic_Ideology__c                                  | real‑time      |
+| `activity_engagement`         | Activity.Last_Activity_Date__c (updated via Task)             | real‑time      |
+
+**Real‑time sync configuration**
+
+- A **Connection** to Snowflake is created in Hightouch (using limited‑privilege access keys).
+- For each data mart, a **Sync** is created where:
+  - **Schedule:** Real‑time (Webhook) – triggered by `INSERT` into the table.
+  - **Mapping:** Source fields → Salesforce fields.
+  - **Update strategy:** `upsert` by external ID (Account_Id__c / Opportunity_Id__c).
+- To avoid duplication, an **External ID** (e.g., `Account_External_Id__c`) is used, which is synchronized to Salesforce during initial load.
+
+**Reliability measures**
+
+- **Monitoring:** Hightouch provides a sync status dashboard and alerts for errors (in Slack, PagerDuty).
+- **Retry:** In case of failure (e.g., temporary Salesforce API unavailability), Hightouch automatically retries with exponential backoff.
+- **Dead‑letter:** Records not delivered after 5 attempts are placed in a queue for manual handling by RevOps operators.
+
+────────────────────────────────────────────────────────────────────────────────────
+5.3.2. 6SENSE (INTENT DATA)
+────────────────────────────────────────────────────────────────────────────────────
+
+**Role in the architecture:**  
+6sense supplies intent signals – information about which companies are searching for code intelligence solutions, visiting the Sourcegraph website, or researching competitors. This data is used by analytic agents (Level 1) to compute `Intent_Strength__c`.
+
+**Integration architecture**
+
+[6sense API] ← (pull, every 30 minutes) → [Analytic agents (AWS Lambda)] → (enrichment, aggregation) → [Snowflake] → (Hightouch) → [Salesforce]
+
+**Data flow**
+
+1. **Periodic 6sense API calls**  
+   Analytic agents (implemented as AWS Lambda) query the 6sense REST API every 30 minutes for a list of accounts that need updating. The list includes:
+   - Accounts with high `ICP_Fit__c` (>0.6).
+   - Accounts with `Last_Activity_Date__c` > 6 hours (to avoid frequently updating inactive ones).
+   - Any accounts marked for forced update (via the control panel).
+
+2. **Fetching signals**  
+   For each account, the agent requests:
+   - Signal strength (0–1) by category: search, page views, competitor queries.
+   - List of keywords that triggered the signal.
+
+3. **Aggregation and normalization**  
+   The agent computes `Intent_Strength` as a weighted average of signals over the last 7 days with exponential decay:
+   `Intent = (∑ (intensity_i × weight_i)) / (∑ weight_i)`, where `weight_i = exp(-age_in_days / 7)`.
+
+4. **Saving to Snowflake**  
+   Results are written to the `account_scores` table (or a separate `intent_updates` table), which through Hightouch triggers an update of the `Intent_Strength__c` field in Salesforce.
+
+5. **Logging**  
+   All 6sense API calls are logged in CloudWatch; if rate limits are exceeded or errors occur, the agent retries and notifies operators.
+
+**Caching and optimization**
+- Results of previous calls are cached in Redis (TTL 5 minutes) to avoid repeated requests for the same accounts within a cycle.
+- For new accounts (just created in Salesforce), the agent queries 6sense immediately (via the `Account_Change__e` trigger) rather than waiting 30 minutes.
+
+**Security and limits**
+- The 6sense API key is stored in AWS Secrets Manager and rotated every 90 days.
+- Named Credentials are used in Salesforce for possible direct calls, but in the target architecture all calls go through agents (Lambda) for uniformity.
+
+────────────────────────────────────────────────────────────────────────────────────
+5.3.3. GAINSIGHT (CUSTOMER SUCCESS)
+────────────────────────────────────────────────────────────────────────────────────
+
+**Role in the architecture:**  
+Gainsight manages health scores, playbooks, NPS surveys, and automated tasks for CSMs. The integration is bidirectional: Salesforce sends data to Gainsight, Gainsight initiates actions that are synchronized back.
+
+**Integration architecture**
+
+[Salesforce] ← (Gainsight Connector, object sync) → [Gainsight]
+[Gainsight] → (Webhooks / API) → [EventBridge] → [Agents]
+[Agents] → (API) → [Gainsight]
+
+**5.3.3.1. Data synchronization from Salesforce to Gainsight**
+
+The standard **Gainsight Connector** for Salesforce is used. The following objects and fields are synchronized:
+
+| Salesforce object | Gainsight object | Synchronized fields                                                                 |
+|-------------------|------------------|---------------------------------------------------------------------------------------|
+| Account           | Company          | Name, Industry, BillingCountry, ICP_Fit__c, Health_Score__c, Risk_Flag__c, Strategic_Ideology__c |
+| Opportunity       | Opportunity      | Name, Amount, StageName, CloseDate, Win_Probability__c, Forecast_Category__c           |
+| Task              | Activity         | Subject, CreatedDate, OwnerId, Status, Automated__c                                   |
+
+Synchronization runs every 15 minutes (streaming sync is not required because health score updates asynchronously).
+
+**5.3.3.2. Health Score and Playbooks in Gainsight**
+
+- **Health Score** in Gainsight is based on the `Health_Score__c` field from Salesforce (computed by analytic agents). Gainsight does not recalculate it; it uses the existing value.
+- **Playbooks** are configured in Gainsight:
+  - **“Retention”** – trigger: `Health_Score__c < 0.5`. Actions:
+    * Create a task in Salesforce for the CSM (High priority).
+    * Send an email to the customer (template: “How can we help?”).
+    * Record the event in Gainsight (for reporting).
+  - **“Expansion”** – trigger: `Expansion_Signal__c = true`. Actions:
+    * Create a task in Salesforce for the AM.
+    * Prepare a commercial proposal (via financial agents; integration described below).
+- When a playbook is executed, Gainsight updates the `Last_Playbook_Date__c` field in Salesforce (via the Connector) and may change `Health_Score__c` (though in the target architecture this is not used).
+
+**5.3.3.3. Feedback from Gainsight to agents**
+
+Gainsight can publish webhooks about playbook execution. These webhooks are sent to AWS EventBridge, where executor agents (Level 4) pick them up to:
+- Log playbook results in Snowflake.
+- Trigger additional actions (e.g., if the playbook did not help, escalate to a manager).
+
+**5.3.3.4. API for agents**
+
+CS agents (Level 4) can directly call the Gainsight API to:
+- Update health score (if a playbook changed the score).
+- Manually launch a playbook (upon operator request).
+- Retrieve a list of high‑risk customers.
+
+Example call (Python):
+```python
+import requests
+
+def update_health_score(account_id, health_score):
+    url = f"https://sourcegraph.gainsight.com/api/v1/companies/{account_id}"
+    headers = {"Authorization": f"Bearer {GAINSIGHT_API_KEY}"}
+    payload = {"custom_fields": {"Health_Score__c": health_score}}
+    response = requests.patch(url, json=payload, headers=headers)
+    response.raise_for_status()
+
+    ────────────────────────────────────────────────────────────────────────────────────
+5.3.4. ENSURING CONSISTENCY AND RELIABILITY
+────────────────────────────────────────────────────────────────────────────────────
+
+    Idempotency: All operations initiated by external systems use unique identifiers (e.g., event_id) and are checked by agents before execution.
+
+    Transactionality: When updating data via Hightouch, upsert by external ID is used; in case of failure, records stay in the queue.
+
+    Monitoring: Dashboards in CloudWatch are configured for each external service with metrics:
+
+        Call latency (p50, p90, p99).
+
+        Number of successful / failed calls.
+
+        Queue size (for Hightouch and Kafka).
+
+    Alerts: When thresholds are exceeded (error rate >5% over 5 minutes, latency >2 seconds), RevOps operators receive notifications in Slack and PagerDuty.
+
+────────────────────────────────────────────────────────────────────────────────────
+CONCLUSIONS ON INTEGRATION WITH EXTERNAL SOURCES
+
+    Hightouch provides reliable, real‑time synchronization of agent results from Snowflake to Salesforce, replacing manual export/import.
+
+    6sense is integrated via analytic agents that aggregate and normalize intent signals, providing a single source of truth for scoring.
+
+    Gainsight is used as a customer success platform, receiving data from Salesforce and triggering playbooks; feedback flows back to the agent system.
+
+All integrations are built on event‑driven principles, with clear separation of responsibilities and reliability mechanisms.

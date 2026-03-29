@@ -1,0 +1,51 @@
+═══════════════════════════════════════════════════════════════════════════════════
+PROTOCOL: 12.4. DATA SCHEMAS (DIAGRAMS) – MASTER DOCUMENT
+Project: Sourcegraph GTM Infrastructure
+═══════════════════════════════════════════════════════════════════════════════════
+
+**12.4. DATA SCHEMAS (DIAGRAMS)**
+
+This section contains a set of diagrams visualising key aspects of the target
+GTM architecture. The diagrams cover data flows, the Salesforce object model,
+the agent holding hierarchy, infrastructure components, and key interaction
+scenarios. All diagrams are created in **Mermaid** format, which allows them to
+be embedded in documentation with automatic rendering in environments that support
+Mermaid (GitHub, GitLab, Confluence, Notion, etc.), as well as enabling export to
+raster and vector formats.
+
+**12.4.1. DATA FLOW DIAGRAM (EVENT‑DRIVEN ARCHITECTURE)**
+Shows the movement of data from external sources through the event bus, agents,
+storage, and back‑synchronisation. Visualises how events trigger automated
+actions and how results are returned to the systems of truth.
+
+**12.4.2. SALESFORCE OBJECT SCHEMA (CUSTOM FIELDS AND RELATIONSHIPS)**
+Details the Account, Opportunity, and Task objects with custom fields,
+their types, and relationships. Serves as a reference for developers and
+CRM administrators.
+
+**12.4.3. AGENT HOLDING ARCHITECTURE (4 LEVELS)**
+Hierarchical structure of agents: mass analysis, strategic ideologies,
+tactical groups, executor cluster. Shows functions and numbers of agents
+at each level.
+
+**12.4.4. INFRASTRUCTURE DIAGRAM (AWS, KUBERNETES, KAFKA, LAMBDA)**
+Displays the deployment of components in AWS: EKS (Kubernetes), MSK (Kafka),
+Lambda, EventBridge, S3, RDS, and their interconnections. Serves as a basis
+for administration and scaling.
+
+**12.4.5. SEQUENCE DIAGRAM: QUALIFICATION SCENARIO**
+Shows the temporal sequence of interactions between components when processing
+a new intent signal and creating a task for the Sales Strategist. Illustrates
+the event‑driven approach with a concrete example.
+
+**12.4.6. SEQUENCE DIAGRAM: RETENTION PLAYBOOK**
+Details the steps of the automated playbook when Health Score drops below 0.5:
+creating a task for the CSM, sending an email to the customer, escalation.
+
+────────────────────────────────────────────────────────────────────────────────────
+**NOTE:** Each diagram will be presented in a separate expanded protocol
+(12.4.1 – 12.4.6) with a full description, Mermaid source code,
+and explanations for interpretation. In the final version of the document,
+the diagrams may be exported to PNG/PDF for inclusion in printed versions.
+
+═══════════════════════════════════════════════════════════════════════════════════

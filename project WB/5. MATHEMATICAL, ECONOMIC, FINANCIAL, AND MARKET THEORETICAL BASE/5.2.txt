@@ -1,0 +1,150 @@
+╔══════════════════════════════════════════════════════════════════════════════════╗
+║   PROTOCOL 5.2. ECONOMIC THEORY                                                  ║
+║  PROJECT: IRON KIT – 13,918 SALES                                                 ║
+║                                                                                  ║ 
+╚══════════════════════════════════════════════════════════════════════════════════╝
+
+═══════════════════════════════════════════════════════════════════════════════════
+**5.2. ECONOMIC THEORY**
+───────────────────────────────────────────────────────────────────────────────────
+
+Economic theory serves as the foundation for understanding consumer behaviour,
+market mechanisms, and macroeconomic factors affecting the demand for metal products.
+The models in this section are used by agents for calibrating forecasts, pricing,
+and strategic planning.
+
+────────────────────────────────────────────────────────────────────────────────────
+**5.2.1. MICROECONOMICS OF DEMAND**
+───────────────────────────────────────────────────────────────────────────────────
+
+**5.2.1.1. Consumer utility function**
+A buyer of metal products (individual or construction team) chooses a product
+maximising utility under a budget constraint. Utility is described by the function:
+
+\[
+U = \alpha \cdot \text{quality} + \beta \cdot \text{price} + \gamma \cdot \text{delivery} + \varepsilon
+\]
+
+where \(\varepsilon\) is a random component. In aggregated form this leads to the
+logit demand model (see 5.1.2).
+
+**5.2.1.2. Price and income elasticity of demand**
+- **Price elasticity:** for metal products (pickets, angle brackets) demand is
+  inelastic at peak season (|E| < 1) and moderately elastic in off‑season (|E| ~ 1.2).
+  For new products elasticity is higher.
+- **Income elasticity:** building materials have positive but moderate income
+  elasticity (0.5–0.8), as they are considered necessity goods for developers.
+
+**5.2.1.3. Substitution effect**
+When picket prices rise, buyers may switch to alternative materials (corrugated sheet,
+wood). Substitution elasticity is estimated from competitor data and is used in the
+logit model through the “competitor price” variable.
+
+────────────────────────────────────────────────────────────────────────────────────
+**5.2.2. MACROECONOMIC FACTORS**
+───────────────────────────────────────────────────────────────────────────────────
+
+The macroeconomic environment affects demand through several channels:
+
+| Factor                     | Impact on metal product sales                                            |
+|----------------------------|---------------------------------------------------------------------------|
+| **Construction activity**  | Growth in residential and commercial construction directly correlates with sales (coefficient 0.6–0.8). Source: Rosstat, housing commissioning data. |
+| **Inflation**              | Rising inflation increases metal costs, forcing price increases; demand may decline under high inflation (income effect). |
+| **Central Bank key rate**  | Affects credit availability for construction companies and individual developers. Rate increases reduce investment in construction, which affects demand with a lag (6–9 months). |
+| **Seasonality (climate)**  | Construction season in Russia: April–October. Seasonal coefficients: March 1.1, April 1.3, May 1.4, June–August 1.2, September 1.1, October 1.0, November–February 0.7–0.9. |
+| **Holiday periods**        | May holidays – sales decline (0.8), December – pre‑New Year surge (1.2). |
+
+**Macro factor forecast**  
+For quarterly forecasts, extrapolation of macro indicators is used based on data
+from the Ministry of Economic Development and consensus forecasts. Impact coefficients
+are estimated by regression and updated quarterly.
+
+────────────────────────────────────────────────────────────────────────────────────
+**5.2.3. BEHAVIOURAL ECONOMICS**
+───────────────────────────────────────────────────────────────────────────────────
+
+**5.2.3.1. Impact of reviews and ratings**
+Positive reviews increase purchase probability (social proof effect). Empirically:
+a 0.5‑point increase in rating (on a 5‑point scale) increases conversion by 8–12%.
+Negative reviews (rating ≤3) reduce sales by 15–20% for 2–3 weeks unless remedial
+action is taken (reply, correction).
+
+**5.2.3.2. Loss aversion**
+Buyers are more sensitive to price increases than to price decreases. This is taken
+into account in dynamic pricing: a price increase of more than 10% over a short
+period (less than 7 days) reduces demand by 25% (effect exceeding elasticity).
+
+**5.2.3.3. Decision‑making under uncertainty**
+Buyers on Wildberries make decisions with limited information. The “Pricing strategist”
+agent uses this by suggesting prices ending in “99”, which increases conversion by
+5–7% (left‑digit effect).
+
+────────────────────────────────────────────────────────────────────────────────────
+**5.2.4. INDUSTRIAL ORGANISATION (THEORY OF INDUSTRY MARKETS)**
+───────────────────────────────────────────────────────────────────────────────────
+
+**5.2.4.1. Structure of the metal products market on Wildberries**
+The market is characterised by:
+- **Monopolistic competition** – many sellers, product differentiation (shape,
+  colour, coating, price).
+- **Low entry barriers** – registration on WB, raw material purchase, setting up
+  production.
+- **High price sensitivity** in standard categories (angle brackets, strips) and
+  differentiation in decorative pickets.
+
+**5.2.4.2. Demand curve for a typical product**
+For each SKU, the “Competitive intelligence” agent constructs a demand curve
+(sales as a function of price) based on historical data and regression. The curve
+is used to determine the optimal price (see 5.1.2).
+
+**5.2.4.3. Market power and pricing**
+For unique products (exclusive design) market power is higher, allowing a higher
+markup (up to 70%). For standard products, the markup is limited by competitor
+prices (usually 25–35%).
+
+────────────────────────────────────────────────────────────────────────────────────
+**5.2.5. GAME THEORY IN COMPETITIVE INTERACTION**
+───────────────────────────────────────────────────────────────────────────────────
+
+**5.2.5.1. Price war game**
+When one competitor lowers its price, others are forced to react. The model predicts
+that if the reduction does not exceed 5%, others may keep prices; for larger
+reductions a chain reaction occurs. The “Pricing strategist” agent uses this rule
+to choose the reaction threshold (default 5%).
+
+**5.2.5.2. Cooperative equilibrium (tacit collusion)**
+On Wildberries, price stability is often observed in categories with a few large
+sellers. The agent analyses the frequency of price changes and, if no sharp movements
+occur for 2 weeks, may increase the markup by 2–3% (testing).
+
+**5.2.5.3. Leader‑follower strategy**
+The largest seller in a category often acts as the price leader. The agent identifies
+the leader (by sales volume) and uses its price as a benchmark, setting its own price
+2–5% lower or higher depending on differentiation.
+
+────────────────────────────────────────────────────────────────────────────────────
+**5.2.6. ECONOMIC MECHANISMS WITHIN THE WILDBERRIES PLATFORM**
+───────────────────────────────────────────────────────────────────────────────────
+
+| Mechanism                | Impact on sales and strategy                                               |
+|--------------------------|---------------------------------------------------------------------------|
+| **WB commissions**       | 10–15% of product price. Affect net margin; the agent accounts for them when calculating the optimal price. |
+| **Promotions and discounts** | Participating in promotions increases visibility but reduces margin. The agent evaluates promotion ROI and recommends participation only when expected revenue increase >20%. |
+| **Rating and reviews**   | Affect search ranking. The “Customer service” agent maintains a high rating through automated replies and negative feedback handling. |
+| **Paid advertising**     | Internal advertising (auction) – the “Ad optimiser” agent manages bids to maximise ROMI. |
+
+────────────────────────────────────────────────────────────────────────────────────
+**5.2.7. PRACTICAL IMPLEMENTATION IN AGENTS**
+───────────────────────────────────────────────────────────────────────────────────
+
+- **“Demand analyst” agent** uses macroeconomic factors and seasonal coefficients
+  to adjust forecasts (via Prophet with regressors).
+- **“Pricing strategist” agent** applies the logit model, accounting for elasticity
+  and substitution effects, as well as game‑theory rules.
+- **“Risk manager” agent** tracks changes in macro indicators (rate, inflation)
+  and triggers a strategy review for significant deviations.
+
+═══════════════════════════════════════════════════════════════════════════════════
+**NOTE:** The economic models in this section are integrated into the work of
+agents at levels 1–3. Parameters (elasticity coefficients, reaction thresholds,
+macro factors) can be adjusted by the operator through the control panel.

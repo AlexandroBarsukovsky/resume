@@ -1,0 +1,101 @@
+═══════════════════════════════════════════════════════════════════════════════════
+PROTOCOL: 8.1. FULL LIST OF TRIGGERS (EVENT → ACTION)
+Project: Sourcegraph GTM Infrastructure
+═══════════════════════════════════════════════════════════════════════════════════
+
+**8.1. FULL LIST OF TRIGGERS (EVENT → ACTION)**
+
+This protocol details all triggers implemented in the target GTM architecture.
+Each trigger describes an event (or combination of events) that initiates one or more
+automated actions. Triggers are implemented using Salesforce Platform Events, Apex,
+AWS EventBridge, and agents (Level 1–4). All triggers are idempotent and have retry
+mechanisms and error handling (Dead Letter Queue).
+
+────────────────────────────────────────────────────────────────────────────────────
+**GENERAL TRIGGER STRUCTURE**
+
+Each trigger in the table below is described by the following parameters:
+- **ID** – unique identifier.
+- **Event** – source and activation condition.
+- **Action** – what exactly is performed (specifying the agent or mechanism).
+- **Priority** – criticality (High / Medium / Low) affecting processing order.
+- **Retry** – number of retry attempts on failure.
+- **Error handling** – what happens if the action cannot be performed.
+
+────────────────────────────────────────────────────────────────────────────────────
+**TRIGGER TABLE**
+
+| ID  | Event                                           | Action                                                                 | Priority | Retry | Error Handling                                        |
+|-----|-------------------------------------------------|------------------------------------------------------------------------|----------|-------|-------------------------------------------------------|
+| T01 | Account Score > 0.7                             | Create task for Sales Strategist (High priority); add account to SalesLoft queue (personalized email). | High      | 3     | If Salesforce API fails – put in DLQ, notify RevOps.  |
+| T02 | New intent signal (6sense)                      | Update Intent_Strength__c field in Salesforce; recalculate Account Score (trigger analytic agent). | Medium    | 2     | If 6sense API unavailable – use cached data; second failure – alert. |
+| T03 | Health Score < 0.5                              | Launch retention playbook (see 8.2.1): create task for CSM, send email to customer. | High      | 3     | If Gainsight unavailable – task created in Salesforce, email sent later. |
+| T04 | Health Score > 0.8 and user growth >30%         | Launch expansion playbook (see 8.2.2): create task for AM, prepare commercial proposal. | High      | 3     | If financial agents error – create task for RevOps.   |
+| T05 | Opportunity moves to stage "Proposal"           | Create contract in Ironclad (via API); notify Legal (email / Slack).  | Medium    | 3     | If Ironclad API unavailable – defer task, notify RevOps. |
+| T06 | Opportunity moves to "Closed Won"               | Create task for CSM (onboarding); update forecast; launch onboarding playbook in Gainsight. | High      | 3     | If Gainsight unavailable – task created in Salesforce, onboarding deferred. |
+| T07 | Opportunity moves to "Closed Lost"              | Record loss reason (from `Lost_Reason__c` field); update win rate model (financial agents). | Medium    | 2     | If model error – data saved for manual analysis.      |
+| T08 | Pipeline Coverage < 3× (weekly calculation)     | Send alert to CRO (email); create task for RevOps (analysis, recommendations). | Medium    | 2     | If email not sent – duplicate to Slack; RevOps task always created. |
+| T09 | Account inactive for 14 days (Last_Activity_Date) | Automatically add to nurture campaign (SalesLoft); create task for Strategist (review). | Low       | 1     | If SalesLoft unavailable – Strategist task remains.   |
+| T10 | Expansion Signal = true                         | Launch expansion playbook (same as T04).                                 | High      | 3     | Same as T04.                                            |
+| T11 | Demo request created (Demo_Request)             | Create task for AE (demo); add to qualification queue (SalesLoft).     | High      | 3     | If AE not assigned – task created for manager.        |
+| T12 | MEDDPICC_Completeness < 0.7 (Opportunity)       | Create task for AE reminding to fill in MEDDPICC fields.               | Medium    | 2     | If task already exists – do not duplicate (check by `Status`). |
+| T13 | Contract renewal with amount >110% of previous  | Create task for AM; mark as expansion opportunity.                      | High      | 3     | If AM missing – escalate to manager.                  |
+| T14 | Territory change (redistribution)               | Recalculate AE quotas (financial agents); notify AE and RevOps.        | Medium    | 2     | If quotas cannot be recalculated – alert RevOps.      |
+| T15 | Agent load (errors >5% per hour)                | Send alert to RevOps operators in control panel (email + Slack).       | High      | 2     | If control panel unavailable – duplicate by email.    |
+| T16 | New quarter (quarterly timer)                   | Run forecast calculation (6.4); update OKRs; recalculate headcount (7.1). | Medium    | 3     | If calculation fails – retry after 1 hour, notify RevOps. |
+
+────────────────────────────────────────────────────────────────────────────────────
+**TECHNICAL IMPLEMENTATION DETAILS**
+
+**Event sources:**
+- **Salesforce Platform Events** – for T01, T03–T07, T11–T13 (CRM changes).
+- **6sense Webhooks / API** – for T02 (pull requests every 30 minutes).
+- **Gainsight Webhooks** – for T03, T04, T06, T10 (Health Score changes, playbooks).
+- **Analytic agents** – for T08, T09, T14, T16 (periodic calculations, monitoring).
+- **System monitoring** – for T15 (CloudWatch / Datadog alerts).
+
+**Action executors:**
+- **Executor agents (Level 4)** – create tasks in Salesforce, call APIs (SalesLoft, Gainsight, Ironclad).
+- **Analytic agents (Level 1)** – recalculate scoring, aggregate metrics.
+- **Financial agents (Level 4)** – calculate forecasts, headcount, quotas.
+- **Apex (Salesforce)** – publish Platform Events, triggers on objects.
+- **AWS EventBridge** – route events between systems.
+
+**Error handling:**
+- All triggers have a **Dead Letter Queue (DLQ)** where events that fail after the specified number of attempts are placed.
+- RevOps operators receive DLQ notifications via the control panel and can manually perform the action or restart processing.
+- For critical triggers (T01, T03, T04, T06, T10), alerts are configured in PagerDuty.
+
+────────────────────────────────────────────────────────────────────────────────────
+**EXAMPLE PROCESS (T01)**
+
+1. **Event:** An analytic agent recalculates Account Score for an account, result >0.7.
+2. **Publication:** The agent updates the `Account_Score__c` field in Salesforce via Hightouch.
+   A Salesforce Apex trigger on the Account object publishes the Platform Event `Account_Change__e`.
+3. **Routing:** EventBridge forwards the event to Kafka (topic `trigger_events`).
+4. **Processing:** An executor agent (Lambda) subscribed to the topic receives the event.
+5. **Actions:**
+   - Call Salesforce API to create a task (Task) of type `Sales_Strategist_Task`.
+   - Call SalesLoft API to add the account to a cadence.
+6. **Logging:** Success/failure are recorded in CloudWatch; on failure – retry after 10, 60, 300 seconds.
+7. **DLQ:** If the error persists after 3 attempts, the event is placed in SQS (DLQ), and a RevOps operator is notified.
+
+────────────────────────────────────────────────────────────────────────────────────
+**RELATIONSHIP WITH OTHER PROTOCOLS**
+
+- **8.2.1–8.2.4** – details of playbooks referenced in T03, T04, T10, T11.
+- **8.3.1–8.3.4** – automatic transitions triggered by T01, T06, T10, T13.
+- **5.2** – implementation of Platform Events and Apex.
+- **4.2.4** – description of executor agents.
+
+────────────────────────────────────────────────────────────────────────────────────
+**CONCLUSIONS ON TRIGGERS**
+
+- The presented list of 16 triggers covers all key events of GTM processes,
+  ensuring full automation of responses.
+- Each trigger has clearly defined conditions, priority, and reliability mechanisms
+  (retry, DLQ, alerts).
+- The technical implementation is distributed across Salesforce (Platform Events, Apex),
+  agents, and external services, providing scalability and fault tolerance.
+
+═══════════════════════════════════════════════════════════════════════════════════

@@ -1,0 +1,170 @@
+# configs/agents_config.yaml
+# Конфигурация агентов GTM-инфраструктуры Sourcegraph
+
+agents:
+  # Уровень 1 – аналитические
+  intent_monitor:
+    enabled: true
+    interval_minutes: 30
+    params:
+      score_threshold: 0.7
+      domains_from_salesforce: true
+
+  account_scorer:
+    enabled: true
+    interval_hours: 6
+    params:
+      intent_weight: 0.4
+      usage_weight: 0.3
+      icp_weight: 0.3
+      update_salesforce: true
+
+  usage_analyzer:
+    enabled: true
+    interval_hours: 12
+    params:
+      snowflake_query: "SELECT account_id, usage_score FROM daily_usage"
+      update_frequency: "daily"
+
+  competitor_intelligence:
+    enabled: true
+    interval_days: 1
+    params:
+      sources: ["6sense", "public_web"]
+      track_pricing: true
+      alert_on_drop_percent: 5
+
+  news_monitor:
+    enabled: true
+    interval_hours: 6
+    params:
+      feeds:
+        - "https://sourcegraph.com/blog/rss"
+        - "https://techcrunch.com/tag/sourcegraph/feed/"
+      keywords: ["GTM", "enterprise", "sales", "competitor"]
+
+  # Уровень 2 – стратегические
+  conservative_strategist:
+    enabled: true
+    interval_hours: 12
+    params:
+      focus: "retention"
+      risk_tolerance: 0.2
+      budget_multiplier: 0.8
+
+  balanced_strategist:
+    enabled: true
+    interval_hours: 12
+    params:
+      focus: "balanced"
+      risk_tolerance: 0.5
+      budget_multiplier: 1.0
+
+  aggressive_strategist:
+    enabled: true
+    interval_hours: 12
+    params:
+      focus: "expansion"
+      risk_tolerance: 0.8
+      budget_multiplier: 1.2
+
+  risk_manager:
+    enabled: true
+    interval_hours: 24
+    params:
+      health_score_weights:
+        deficit: 0.4
+        turnover: 0.3
+        margin: 0.3
+      alert_threshold_red: 0.5
+      alert_threshold_yellow: 0.7
+
+  marketing_analyst:
+    enabled: true
+    interval_days: 7
+    params:
+      monthly_budget: 500000
+      romi_target: 200
+
+  # Уровень 3 – координаторы
+  segment_coordinators:
+    enabled: true
+    interval_hours: 12
+    params:
+      segments:
+        - name: "Enterprise"
+          industries: ["finance", "tech"]
+          regions: ["US", "EMEA"]
+          size: ">5000"
+        - name: "MidMarket"
+          industries: ["retail", "manufacturing"]
+          regions: ["US", "EMEA"]
+          size: "500-5000"
+        - name: "SMB"
+          industries: ["all"]
+          regions: ["all"]
+          size: "<500"
+
+  archivist:
+    enabled: true
+    interval_days: 1
+    params:
+      retention_days: 365
+
+  supervisor:
+    enabled: true
+    interval_minutes: 5
+    params:
+      heartbeat_ttl_seconds: 300
+      restart_on_failure: true
+
+  resource_planner:
+    enabled: true
+    interval_days: 7
+    params:
+      headcount_model: true
+      territory_design: true
+      compensation_model: true
+
+  # Уровень 4 – исполнительные
+  task_creator:
+    enabled: true
+    interval_minutes: 1
+    params:
+      salesforce_queue_id: "00Gxxxxxxxxxxxx"
+      task_priority: "high"
+
+  forecast_updater:
+    enabled: true
+    interval_weeks: 1
+    params:
+      macro_model: "VAR"
+      seasonal_adjustment: true
+
+  report_generator:
+    enabled: true
+    interval_weeks: 1
+    params:
+      report_types: ["QBR", "board_pack", "sales_dashboard"]
+      recipients: ["cro@sourcegraph.com", "cfo@sourcegraph.com"]
+
+  notification_sender:
+    enabled: true
+    interval_minutes: 5
+    params:
+      channels:
+        slack: "#gtm-alerts"
+        email: "gtm-team@sourcegraph.com"
+
+  script2_treasury:
+    enabled: true
+    interval_hours: 1
+    params:
+      alert_threshold: 0.8
+
+  script3_executor:
+    enabled: true
+    interval_minutes: 1
+    params:
+      retry_count: 3
+      retry_delay_seconds: [2, 5, 10]

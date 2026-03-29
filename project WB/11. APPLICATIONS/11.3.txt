@@ -1,0 +1,427 @@
+╔══════════════════════════════════════════════════════════════════════════════════╗
+║  PROTOCOL 11.3. CONFIGURATION FILES                                              ║
+║  PROJECT: IRON KIT – 13,918 SALES                                                 ║
+║                                                                                  ║
+╚══════════════════════════════════════════════════════════════════════════════════╝
+
+═══════════════════════════════════════════════════════════════════════════════════
+**11.3. CONFIGURATION FILES**
+───────────────────────────────────────────────────────────────────────────────────
+
+This protocol contains examples of configuration files used during the deployment
+and operation of the AI ecosystem. All configurations are stored encrypted (except
+`.env.example`) and loaded into the environment at startup. For security, secrets
+are not included in the repository.
+
+────────────────────────────────────────────────────────────────────────────────────
+**11.3.1. ENVIRONMENT VARIABLES (.env)**
+───────────────────────────────────────────────────────────────────────────────────
+
+The `.env` file contains the main settings for connecting to databases, API keys,
+and environment parameters.
+
+```bash
+# .env.example – template, copy to .env and fill with real values
+
+# PostgreSQL
+DB_HOST=postgres
+DB_PORT=5432
+DB_NAME=symbiosis
+DB_USER=symbiosis
+DB_PASSWORD=strong_password_here
+
+# Redis
+REDIS_HOST=redis
+REDIS_PORT=6379
+REDIS_PASSWORD=redis_password_here
+
+# Wildberries API
+WB_API_TOKEN=your_wb_api_token_here
+WB_API_URL=https://suppliers-api.wildberries.ru/api/v2
+
+# OpenWeatherMap (optional)
+WEATHER_API_KEY=your_openweathermap_api_key
+
+# Telegram / notifications (optional)
+TELEGRAM_BOT_TOKEN=
+TELEGRAM_CHAT_ID=
+
+# Application parameters
+APP_ENV=production          # development / production
+LOG_LEVEL=INFO
+SECRET_KEY=some_long_random_string_for_jwt
+
+────────────────────────────────────────────────────────────────────────────────────
+11.3.2. DOCKER COMPOSE (docker-compose.yml)
+───────────────────────────────────────────────────────────────────────────────────
+
+The main orchestration file for local deployment and for production (with minor
+changes).
+yaml
+
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --requirepass ${REDIS_PASSWORD} --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  agents:
+    build: ./agents
+    environment:
+      DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      WB_API_TOKEN: ${WB_API_TOKEN}
+      WEATHER_API_KEY: ${WEATHER_API_KEY}
+      LOG_LEVEL: ${LOG_LEVEL}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./agents:/app
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  celery_worker:
+    build: ./agents
+    environment:
+      DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      WB_API_TOKEN: ${WB_API_TOKEN}
+    depends_on:
+      - postgres
+      - redis
+    command: celery -A tasks worker --loglevel=${LOG_LEVEL}
+    restart: unless-stopped
+
+  celery_beat:
+    build: ./agents
+    environment:
+      DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+    depends_on:
+      - postgres
+      - redis
+    command: celery -A tasks beat --loglevel=${LOG_LEVEL}
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    environment:
+      VITE_API_URL: http://agents:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - agents
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./frontend/dist:/usr/share/nginx/html
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - agents
+      - frontend
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+
+────────────────────────────────────────────────────────────────────────────────────
+11.3.3. AGENT CONFIGURATION (YAML)
+───────────────────────────────────────────────────────────────────────────────────
+
+Parameters for each agent can be defined in a separate YAML file loaded at
+initialisation. Example agents_config.yaml:
+yaml
+
+# agents_config.yaml
+agents:
+  pricing_strategist:
+    enabled: true
+    parameters:
+      min_margin: 25                # minimum margin (%)
+      auto_apply_threshold: 5       # automatically apply if deviation <=5%
+      max_price_competitor_factor: 1.2   # maximum price relative to competitor
+      logistic_model:
+        retrain_days: 30            # retrain model every 30 days
+
+  inventory_optimizer:
+    enabled: true
+    parameters:
+      service_level: 0.95           # service level (z=1.645)
+      lead_time_days: 14            # raw material lead time
+      fixed_order_cost: 5000        # cost per order (RUB)
+      holding_cost_pct: 0.005       # holding cost as % of cost per day
+
+  review_handler:
+    enabled: true
+    parameters:
+      sentiment_model: rubert
+      auto_reply: true
+      escalation_after_days: 3
+      negative_threshold: 3
+
+  forecast_engine:
+    enabled: true
+    parameters:
+      models:
+        prophet:
+          enabled: true
+          weight: 0.5
+        arima:
+          enabled: true
+          weight: 0.3
+        holt_winters:
+          enabled: true
+          weight: 0.2
+      mape_threshold_warning: 25
+      retrain_interval_days: 7
+
+────────────────────────────────────────────────────────────────────────────────────
+11.3.4. TRIGGER CONFIGURATION (YAML)
+───────────────────────────────────────────────────────────────────────────────────
+
+Example triggers_config.yaml with activation thresholds:
+yaml
+
+triggers:
+  T01_stock_low:
+    enabled: true
+    safety_factor: 1.2              # multiplier for s‑level (tightening)
+  T02_price_drop:
+    enabled: true
+    threshold_percent: 5            # competitor price drop >5%
+    auto_apply_threshold: 5         # automatically apply if deviation <=5%
+  T03_negative_review:
+    enabled: true
+    rating_threshold: 3
+  T06_health_score_low:
+    enabled: true
+    health_score_threshold: 0.5
+    escalation_days: 3
+  T08_budget_exceed:
+    enabled: true
+    warning_threshold: 0.8
+    block_threshold: 1.0
+  T14_api_failure:
+    enabled: true
+    failure_count: 3
+    time_window_minutes: 5
+
+────────────────────────────────────────────────────────────────────────────────────
+11.3.5. CONSOLE CONFIGURATION (React – environment variables)
+───────────────────────────────────────────────────────────────────────────────────
+
+.env file for the frontend (stored in frontend/.env):
+bash
+
+# frontend/.env
+VITE_API_URL=http://localhost:8000/api/v4
+VITE_WS_URL=ws://localhost:8000/ws
+VITE_APP_TITLE=AI Ecosystem Iron Kit
+
+────────────────────────────────────────────────────────────────────────────────────
+11.3.6. DATABASE INITIALISATION (init.sql)
+───────────────────────────────────────────────────────────────────────────────────
+
+The init.sql file is executed on the first start of the PostgreSQL container. It
+creates tables, indexes, and loads initial data (e.g., reference data).
+sql
+
+-- init.sql
+-- Create pgvector extension for review embeddings
+CREATE EXTENSION IF NOT EXISTS vector;
+
+-- Tables (short version, full DDL in protocol 6.1)
+CREATE TABLE IF NOT EXISTS sku (
+    sku VARCHAR(50) PRIMARY KEY,
+    name VARCHAR(200) NOT NULL,
+    category VARCHAR(50) NOT NULL,
+    cost NUMERIC(10,2) NOT NULL,
+    current_price NUMERIC(10,2) NOT NULL,
+    min_margin NUMERIC(5,2) DEFAULT 25.0,
+    target_margin NUMERIC(5,2) DEFAULT 35.0,
+    stock_production INTEGER NOT NULL DEFAULT 0,
+    stock_wb INTEGER NOT NULL DEFAULT 0,
+    rating NUMERIC(3,2) DEFAULT 0,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS orders (
+    order_id VARCHAR(50) PRIMARY KEY,
+    sku VARCHAR(50) REFERENCES sku(sku),
+    quantity INTEGER NOT NULL,
+    price NUMERIC(10,2) NOT NULL,
+    total_amount NUMERIC(10,2) GENERATED ALWAYS AS (quantity * price) STORED,
+    status VARCHAR(20) NOT NULL DEFAULT 'created',
+    order_date TIMESTAMP NOT NULL,
+    shipped_date TIMESTAMP,
+    customer_rating INTEGER
+);
+
+-- and so on... (full script in protocol 6.1)
+
+────────────────────────────────────────────────────────────────────────────────────
+11.3.7. NGINX CONFIGURATION (nginx.conf)
+───────────────────────────────────────────────────────────────────────────────────
+
+Example configuration for proxying requests to agents and the frontend.
+nginx
+
+# nginx.conf
+events {
+    worker_connections 1024;
+}
+
+http {
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+
+    upstream backend {
+        server agents:8000;
+    }
+
+    upstream frontend {
+        server frontend:3000;
+    }
+
+    server {
+        listen 80;
+        server_name localhost;
+
+        location /api/ {
+            proxy_pass http://backend;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+
+        location /ws/ {
+            proxy_pass http://backend;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+        }
+
+        location / {
+            proxy_pass http://frontend;
+            proxy_set_header Host $host;
+        }
+    }
+}
+
+────────────────────────────────────────────────────────────────────────────────────
+11.3.8. CELERY CONFIG (tasks.py)
+───────────────────────────────────────────────────────────────────────────────────
+
+Celery configuration for periodic tasks (beat_schedule) and broker.
+python
+
+# agents/tasks.py
+from celery import Celery
+from celery.schedules import crontab
+
+app = Celery('tasks', broker='redis://redis:6379/0', backend='redis://redis:6379/1')
+
+app.conf.update(
+    result_expires=3600,
+    task_serializer='json',
+    accept_content=['json'],
+    result_serializer='json',
+    timezone='Europe/Moscow',
+    enable_utc=False,
+    beat_schedule={
+        'fetch-competitor-prices': {
+            'task': 'tasks.fetch_competitor_prices',
+            'schedule': crontab(minute='*/30'),  # every 30 minutes
+        },
+        'update-forecast': {
+            'task': 'tasks.update_forecast',
+            'schedule': crontab(hour=2, minute=0),  # daily at 2:00
+        },
+        'compute-health-score': {
+            'task': 'tasks.compute_health_score',
+            'schedule': crontab(hour=4, minute=0),  # daily at 4:00
+        },
+        'weekly-report': {
+            'task': 'tasks.weekly_report',
+            'schedule': crontab(day_of_week=0, hour=23, minute=0),  # Sunday 23:00
+        },
+    }
+)
+
+────────────────────────────────────────────────────────────────────────────────────
+11.3.9. EXAMPLE PROMETHEUS CONFIGURATION (OPTIONAL)
+───────────────────────────────────────────────────────────────────────────────────
+
+prometheus.yml file for monitoring.
+yaml
+
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'agents'
+    static_configs:
+      - targets: ['agents:8000']
+    metrics_path: '/metrics'
+
+────────────────────────────────────────────────────────────────────────────────────
+11.3.10. PROTECTING CONFIGURATIONS
+───────────────────────────────────────────────────────────────────────────────────
+
+    All secret values (passwords, tokens) are stored encrypted in environment variables
+    or AWS Secrets Manager (when deployed in the cloud).
+
+    Configuration files containing sensitive data must not be committed to the repository.
+
+    For local development, a .env file is used, which is added to .gitignore.
+
+    In production, environment variables are set via orchestrator secrets (Kubernetes)
+    or systemd environment files.
+
+═══════════════════════════════════════════════════════════════════════════════════
+NOTE: All configurations provided are templates. Before deployment,
+replace placeholders with real values and adapt to the specific infrastructure
+(local server, cloud, Kubernetes).

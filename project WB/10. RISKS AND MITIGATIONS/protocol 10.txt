@@ -1,0 +1,157 @@
+╔══════════════════════════════════════════════════════════════════════════════════╗
+║  SECTION 10. RISKS AND MITIGATIONS (MASTER PROTOCOL)                              ║
+║  PROJECT: IRON KIT – 13,918 SALES                                                 ║
+║                                                                                  ║
+╚══════════════════════════════════════════════════════════════════════════════════╝
+
+═══════════════════════════════════════════════════════════════════════════════════
+**10. RISKS AND MITIGATIONS**
+───────────────────────────────────────────────────────────────────────────────────
+
+The successful implementation of the AI ecosystem requires systematic risk management
+for risks that may arise during implementation phases and during operation.
+This section classifies risks into four categories (organisational, technical,
+financial, security and compliance), assesses their likelihood and potential impact,
+and proposes specific mitigation, monitoring, and response measures. At the end of the
+section, a response plan and fallback measures are presented to ensure operational
+continuity.
+
+────────────────────────────────────────────────────────────────────────────────────
+**10.1. ORGANISATIONAL RISKS**
+───────────────────────────────────────────────────────────────────────────────────
+
+Organisational risks are related to the human factor: resistance to change,
+insufficient qualifications, lack of data for model training.
+
+**10.1.1. Resistance to change**
+
+| Aspect                     | Description                                                                 |
+|----------------------------|-----------------------------------------------------------------------------|
+| **Risk description**       | The business owner (primary user) may distrust automation, fear loss of control, or simply not have time to learn new tools. |
+| **Likelihood**             | Medium (40–60%)                                                             |
+| **Impact**                 | High – could lead to abandonment of the system, failure to achieve KPIs.    |
+| **Mitigation**             | – **Operator console in the style of a strategy game** – intuitive interface lowering the entry barrier.<br>– **Phased implementation** – first only the dashboard, then agents with low autonomy, gradually increasing.<br>– **Scenario‑based training** – demonstrate quick wins (e.g., how an agent helped avoid a shortage).<br>– **Manual override capability** – an “Intervene” button on every automated decision, preserving control. |
+| **Monitoring**             | NPS surveys (monthly), number of manual overrides (should decrease).        |
+
+**10.1.2. Insufficient data for model training**
+
+| Aspect                     | Description                                                                 |
+|----------------------------|-----------------------------------------------------------------------------|
+| **Risk description**       | Training demand forecasting and pricing models requires at least 12 months of sales history. If data is insufficient, model accuracy may be low. |
+| **Likelihood**             | Low (history of 1 year 3 months already exists)                             |
+| **Impact**                 | Medium – reduced forecast accuracy, need for manual adjustments.            |
+| **Mitigation**             | – **Use external sources** – add competitor data, macroeconomic indicators, weather.<br>– **Data augmentation** – synthetic generation of sales based on seasonality and trends.<br>– **Gradual retraining** – models recalculated monthly, accuracy improves as data accumulates. |
+| **Monitoring**             | Forecast MAPE; if MAPE >30% in the first 3 months, use simplified models (exponential smoothing). |
+
+────────────────────────────────────────────────────────────────────────────────────
+**10.2. TECHNICAL RISKS**
+───────────────────────────────────────────────────────────────────────────────────
+
+Technical risks cover possible failures in infrastructure operation, integrations,
+data loss, and agent failures.
+
+**10.2.1. Wildberries API failures**
+
+| Aspect                     | Description                                                                 |
+|----------------------------|-----------------------------------------------------------------------------|
+| **Risk description**       | Wildberries API may be temporarily unavailable (maintenance, overloads, API changes). This prevents price updates, order retrieval, review replies. |
+| **Likelihood**             | Medium (based on experience – 1–2 outages per month lasting up to 1 hour)   |
+| **Impact**                 | High – automation stops, data becomes outdated.                             |
+| **Mitigation**             | – **Scriptor #3 with fallback via Excel** – on failure, system switches to manual CSV upload (operator uploads data from WB personal account, agents process it).<br>– **Retry with exponential backoff** – up to 3 attempts, backoff 30/60/120 sec.<br>– **Caching** – last valid data stored in Redis, used for calculations until API is restored. |
+| **Monitoring**             | Error logging in `api_calls` table, alert on error rate >5% over 5 minutes. |
+
+**10.2.2. Data loss**
+
+| Aspect                     | Description                                                                 |
+|----------------------------|-----------------------------------------------------------------------------|
+| **Risk description**       | Database failure, accidental deletion, ransomware attack could lead to loss of critical data (orders, cost, configurations). |
+| **Likelihood**             | Low (if backup policies are followed)                                       |
+| **Impact**                 | Critical – business stoppage, need for recovery.                            |
+| **Mitigation**             | – **Daily PostgreSQL backups** (dump) to Object Storage (S3) with 30‑day retention.<br>– **Replication** (optional) – master‑slave for fast failover.<br>– **Configuration backups** – scripts and Dockerfiles stored in Git. |
+| **Monitoring**             | Backup success checks via notifications (email/console).                    |
+
+────────────────────────────────────────────────────────────────────────────────────
+**10.3. FINANCIAL RISKS**
+───────────────────────────────────────────────────────────────────────────────────
+
+Financial risks are related to budget overruns, failure to achieve planned targets,
+and delayed payback.
+
+**10.3.1. Budget overrun (CAPEX / OPEX)**
+
+| Aspect                     | Description                                                                 |
+|----------------------------|-----------------------------------------------------------------------------|
+| **Risk description**       | Development costs may exceed the planned 2.0 million RUB due to integration complexities, additional rework, rising cloud resource prices. |
+| **Likelihood**             | Medium (20–30%)                                                             |
+| **Impact**                 | Medium – may require scope reduction or additional funding.                 |
+| **Mitigation**             | – **Phased funding** – investments split by phases; after each phase, results are evaluated and a continuation decision is made.<br>– **Contingency fund 10% of CAPEX** (200 thousand RUB) – used only for unforeseen circumstances.<br>– **Cost monitoring** – monthly comparison of actual vs plan, alerts on >5% deviation. |
+| **Monitoring**             | Dashboard in the console (Finance section), monthly report.                 |
+
+**10.3.2. Failure to achieve KPIs (revenue growth, margin)**
+
+| Aspect                     | Description                                                                 |
+|----------------------------|-----------------------------------------------------------------------------|
+| **Risk description**       | Forecast indicators (revenue +50% YoY, margin 35%) may not be achieved due to external factors (crisis, intensified competition) or model errors. |
+| **Likelihood**             | Medium                                                                      |
+| **Impact**                 | High – reduced ROI, extended payback period.                                |
+| **Mitigation**             | – **Monthly KPI monitoring** – compare actual with forecast, analyse deviations.<br>– **Model adjustment** – when deviation >10%, retrain on new data, adjust thresholds.<br>– **Flexible roadmap** – ability to reduce scope or postpone some tasks to later phases. |
+| **Monitoring**             | KPI dashboard in the console (revenue, margin, turnover).                   |
+
+────────────────────────────────────────────────────────────────────────────────────
+**10.4. SECURITY AND COMPLIANCE RISKS**
+───────────────────────────────────────────────────────────────────────────────────
+
+Security risks relate to data leakage, unauthorised access, and copyright infringement
+when generating new products.
+
+**10.4.1. Data leakage**
+
+| Aspect                     | Description                                                                 |
+|----------------------------|-----------------------------------------------------------------------------|
+| **Risk description**       | Unauthorised access to the database, API keys, operator console could lead to leakage of commercial information (prices, cost, customer data). |
+| **Likelihood**             | Low (if security measures are followed)                                     |
+| **Impact**                 | Critical – reputational damage, potential fines (Federal Law‑152).          |
+| **Mitigation**             | – **Encryption at rest** (AES‑256 for PostgreSQL, Redis optionally).<br>– **Encryption in transit** (TLS 1.3 for all APIs).<br>– **Role‑based access** – owner (full access), observer (view only).<br>– **Two‑factor authentication** for the console.<br>– **Audit** – logging of all console actions and API calls. |
+| **Monitoring**             | SIEM (if needed), alerts on suspicious activity.                            |
+
+**10.4.2. Copyright infringement (when generating new products)**
+
+| Aspect                     | Description                                                                 |
+|----------------------------|-----------------------------------------------------------------------------|
+| **Risk description**       | GENESIS may generate a product whose design infringes others’ patents or copyrights (e.g., copying a competitor’s shape). |
+| **Likelihood**             | Low (with introduced filters)                                               |
+| **Impact**                 | Medium – legal costs, reputational damage.                                  |
+| **Mitigation**             | – **Legal agent (D6)** with functionality to check against patent and trademark databases (via FIPS API).<br>– **Manual approval** – all new products undergo visual inspection by the owner before launch.<br>– **Documentation** – record the idea source (reviews, competitors) for justification. |
+| **Monitoring**             | New product log, annual audit.                                              |
+
+────────────────────────────────────────────────────────────────────────────────────
+**10.5. RESPONSE PLAN AND FALLBACK MEASURES**
+───────────────────────────────────────────────────────────────────────────────────
+
+**10.5.1. Dead Letter Queue (DLQ) for unprocessed events**
+
+- **Purpose:** collect events that could not be processed after 3 attempts.
+- **Implementation:** Redis Stream named `dlq`, each event stores `event_id`, `timestamp`, `source`, `payload`, `error_message`.
+- **Operator actions:** via console, the DLQ can be viewed, errors inspected, events resent, data manually corrected, or ignored.
+- **Monitoring:** alert when DLQ size exceeds 100 messages.
+
+**10.5.2. Manual mode during failures**
+
+During a prolonged (more than 1 hour) Wildberries API outage or critical agent error:
+
+1. **Switch to manual mode** – system disables automated actions; all changes require operator confirmation.
+2. **Fallback channels** – operator uploads CSV files (prices, orders, reviews) via the console; agents process them as normal events.
+3. **Notifications** – owner receives a push notification and email about the switch to manual mode.
+4. **Return to automation** – after API restoration and stability check (1 hour without errors), the system automatically switches back.
+
+**10.5.3. Contingency fund (10% of CAPEX)**
+
+- **Amount:** 200 thousand RUB (10% of 2.0 million RUB).
+- **Purpose:** cover unforeseen expenses (additional rework, consultations, urgent data recovery).
+- **Usage procedure:** only with owner approval, with mandatory recording of the reason. After use, the fund must be replenished from net profit.
+
+═══════════════════════════════════════════════════════════════════════════════════
+**NOTE:** All risks have quantitative and qualitative assessments; mitigation measures
+are built into the architecture (DLQ, fallback channels, training). Regular drills
+(once per quarter) to simulate failure scenarios ensure the system is ready for
+abnormal situations.

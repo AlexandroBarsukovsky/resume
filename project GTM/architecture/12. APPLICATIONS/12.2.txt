@@ -1,0 +1,347 @@
+═══════════════════════════════════════════════════════════════════════════════════
+PROTOCOL: 12.2. SQL QUERIES FOR SNOWFLAKE (EXAMPLES)
+Project: Sourcegraph GTM Infrastructure
+═══════════════════════════════════════════════════════════════════════════════════
+
+**12.2. SQL QUERIES FOR SNOWFLAKE (EXAMPLES)**
+
+This protocol contains ready‑made SQL queries for Snowflake, used in the target
+GTM architecture. The queries cover creating data marts, aggregating product events,
+calculating key metrics (Account Score, Health Score), and preparing data for
+forecasting. All examples are optimised for large data volumes (billions of rows)
+and follow Snowflake best practices (clustering, materialised views, window functions).
+
+────────────────────────────────────────────────────────────────────────────────────
+12.2.1. CREATING DATA MARTS FOR ACCOUNT SCORE
+────────────────────────────────────────────────────────────────────────────────────
+
+**12.2.1.1. Table of intent signals (raw data)**
+
+```sql
+CREATE OR REPLACE TABLE raw_intent_signals (
+    signal_id        VARCHAR(36)      PRIMARY KEY,
+    account_id       VARCHAR(18)      NOT NULL,
+    source           VARCHAR(50)      NOT NULL,   -- 6sense, etc.
+    intent_strength  FLOAT            NOT NULL,   -- 0..1
+    signal_date      TIMESTAMP_NTZ    NOT NULL,
+    keyword          VARCHAR(200),
+    metadata         VARIANT
+)
+CLUSTER BY (account_id, signal_date);
+
+12.2.1.2. Aggregation of intent signals over 7 days with exponential decay
+sql
+
+CREATE OR REPLACE VIEW v_intent_aggregated AS
+WITH weighted_signals AS (
+    SELECT
+        account_id,
+        intent_strength,
+        DATEDIFF('day', signal_date, CURRENT_DATE()) AS age_days,
+        EXP(-age_days / 7.0) AS weight
+    FROM raw_intent_signals
+    WHERE signal_date >= DATEADD('day', -7, CURRENT_DATE())
+),
+account_intent AS (
+    SELECT
+        account_id,
+        SUM(intent_strength * weight) / NULLIF(SUM(weight), 0) AS intent_score
+    FROM weighted_signals
+    GROUP BY account_id
+)
+SELECT * FROM account_intent;
+
+12.2.1.3. Data mart for product usage (U)
+sql
+
+CREATE OR REPLACE VIEW v_product_usage AS
+WITH daily_activity AS (
+    SELECT
+        account_id,
+        DATE_TRUNC('day', event_date) AS day,
+        COUNT(DISTINCT user_id) AS dau
+    FROM product_events
+    WHERE event_date >= DATEADD('month', -1, CURRENT_DATE())
+    GROUP BY account_id, day
+),
+monthly_activity AS (
+    SELECT
+        account_id,
+        COUNT(DISTINCT user_id) AS mau
+    FROM product_events
+    WHERE event_date >= DATEADD('month', -1, CURRENT_DATE())
+    GROUP BY account_id
+),
+features_used AS (
+    SELECT
+        account_id,
+        COUNT(DISTINCT feature_name) AS active_features
+    FROM feature_events
+    WHERE event_date >= DATEADD('month', -1, CURRENT_DATE())
+    GROUP BY account_id
+),
+-- Rolling average DAU/MAU over 30 days
+dau_mau AS (
+    SELECT
+        d.account_id,
+        AVG(d.dau / NULLIF(m.mau, 0)) AS avg_dau_mau
+    FROM daily_activity d
+    JOIN monthly_activity m ON d.account_id = m.account_id
+    GROUP BY d.account_id
+)
+SELECT
+    d.account_id,
+    0.6 * d.avg_dau_mau + 0.4 * (f.active_features / (SELECT COUNT(*) FROM all_features)) AS usage_score
+FROM dau_mau d
+LEFT JOIN features_used f ON d.account_id = f.account_id;
+
+12.2.1.4. Final Account Score data mart
+sql
+
+CREATE OR REPLACE VIEW v_account_score AS
+SELECT
+    a.account_id,
+    COALESCE(i.intent_score, 0) AS intent_score,
+    COALESCE(u.usage_score, 0) AS usage_score,
+    COALESCE(icp.icp_fit, 0) AS icp_fit,
+    0.4 * COALESCE(i.intent_score, 0) +
+    0.3 * COALESCE(u.usage_score, 0) +
+    0.3 * COALESCE(icp.icp_fit, 0) AS account_score
+FROM accounts a
+LEFT JOIN v_intent_aggregated i ON a.account_id = i.account_id
+LEFT JOIN v_product_usage u ON a.account_id = u.account_id
+LEFT JOIN account_icp_fit icp ON a.account_id = icp.account_id;
+
+────────────────────────────────────────────────────────────────────────────────────
+12.2.2. AGGREGATION OF PRODUCT EVENTS
+────────────────────────────────────────────────────────────────────────────────────
+
+12.2.2.1. DAU/MAU by account (optimised version)
+sql
+
+CREATE OR REPLACE MATERIALIZED VIEW mv_account_dau_mau
+CLUSTER BY (account_id)
+AS
+WITH daily_users AS (
+    SELECT
+        account_id,
+        DATE_TRUNC('day', event_date) AS day,
+        ARRAY_AGG(DISTINCT user_id) AS users_array
+    FROM product_events
+    WHERE event_date >= DATEADD('month', -1, CURRENT_DATE())
+    GROUP BY account_id, day
+),
+monthly_users AS (
+    SELECT
+        account_id,
+        ARRAY_AGG(DISTINCT user_id) AS users_array
+    FROM product_events
+    WHERE event_date >= DATEADD('month', -1, CURRENT_DATE())
+    GROUP BY account_id
+)
+SELECT
+    d.account_id,
+    AVG(ARRAY_SIZE(d.users_array) / NULLIF(ARRAY_SIZE(m.users_array), 0)) AS avg_dau_mau
+FROM daily_users d
+JOIN monthly_users m ON d.account_id = m.account_id
+GROUP BY d.account_id;
+
+12.2.2.2. Number of active features by account
+sql
+
+CREATE OR REPLACE VIEW v_active_features AS
+WITH feature_events_30d AS (
+    SELECT
+        account_id,
+        feature_name,
+        COUNT(*) AS event_count
+    FROM feature_events
+    WHERE event_date >= DATEADD('month', -1, CURRENT_DATE())
+    GROUP BY account_id, feature_name
+    HAVING event_count > 0
+)
+SELECT
+    account_id,
+    COUNT(DISTINCT feature_name) AS active_features
+FROM feature_events_30d
+GROUP BY account_id;
+
+────────────────────────────────────────────────────────────────────────────────────
+12.2.3. CALCULATING HEALTH SCORE
+────────────────────────────────────────────────────────────────────────────────────
+
+12.2.3.1. Normalising support tickets
+sql
+
+CREATE OR REPLACE VIEW v_support_normalized AS
+WITH ticket_counts AS (
+    SELECT
+        account_id,
+        COUNT(*) AS tickets_count
+    FROM support_tickets
+    WHERE created_date >= DATEADD('month', -1, CURRENT_DATE())
+    GROUP BY account_id
+),
+global_stats AS (
+    SELECT
+        MAX(tickets_count) AS max_tickets,
+        MIN(tickets_count) AS min_tickets
+    FROM ticket_counts
+)
+SELECT
+    tc.account_id,
+    CASE
+        WHEN g.max_tickets = g.min_tickets THEN 1.0
+        ELSE (g.max_tickets - tc.tickets_count) / NULLIF(g.max_tickets - g.min_tickets, 0)
+    END AS support_score
+FROM ticket_counts tc
+CROSS JOIN global_stats g;
+
+12.2.3.2. Health Score (composite)
+sql
+
+CREATE OR REPLACE VIEW v_health_score AS
+SELECT
+    a.account_id,
+    0.5 * COALESCE(u.usage_score, 0) +
+    0.2 * COALESCE(s.support_score, 0) +
+    0.2 * COALESCE(e.engagement_score, 0) +
+    0.1 * COALESCE(n.nps_score, 0.5) AS health_score
+FROM accounts a
+LEFT JOIN v_product_usage u ON a.account_id = u.account_id
+LEFT JOIN v_support_normalized s ON a.account_id = s.account_id
+LEFT JOIN v_engagement e ON a.account_id = e.account_id
+LEFT JOIN v_nps n ON a.account_id = n.account_id;
+
+────────────────────────────────────────────────────────────────────────────────────
+12.2.4. FORECASTING METRICS
+────────────────────────────────────────────────────────────────────────────────────
+
+12.2.4.1. Win Probability (based on logistic regression – model stored in table)
+sql
+
+-- Table with model coefficients (updated by financial agents)
+CREATE OR REPLACE TABLE model_coefficients (
+    feature          VARCHAR(50) PRIMARY KEY,
+    coefficient      FLOAT
+);
+-- Example insert
+INSERT INTO model_coefficients VALUES
+    ('intercept', -2.1),
+    ('stage_Qualification', 0.8),
+    ('stage_Proposal', 1.5),
+    ('segment_Enterprise', 0.6),
+    ('region_EMEA', -0.2),
+    ('days_in_stage_log', 0.3),
+    ('macro_index', 0.5);
+
+-- Function to calculate probability
+CREATE OR REPLACE FUNCTION win_probability(
+    stage VARCHAR,
+    segment VARCHAR,
+    region VARCHAR,
+    days_in_stage INT,
+    macro_index FLOAT
+)
+RETURNS FLOAT
+AS
+$$
+    SELECT 1 / (1 + EXP(-(
+        (SELECT coefficient FROM model_coefficients WHERE feature = 'intercept') +
+        (SELECT coefficient FROM model_coefficients WHERE feature = 'stage_' || stage) +
+        (SELECT coefficient FROM model_coefficients WHERE feature = 'segment_' || segment) +
+        (SELECT coefficient FROM model_coefficients WHERE feature = 'region_' || region) +
+        (SELECT coefficient FROM model_coefficients WHERE feature = 'days_in_stage_log') * LN(days_in_stage + 1) +
+        (SELECT coefficient FROM model_coefficients WHERE feature = 'macro_index') * macro_index
+    )))
+$$;
+
+12.2.4.2. Quarterly revenue forecast
+sql
+
+CREATE OR REPLACE VIEW v_quarterly_forecast AS
+WITH active_opps AS (
+    SELECT
+        opportunity_id,
+        amount,
+        win_probability(stage, segment, region, days_in_stage, macro_index) AS p_win
+    FROM opportunities
+    WHERE close_date BETWEEN DATE_TRUNC('quarter', CURRENT_DATE()) AND DATEADD('quarter', 1, DATE_TRUNC('quarter', CURRENT_DATE()))
+),
+weighted AS (
+    SELECT SUM(amount * p_win) AS base_forecast
+    FROM active_opps
+)
+SELECT
+    base_forecast,
+    base_forecast * (1 + (SELECT macro_adjustment FROM macro_forecast)) * (SELECT seasonal_factor FROM seasonal_factors WHERE quarter = QUARTER(CURRENT_DATE())) AS adjusted_forecast
+FROM weighted;
+
+────────────────────────────────────────────────────────────────────────────────────
+12.2.5. PERFORMANCE OPTIMISATION
+────────────────────────────────────────────────────────────────────────────────────
+
+12.2.5.1. Using clustering
+
+For tables with large data volumes (raw_intent_signals, product_events),
+it is recommended to use clustering keys on account_id and event_date.
+
+Example: ALTER TABLE raw_intent_signals CLUSTER BY (account_id, signal_date);
+
+12.2.5.2. Materialised views (MV)
+
+For frequently used aggregations (DAU/MAU, Account Score, Health Score),
+use MVs to avoid recomputation.
+
+MVs are automatically updated when the source data changes.
+
+12.2.5.3. Optimising window functions
+
+For rolling averages, use ROWS BETWEEN to limit the window.
+
+Example: AVG(dau) OVER (PARTITION BY account_id ORDER BY day ROWS BETWEEN 29 PRECEDING AND CURRENT ROW)
+
+12.2.5.4. Partitioning
+
+For event tables, partitioning by event_date (daily or monthly) is recommended
+to speed up purging of old data and improve query performance.
+
+12.2.5.5. Example efficient query for weekly pipeline coverage calculation
+sql
+
+CREATE OR REPLACE MATERIALIZED VIEW mv_pipeline_coverage
+CLUSTER BY (region)
+AS
+WITH active_pipeline AS (
+    SELECT
+        region,
+        SUM(amount * win_probability) AS pipeline_value
+    FROM opportunities
+    WHERE stage NOT IN ('Closed Won', 'Closed Lost')
+    GROUP BY region
+),
+quotas AS (
+    SELECT region, quota_amount FROM quarterly_quotas WHERE quarter = QUARTER(CURRENT_DATE())
+)
+SELECT
+    p.region,
+    p.pipeline_value,
+    q.quota_amount,
+    p.pipeline_value / NULLIF(q.quota_amount, 0) AS coverage
+FROM active_pipeline p
+JOIN quotas q ON p.region = q.region;
+
+────────────────────────────────────────────────────────────────────────────────────
+CONCLUSIONS
+
+    The presented SQL queries cover all key calculations of the target GTM architecture.
+
+    The use of materialised views, clustering, and partitioning ensures high
+    performance when scaling.
+
+    All queries can be adapted to Sourcegraph’s specific data structure.
+
+    Regularly executing these queries (via Snowflake tasks) allows automatic
+    updating of data marts for agents and dashboards.
+
+═══════════════════════════════════════════════════════════════════════════════════

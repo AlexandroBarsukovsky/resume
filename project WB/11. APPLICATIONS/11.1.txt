@@ -1,0 +1,200 @@
+╔══════════════════════════════════════════════════════════════════════════════════╗
+║  SECTION 11. APPENDICES – PROTOCOL 11.1. COMPLETE SET OF FORMULAS                ║
+║  PROJECT: IRON KIT – 13,918 SALES                                                 ║
+║                                                                                  ║ 
+╚══════════════════════════════════════════════════════════════════════════════════╝
+
+═══════════════════════════════════════════════════════════════════════════════════
+**11.1. COMPLETE SET OF FORMULAS**
+───────────────────────────────────────────────────────────────────────────────────
+
+This appendix presents all the mathematical formulas used in the AI ecosystem.
+For each formula, a description of the variables, scope of application, data source,
+and calibration method is provided. The formulas are implemented in agent code and
+can be viewed and adjusted via the operator console.
+
+────────────────────────────────────────────────────────────────────────────────────
+**11.1.1. DEMAND FORECASTING (ARIMA, PROPHET)**
+───────────────────────────────────────────────────────────────────────────────────
+
+**Purpose:** forecasting sales for 7, 30, and 90 days for each SKU.
+
+**11.1.1.1. Ensemble model**
+\[
+\hat{y}_t = w_1 \cdot \hat{y}_t^{(Prophet)} + w_2 \cdot \hat{y}_t^{(ARIMA)} + w_3 \cdot \hat{y}_t^{(HW)}
+\]
+where:
+- \(\hat{y}_t^{(Prophet)}\) – forecast from the Prophet model (Facebook),
+- \(\hat{y}_t^{(ARIMA)}\) – forecast from the ARIMA model (auto.arima),
+- \(\hat{y}_t^{(HW)}\) – forecast from exponential smoothing (Holt‑Winters),
+- \(w_1, w_2, w_3\) – weights, optimised monthly by minimising MAPE on a test set (last 30 days).
+
+**11.1.1.2. Prophet model**
+\[
+y(t) = g(t) + s(t) + h(t) + \varepsilon_t
+\]
+- \(g(t)\) – trend (piecewise linear or logistic),
+- \(s(t)\) – seasonality (multiplicative, period 7 and 365 days),
+- \(h(t)\) – holiday effects (added as regressors),
+- \(\varepsilon_t\) – noise.
+
+Regressors: price, temperature, precipitation, holiday flag.
+
+**11.1.1.3. ARIMA model (auto.arima)**
+\[
+\phi_p(B)(1-B)^d y_t = \theta_q(B) \varepsilon_t
+\]
+Orders \((p,d,q)\) and seasonal orders \((P,D,Q)_m\) are automatically selected by AIC.
+
+**11.1.1.4. Exponential smoothing (Holt‑Winters)**
+\[
+\hat{y}_{t+h|t} = (l_t + h b_t) \cdot s_{t+h-m(k+1)}
+\]
+- \(l_t\) – level,
+- \(b_t\) – trend,
+- \(s_t\) – seasonal component (period 7 and 365).
+
+**11.1.1.5. Weather factor adjustment (linear regression)**
+\[
+y_t = \beta_0 + \beta_1 \cdot T_t + \beta_2 \cdot P_t + \varepsilon
+\]
+Coefficients are recalculated monthly; \(T_t\) – temperature, \(P_t\) – precipitation.
+
+**11.1.1.6. Accuracy assessment (MAPE)**
+\[
+\text{MAPE} = \frac{1}{n} \sum_{t=1}^{n} \left| \frac{y_t - \hat{y}_t}{y_t} \right| \times 100\%
+\]
+
+────────────────────────────────────────────────────────────────────────────────────
+**11.1.2. PRICE ELASTICITY (LOGIT MODEL)**
+───────────────────────────────────────────────────────────────────────────────────
+
+**Purpose:** determining purchase probability as a function of price, competitor prices, and rating.
+
+**11.1.2.1. Logistic regression**
+\[
+P(\text{purchase} = 1) = \frac{1}{1 + e^{-(\beta_0 + \beta_1 \cdot p + \beta_2 \cdot p_c + \beta_3 \cdot r)}}
+\]
+where:
+- \(p\) – current product price,
+- \(p_c\) – average competitor price,
+- \(r\) – average rating (1–5),
+- \(\beta\) – coefficients estimated by maximum likelihood on historical data (6 months).
+
+**11.1.2.2. Interpretation of coefficients**
+- \(\beta_1 < 0\) – price increase reduces probability,
+- \(\beta_2 > 0\) – competitor price increase raises our attractiveness,
+- \(\beta_3 > 0\) – high rating increases probability.
+
+**11.1.2.3. Price optimisation objective function**
+\[
+\max_{p} \quad \pi(p) = (p - c) \cdot \mathbb{E}[Q(p)] \cdot P_{\text{purchase}}(p)
+\]
+where:
+- \(c\) – cost,
+- \(\mathbb{E}[Q(p)]\) – expected number of buyers (from demand forecast),
+- \(P_{\text{purchase}}(p)\) – logit probability.
+
+The solution is found numerically (golden section search) on the interval \([c(1+m_{\min}), \max(p_c, c(1+m_{\max}))]\).
+
+────────────────────────────────────────────────────────────────────────────────────
+**11.1.3. INVENTORY OPTIMISATION (s, S)**
+───────────────────────────────────────────────────────────────────────────────────
+
+**Purpose:** determining order and replenishment thresholds to minimise costs.
+
+**11.1.3.1. Basic parameters**
+- \(L\) – lead time (days),
+- \(\mu_L = \hat{y}_{L} \cdot L\) – mean demand during lead time,
+- \(\sigma_L = \sqrt{L \cdot \sigma^2}\) – standard deviation of demand during lead time,
+- \(z = 1.645\) – service level factor for 95%,
+- \(K\) – fixed order cost,
+- \(h\) – holding cost per unit per day (≈0.5% of cost).
+
+**11.1.3.2. Reorder point (s)**
+\[
+s = \mu_L + z \cdot \sigma_L
+\]
+
+**11.1.3.3. Economic order quantity (Wilson formula)**
+\[
+Q_{\text{opt}} = \sqrt{\frac{2 \cdot \mu_L \cdot K}{h}}
+\]
+
+**11.1.3.4. Target replenishment level (S)**
+\[
+S = s + Q_{\text{opt}}
+\]
+
+**11.1.3.5. Total cost minimisation objective**
+\[
+\min \left( h \cdot \text{average inventory} + K \cdot \frac{\text{annual demand}}{Q_{\text{opt}}} + \text{shortage cost} \right)
+\]
+Shortage cost is estimated as lost marginal profit.
+
+────────────────────────────────────────────────────────────────────────────────────
+**11.1.4. HEALTH SCORE, ACCOUNT SCORE**
+───────────────────────────────────────────────────────────────────────────────────
+
+**11.1.4.1. Business Health Score**
+\[
+H = 0.4 \cdot \text{turnover}_\text{norm} + 0.3 \cdot \text{shortage}_\text{norm} + 0.3 \cdot \text{margin}_\text{norm}
+\]
+where:
+- \(\text{turnover}_\text{norm} = 1 - \frac{\text{turnover} - 15}{60 - 15}\) (clipped to [0,1]),
+- \(\text{shortage}_\text{norm} = 1 - \frac{\text{days with shortage}}{\text{days in month}}\),
+- \(\text{margin}_\text{norm} = \frac{\text{margin} - 20}{50 - 20}\) (clipped to [0,1]).
+
+**11.1.4.2. Task Account Score**
+\[
+S = 0.5 \cdot \text{urgency} + 0.3 \cdot \text{revenue\_impact} + 0.2 \cdot \text{available\_resources}
+\]
+- **urgency** – inverse time to deadline (0–1),
+- **revenue_impact** – estimate (0–1) from agents,
+- **available_resources** – resource readiness (0–1).
+
+────────────────────────────────────────────────────────────────────────────────────
+**11.1.5. DCF, ROI, VaR**
+───────────────────────────────────────────────────────────────────────────────────
+
+**11.1.5.1. Free Cash Flow (FCF)**
+\[
+FCF_t = \Delta \text{Revenue}_t - \text{OPEX}_t - \text{CAPEX}_t + \Delta \text{Working capital}_t
+\]
+
+**11.1.5.2. Net Present Value (NPV)**
+\[
+NPV = \sum_{t=0}^{T} \frac{FCF_t}{(1 + r)^t}
+\]
+where \(r\) is the discount rate (15%), \(T\) the horizon (5 years).
+
+**11.1.5.3. Internal Rate of Return (IRR)**
+\[
+\sum_{t=0}^{T} \frac{FCF_t}{(1 + IRR)^t} = 0
+\]
+Computed numerically.
+
+**11.1.5.4. Payback Period**
+\[
+\text{Payback} = \min\left\{ t : \sum_{i=0}^{t} FCF_i \ge 0 \right\}
+\]
+
+**11.1.5.5. Return on Investment (ROI) over 3 years**
+\[
+ROI = \frac{\sum_{t=1}^{3} \text{Net profit}_t - \text{CAPEX}_0}{\text{CAPEX}_0} \times 100\%
+\]
+
+**11.1.5.6. Value at Risk (VaR)**
+\[
+\text{VaR}_{\alpha} = \inf\{ x : F_L(x) \ge \alpha \}
+\]
+where \(F_L(x)\) is the loss distribution (monthly expenses). Estimated by historical simulation (1,000 scenarios) based on volatility of raw material prices, WB commissions, advertising costs.
+
+────────────────────────────────────────────────────────────────────────────────────
+**NOTE:** All formulas are implemented in Python agents. Parameters (weights, thresholds,
+target values) can be adjusted by the operator via the console. Models are recalibrated
+monthly on new data.
+
+═══════════════════════════════════════════════════════════════════════════════════
+**NOTE:** The following protocols (11.2–11.7) will detail SQL queries, configuration
+files, data schemas, plain‑language materials, a glossary, and references.

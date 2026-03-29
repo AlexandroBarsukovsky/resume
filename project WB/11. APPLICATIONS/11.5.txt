@@ -1,0 +1,147 @@
+╔══════════════════════════════════════════════════════════════════════════════════╗
+║  PROTOCOL 11.5. SIMPLE LANGUAGE                                                  ║
+║  PROJECT: IRON KIT – 13,918 SALES                                                 ║
+║                                                                                  ║
+╚══════════════════════════════════════════════════════════════════════════════════╝
+
+═══════════════════════════════════════════════════════════════════════════════════
+**11.5. SIMPLE LANGUAGE FOR THE BUSINESS OWNER**
+───────────────────────────────────────────────────────────────────────────────────
+
+This section is written for those who do not want to dive into technical details
+but want to understand how the system works and what it does for the business.
+Everything here is explained in simple words, without formulas or programming jargon.
+
+────────────────────────────────────────────────────────────────────────────────────
+**1. WHAT IS THE AI ECOSYSTEM?**
+───────────────────────────────────────────────────────────────────────────────────
+
+Imagine you have a personal assistant who never sleeps, never gets tired, and always
+keeps a finger on the pulse. This assistant monitors your products, prices, reviews,
+competitors, advertising, and taxes. It does not replace you; instead, it does all
+the boring and repetitive work so that you can focus on what really matters:
+growing the business, developing new ideas, and negotiating.
+
+The AI ecosystem is like a whole team of such assistants, divided by specialisation:
+some collect data (how much you sold, what people say in reviews, what prices
+competitors have), others analyse and propose solutions (what price to set, how much
+stock to order), and others carry out actions themselves (update the price on
+Wildberries, create a shipment request, calculate taxes). You manage this entire
+team through a screen – like in a strategy game. You see resources, give orders,
+track results.
+
+**The main point:** you remain the boss, and the AI agents are your reliable executors.
+
+────────────────────────────────────────────────────────────────────────────────────
+**2. HOW DO AGENTS HELP MANAGE INVENTORY?**
+───────────────────────────────────────────────────────────────────────────────────
+
+Previously, you managed stock “by eye”: sometimes you ran out of pickets during
+peak season, sometimes angle brackets sat on the shelf for too long. Agents solve
+this problem automatically.
+
+- **The forecasting agent** looks at sales history, considers the season (spring‑summer
+  is peak), the weather (people install fences less often in rain), and even holidays
+  (sales drop during the May holidays). It says: “in two weeks, 500 pickets will be
+  needed.”
+
+- **The inventory agent** compares the forecast with what is in stock. If there is
+  too little left, it automatically creates a production order. If it is urgent,
+  it sets a high priority so that the team works faster.
+
+- **The logistics agent** ensures that goods are shipped to Wildberries on time.
+  If stock at the WB warehouse runs low, it submits a shipment request.
+
+As a result, you never have shortages (you do not lose sales) and you never have
+overstock (money is not tied up in unnecessary inventory).
+
+────────────────────────────────────────────────────────────────────────────────────
+**3. WHY ARE FORECASTS IMPORTANT?**
+───────────────────────────────────────────────────────────────────────────────────
+
+Forecasts are like a weather report, but for business. You know that in two weeks
+it will be hot, so you have time to prepare.
+
+Without forecasts, you work “blind”: you buy raw materials without knowing how much
+you will sell; you hire workers without understanding whether there will be demand;
+you run ads at random.
+
+With forecasts, you:
+- buy exactly as much raw material as you need (no more, no less);
+- plan production so that goods are ready for the peak season;
+- allocate your advertising budget to the most popular items rather than “to everything.”
+
+The accuracy of forecasts in our system exceeds 85%. That means you make mistakes
+in less than 15% of cases. Previously, you had no idea how much you would sell
+tomorrow.
+
+────────────────────────────────────────────────────────────────────────────────────
+**4. HOW DOES THE OPERATOR CONSOLE WORK?**
+───────────────────────────────────────────────────────────────────────────────────
+
+The console is your command centre. It looks like a game screen where everything
+is visual and intuitive.
+
+- **Main screen:** large numbers – revenue, margin, how many days of stock remain.
+  Colour coding: green – everything is fine, yellow – attention needed, red – urgent
+  intervention required.
+
+- **Product map:** four blocks – pickets, angle brackets, wind strips, flashings.
+  Click on a block – you see each product, its stock, price, forecast.
+
+- **Task list:** the system itself suggests what to do. For example: “A competitor
+  reduced the price of pickets from 6200 to 5900. I suggest setting 5950?” Buttons:
+  “Yes”, “No”, “Configure later”.
+
+- **Exception queue:** if something goes wrong (e.g., the Wildberries API was
+  temporarily unavailable), you see a list of such events and can manually retry
+  or fix them.
+
+All control is like in a computer game: you do not need to learn complex software;
+a couple of hours are enough to get comfortable.
+
+────────────────────────────────────────────────────────────────────────────────────
+**5. HOW DO AGENTS CREATE NEW PRODUCTS?**
+───────────────────────────────────────────────────────────────────────────────────
+
+Have you noticed that sometimes new fence designs, unusual colours, or hybrid
+products appear? That is not by accident. Our creative agents help you come up
+with such novelties.
+
+- **The idea generator** (agent GENESIS) analyses customer reviews (“I would like
+  a picket with anti‑vandal coating”), looks at trends in social media, and sees
+  what competitors are doing. It suggests 10–20 options for new products.
+
+- **The process engineer** checks whether you can make it with your equipment and
+  roughly estimates the cost.
+
+- **The test analyst** launches a pilot batch (10–20 units) on Wildberries, allocates
+  a small advertising budget, and monitors customer reactions. If the product sells
+  well (ROMI > 50%), the system suggests launching it in series.
+
+- **The creative marketer** comes up with a name, description, attractive photos,
+  and uploads everything to the marketplace.
+
+All this happens without your direct involvement, but you can approve or reject
+each new product. As a result, the assortment grows quickly (up to 5–10 new products
+per month), while risks are minimal (unsuccessful ideas are filtered out early).
+
+────────────────────────────────────────────────────────────────────────────────────
+**6. SUMMARY: WHAT YOU GET**
+───────────────────────────────────────────────────────────────────────────────────
+
+- **Free time** – you spend not 35 hours a week managing the business, but 5–10;
+  the agents do the rest.
+- **High margin** – prices automatically adjust to the market, shortages disappear,
+  slow‑moving items are sold off.
+- **Revenue growth** – forecasts help you capture sales, and new products bring
+  additional income.
+- **Peace of mind** – you know that everything is under control, and in critical
+  situations the system will alert you.
+
+This is not science fiction – it already works in simulations and is ready for
+implementation.
+
+═══════════════════════════════════════════════════════════════════════════════════
+**NOTE:** If you want to dive deeper into technical details, refer to Sections 4–6
+(architecture, models, data).

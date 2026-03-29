@@ -1,0 +1,138 @@
+═══════════════════════════════════════════════════════════════════════════════════
+SECTION 12. APPENDICES
+Project: Sourcegraph GTM Infrastructure
+═══════════════════════════════════════════════════════════════════════════════════
+
+**12. APPENDICES**
+
+This section contains supporting materials detailing technical implementations,
+formulas, configurations, diagrams, and reference information necessary for
+understanding, implementing, and operating the target GTM architecture. The appendices
+are intended for various audiences: from technical specialists (SQL queries,
+configurations) to management and new hires (plain language, glossary).
+
+All appendices will be presented as separate protocols that will sequentially
+complement this section. A brief description of each appendix is provided below.
+
+────────────────────────────────────────────────────────────────────────────────────
+12.1. COMPLETE SET OF FORMULAS (ACCOUNT SCORE, HEALTH SCORE, FORECAST, DCF)
+────────────────────────────────────────────────────────────────────────────────────
+
+**Content:**
+- Account Score formula with detailed weights, normalisation, and data sources.
+- Health Score formula with justification of weights, components, and normalisation methods.
+- Quarterly revenue forecast model: logistic regression for win probability,
+  VAR model for macroeconomic adjustments, seasonal coefficients.
+- Financial models: DCF, NPV, ROI, payback period, VaR, CVaR.
+- Formulas for Headcount model, compensation, pipeline coverage, and other KPIs.
+
+**Note:** a detailed protocol with full mathematical derivation, calculation examples,
+and references to source data will be presented separately.
+
+────────────────────────────────────────────────────────────────────────────────────
+12.2. SQL QUERIES FOR SNOWFLAKE (EXAMPLES)
+────────────────────────────────────────────────────────────────────────────────────
+
+**Content:**
+- Creating data marts for Account Score, Health Score, Expansion Signals.
+- Aggregating product events (DAU/MAU, active features).
+- Calculating forecast metrics (moving averages, seasonal coefficients).
+- Queries for reporting (QBR, board‑pack) and monitoring.
+- Optimised queries using clustering and materialised views.
+
+**Note:** a separate protocol will provide a set of ready‑made SQL scripts,
+comments, and performance optimisation recommendations.
+
+────────────────────────────────────────────────────────────────────────────────────
+12.3. SALESFORCE CONFIGURATION FILES (PROCESS BUILDER, FLOW, APEX SNIPPETS)
+────────────────────────────────────────────────────────────────────────────────────
+
+**Content:**
+- Platform Event configurations (Account_Change__e, Opportunity_Change__e).
+- Process Builder / Flow for automatic task creation, field updates,
+  escalation.
+- Apex triggers on Account, Opportunity, Task objects with code examples.
+- Integration configuration (Hightouch, Gainsight, SalesLoft) via API.
+- Access policies, roles, and permissions.
+
+**Note:** a separate protocol will include XML descriptions, Apex code snippets,
+and step‑by‑step deployment instructions for sandbox and production.
+
+────────────────────────────────────────────────────────────────────────────────────
+12.4. DATA SCHEMAS (DIAGRAMS)
+────────────────────────────────────────────────────────────────────────────────────
+
+**Content:**
+- Data flow diagram (event‑driven architecture) – interaction of Salesforce,
+  Snowflake, agents, external APIs.
+- Salesforce object schema (Account, Opportunity, Task) with custom fields
+  and relationships.
+- Agent holding architecture (4 levels) – components and interactions.
+- Infrastructure diagram (AWS, Kubernetes, Kafka, Lambda, EventBridge).
+- Sequence diagram for key scenarios (qualification, retention, expansion).
+
+**Note:** a separate protocol will contain diagrams in draw.io / PNG formats
+with detailed explanations.
+
+────────────────────────────────────────────────────────────────────────────────────
+12.5. SIMPLE LANGUAGE FOR NON‑TECHNICAL AUDIENCES
+────────────────────────────────────────────────────────────────────────────────────
+
+**Content:**
+- **What is the agent holding?** – explanation of four‑level orchestration
+  using the analogy of a factory and dispatch centre.
+- **How does the health score work?** – “traffic light” metaphor for customers,
+  automatic alerts for CSMs.
+- **Why are forecasts important?** – why accurate revenue prediction helps
+  plan budgets and avoid cash flow gaps.
+- **How do triggers help sellers?** – examples of automated tasks that
+  reduce routine work.
+- Additional sections: “What is Account Score?”, “How do agents help expand
+  customers?”, “Why are we implementing automation?”.
+
+**Note:** a separate protocol will contain plain‑language texts ready for
+inclusion in the handbook, presentations, and new hire training.
+
+────────────────────────────────────────────────────────────────────────────────────
+12.6. GLOSSARY OF TERMS
+────────────────────────────────────────────────────────────────────────────────────
+
+**Content:**
+- Definitions of all key terms used in the document: Account Score,
+  Health Score, Expansion Signal, Pipeline Coverage, MAPE, VAR model,
+  event‑driven, reverse ETL, agent, playbook, DLQ, and others.
+- English and Russian equivalents.
+- References to document sections where the term is explained in detail.
+
+**Note:** a separate protocol will provide a structured glossary in alphabetical
+order with short and full definitions.
+
+────────────────────────────────────────────────────────────────────────────────────
+12.7. REFERENCES AND SOURCES
+────────────────────────────────────────────────────────────────────────────────────
+
+**Content:**
+- Sources of information about Sourcegraph (handbook, blogs, leadership interviews).
+- Links to used industry reports (Gartner, Forrester).
+- Academic and practical works on methodologies: MEDDPICC, logistic regression,
+  VAR models, quantum cryptography (simulation).
+
+**Note:** a separate protocol will contain a complete bibliography
+with annotations and references to which parts of the document rely on them.
+
+────────────────────────────────────────────────────────────────────────────────────
+**CONCLUSIONS ON APPENDICES**
+
+- The appendices ensure completeness of the architectural document by providing
+  detailed technical, analytical, and reference materials.
+- Each appendix is tailored to its audience: from engineers to
+  non‑technical users.
+- All information is structured, numbered, and ready for use
+  in implementation, training, and operation.
+
+────────────────────────────────────────────────────────────────────────────────────
+**NOTE:** Separate detailed protocols will follow for each subsection (12.1 – 12.7).
+Each protocol will contain the full set of data, examples, configurations, diagrams,
+plain‑language texts, glossary, and bibliography.
+
+═══════════════════════════════════════════════════════════════════════════════════

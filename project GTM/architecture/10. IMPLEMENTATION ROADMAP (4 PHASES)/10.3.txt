@@ -1,0 +1,143 @@
+═══════════════════════════════════════════════════════════════════════════════════
+PROTOCOL: 10.3. PHASE 3 (5–6 MONTHS): SCALING – 3,000 EXECUTORS, ALL FUNCTIONS
+Project: Sourcegraph GTM Infrastructure
+═══════════════════════════════════════════════════════════════════════════════════
+
+**10.3. PHASE 3 (5–6 MONTHS): SCALING – 3,000 EXECUTORS, ALL FUNCTIONS**
+
+────────────────────────────────────────────────────────────────────────────────────
+10.3.1. ACTIONS, RESOURCES, RISKS
+────────────────────────────────────────────────────────────────────────────────────
+
+**10.3.1.1. Actions**
+
+| Week | Action                                                                  | Responsible                 |
+|------|-------------------------------------------------------------------------|-----------------------------|
+| 1    | **Architectural preparation for scaling** – load assessment, configure Kubernetes Horizontal Pod Autoscaler (HPA), increase Kafka resources, optimise Redis. | Engineers (2), Technical Lead (1) |
+| 2–3  | **Enhance analyst agents (Level 1)** – optimise Account Score and Health Score calculations, implement caching (Redis), increase parallelism to 1,024 pods. | Engineers (2)                |
+| 4–6  | **Launch CS agents (700)** – implement Health Score monitoring, automatic execution of retention and expansion playbooks, full Gainsight integration. | Engineers (3), RevOps (1)    |
+| 7–8  | **Expand executor cluster to 3,000 agents** – add agents across all functions: intent (500), funnel (800), CS (700), finance (600), reporting (400). Configure HPA for each type. | Engineers (3)                |
+| 9–10 | **Deploy full‑featured control panel (React)** – implement all functions: monitoring dashboards, DLQ interface, manual override, threshold configuration, action history. | UI/UX (2), Engineers (2)     |
+| 11–12| **Integrate real‑time Tableau** – connect live dashboards to Snowflake and Salesforce, configure row‑level permissions. | RevOps (1), Engineers (1)    |
+| 13–14| **Full testing in sandbox** – run through 10,000+ accounts, verify all triggers and playbooks, load test (up to 10⁵ events/second). | Engineers (3), RevOps (2)    |
+| 15–16| **Canary deployment (5% → 20% → 100%)** – phased rollout to all accounts, monitor critical metrics, automatic rollback on errors. | RevOps (2), Technical Lead (1) |
+| 17–18| **Optimisation and final tuning** – refine based on monitoring results, update documentation, train users. | All participants             |
+
+**Action Details:**
+
+- **CS agents (700):** implemented in Python, deployed on Kubernetes. They perform:
+  * Hourly Health Score monitoring (read from Snowflake).
+  * When H < 0.5 – launch retention playbook via Gainsight API (create Salesforce task, send email to customer).
+  * When Expansion Signal – launch expansion playbook (create AM task, prepare proposal via financial agents).
+  * Synchronise playbook statuses with Gainsight and Salesforce.
+
+- **Executor cluster expansion:** all agents (3,000) divided into functional groups:
+  * 500 – intent: enrichment, update Intent_Strength.
+  * 800 – funnel: create/update Opportunities, demo tasks, follow‑up.
+  * 700 – CS: as described above.
+  * 600 – finance: calculate commissions, forecasts, headcount, compensation.
+  * 400 – reporting: automatically generate QBRs, board‑packs, Tableau dashboards.
+  Each group has independent HPA configuration (target CPU load 70%).
+
+- **Control panel (full version):** React application with WebSocket for real‑time updates. Includes:
+  * Overview dashboard: agent load, success rate, key metrics.
+  * DLQ interface: table of unprocessed events with ability to view details, resend, manual execution.
+  * Threshold configuration: change Account Score, Health Score weights, trigger thresholds (no deployment required).
+  * Manual override: search account, change ideology, assign AE, cancel tasks.
+  * Action history: log of all automated and manual actions with filters.
+
+- **Tableau integration:** dashboards created:
+  * Executive Dashboard – ARR, NRR, pipeline coverage, forecast accuracy, health score.
+  * Sales Dashboard – quotas, pipeline by AE, activity, MEDDPICC completeness.
+  * CS Dashboard – health score, expansion signals, onboarding TTFV, playbook effectiveness.
+  * Live connection to Snowflake and Salesforce, row‑level security via user filters.
+
+- **Monitoring and alerts:** CloudWatch dashboards, alerts for:
+  * p99 latency > 500 ms for API calls.
+  * error rate > 1% over 5 minutes.
+  * Kafka consumer lag > 10,000.
+  * Agent availability <99.5%.
+
+**10.3.1.2. Resources**
+
+| Resource Type              | Composition                                                             | Allocation              |
+|----------------------------|-------------------------------------------------------------------------|-------------------------|
+| **Engineers (development)**| 4 engineers (Python, Go, React, AWS, Kubernetes)                        | Full time, 18 weeks     |
+| **RevOps**                 | 3 specialists (configuration, testing, training, monitoring)            | 75% time, 18 weeks      |
+| **UI/UX**                  | 2 designers / frontend developers (control panel)                       | Full time, 10 weeks     |
+| **Technical Lead**         | 1 lead (architecture, coordination)                                    | 50% time, 18 weeks      |
+| **GTM teams (testing)**    | 2 Strategists, 2 AEs, 2 CSMs, 2 AMs (participate in canary deployment) | 20% time, 4 weeks       |
+| **Infrastructure**         | AWS (additional EC2 for Kubernetes, Kafka cluster expansion, RDS for control panel) | Pre‑allocated |
+
+**Budget (CAPEX):** $600K (development, licenses, cloud resources, training)
+
+**10.3.1.3. Risks and Mitigations**
+
+| Risk                                     | Likelihood | Impact | Mitigation                                                             |
+|------------------------------------------|------------|--------|------------------------------------------------------------------------|
+| Insufficient infrastructure performance when scaling to 10⁵ events/second | Medium   | High   | Preliminary load testing, horizontal scaling of all components, use spot instances for cost savings. |
+| Debugging complexity with 3,000 agents  | Medium     | Medium | Centralised logging (CloudWatch, ELK), tracing via correlation ID, detailed metrics per agent. |
+| Salesforce API limit violations          | Low        | High   | Use Bulk API for mass updates, batch processing, monitor limits in real‑time. |
+| Health Score quality issues (false positives) | Medium | High   | Continuous weight calibration, A/B testing, CSM feedback, manual override capability. |
+| Team resistance to new processes (automated playbooks) | Medium | Medium | Training, demonstrate success stories, involve opinion leaders. |
+| Complexity of Tableau row‑level security integration | Low    | Medium | Use standard Tableau mechanisms (user filters, Active Directory groups), design permissions model in advance. |
+
+────────────────────────────────────────────────────────────────────────────────────
+10.3.2. EXPECTED KPIs
+────────────────────────────────────────────────────────────────────────────────────
+
+**10.3.2.1. Operational KPIs**
+
+| KPI                                  | Formula / Measurement Method                     | Target Value                |
+|--------------------------------------|--------------------------------------------------|-----------------------------|
+| **Net retention (NRR)**              | (ARR_start + Expansion – Churn) / ARR_start      | >120%                       |
+| **Percentage of customers in green health score zone** | Customers with H ≥ 0.8 / total active | >80%                        |
+| **Time savings on reporting**        | Hours spent preparing QBR and board‑pack         | <2 hours (down from 20)     |
+| **Forecast accuracy**                | 1 – MAPE (quarterly forecast)                    | >90% (error <10%)           |
+| **Win rate (enterprise)**            | (Closed Won) / (Closed Won + Closed Lost)        | >25%                        |
+| **Time to First Value (TTFV)**       | Average time from deal closure to first active usage | <30 days                    |
+| **Expansion signal conversion**      | (Closed expansion deals) / (Number of expansion signals) | >30%                        |
+| **Pipeline coverage**                | Pipeline sum / quarterly quota                   | >3×                         |
+
+**10.3.2.2. Technical KPIs**
+
+| KPI                                  | Formula / Measurement Method                     | Target Value                |
+|--------------------------------------|--------------------------------------------------|-----------------------------|
+| **Throughput**                       | Maximum events processed per second              | 10⁵ events/second           |
+| **Event processing time (p99)**      | 99th percentile from publication to action       | <2 seconds                  |
+| **Agent holding availability**       | Percentage of time all agents operate without critical failures | >99.5%                      |
+| **MTTR (Mean Time to Resolve)**      | Average recovery time after failure              | <30 minutes                 |
+| **Health Score accuracy**            | F1‑score for churn prediction (on test set)      | >0.85                       |
+| **Percentage of automated actions**  | (Automated actions) / (total actions)            | >95%                        |
+
+**10.3.2.3. Business Outcomes**
+
+- **ARR growth** – projected 50% YoY growth driven by higher win rate, shorter sales cycle, and increased expansion.
+- **Churn reduction** – 20% reduction relative to historical levels (due to proactive retention).
+- **Operational cost savings** – automation enables handling 5× more customers without increasing headcount.
+- **3‑year ROI** – >300% (per financial model, Section 2.3).
+
+────────────────────────────────────────────────────────────────────────────────────
+**CRITERIA FOR TRANSITION TO PHASE 4**
+
+Transition to Phase 4 (optimisation and retraining) occurs when the following conditions are met:
+
+1. All key KPIs (NRR, health score, forecast accuracy) are achieved or exceeded.
+2. The system stably handles peak loads (10⁵ events/second) for 4 weeks.
+3. The percentage of manual interventions does not exceed 5% of total automated actions.
+4. GTM teams (Sales, CS, AM) confirm that automation meets their needs and does not create additional burden (NPS survey >85).
+5. Full load testing completed, all components scale automatically.
+6. Technical documentation and training completed.
+
+────────────────────────────────────────────────────────────────────────────────────
+**CONCLUSIONS ON PHASE 3**
+
+- Phase 3 completes the construction of the full GTM infrastructure: 3,000 executor
+  agents, CS functions, full Gainsight and Tableau integration, a comprehensive
+  control panel.
+- Achieving the target KPIs confirms that the system is ready for production
+  operation and delivers significant business impact.
+- The success of Phase 3 requires thorough load testing and coordination
+  between technical and business teams.
+
+═══════════════════════════════════════════════════════════════════════════════════

@@ -1,0 +1,106 @@
+═══════════════════════════════════════════════════════════════════════════════════
+PROTOCOL: 3.1. SALES AND MARKETING ORGANIZATIONAL STRUCTURE
+Project: Sourcegraph GTM Infrastructure
+═══════════════════════════════════════════════════════════════════════════════════
+
+**3.1. SALES AND MARKETING ORGANIZATIONAL STRUCTURE**
+
+────────────────────────────────────────────────────────────────────────────────────
+3.1.1. OVERALL SCHEMA (BASED ON HANDBOOK AND INTERVIEWS)
+────────────────────────────────────────────────────────────────────────────────────
+
+The GTM organizational structure of Sourcegraph follows a functional principle,
+with roles responsible for different stages of the customer lifecycle. The main
+departments are:
+
+- **Sales** – sales (AE, Sales Strategist)
+- **Customer Success** – retention and expansion (CSM, AM)
+- **Marketing** – marketing (ABM, content, events)
+- **Revenue Operations (RevOps)** – data management, CRM, reporting
+
+All departments report to the CRO (Chief Revenue Officer). Interaction takes place
+within quarterly plans and weekly operational meetings.
+
+────────────────────────────────────────────────────────────────────────────────────
+3.1.2. DETAILED ROLE DESCRIPTIONS AND FUNCTIONS
+────────────────────────────────────────────────────────────────────────────────────
+
+**Sales Strategist (formerly SDR)**
+- **Headcount:** 8–12 people.
+- **Functions:** analytical qualification of incoming intent signals (6sense),
+  data enrichment (Clearbit/ZoomInfo), primary outreach (email/LinkedIn),
+  handover of qualified accounts to AEs.
+- **Tools:** 6sense, Snowflake (product data), Excel, Salesforce (task creation),
+  SalesLoft (sequences).
+- **KPIs:** number of qualified opportunities, response time, conversion to Opportunity.
+
+**Account Executive (AE)**
+- **Headcount:** 15–20 people.
+- **Functions:** managing enterprise deals, MEDDPICC qualification,
+  demonstrations, negotiations, contract closing.
+- **Tools:** Salesforce (Opportunity), MEDDPICC templates, ZoomInfo,
+  contract management system (Ironclad).
+- **KPIs:** ARR quota, win rate, deal cycle, forecast accuracy.
+
+**Customer Success Manager (CSM)**
+- **Headcount:** 8–10 people.
+- **Functions:** onboarding, training, retention, risk identification.
+- **Tools:** Gainsight (being implemented), Salesforce, product analytics
+  (Amplitude/Snowflake).
+- **KPIs:** net retention, health score (planned), time to first value,
+  churn rate.
+
+**Account Manager (AM)**
+- **Headcount:** 4–5 people.
+- **Functions:** expansion (upsell, cross‑sell) and contract renewals
+  for top‑100 clients.
+- **Tools:** Salesforce, Gainsight, product analytics.
+- **KPIs:** expansion ARR, renewal rate, number of upsell deals.
+
+**Marketing (ABM team)**
+- **Headcount:** 6–8 people.
+- **Functions:** development of ABM campaigns, content marketing, events,
+  lead generation (in collaboration with Sales Strategists).
+- **Tools:** 6sense, Marketo, LinkedIn Ads, web analytics.
+- **KPIs:** number of incoming intent signals, conversion to demo,
+  campaign ROI.
+
+**Revenue Operations (RevOps)**
+- **Headcount:** 4–6 people.
+- **Functions:** Salesforce administration, integration configuration,
+  reporting (QBR, board packs), compensation management, performance analysis.
+- **Tools:** Salesforce, Tableau, Snowflake, Hightouch, Excel/Google Sheets.
+- **KPIs:** data accuracy, report preparation time, team satisfaction.
+
+────────────────────────────────────────────────────────────────────────────────────
+3.1.3. HIERARCHY AND REPORTING LINES
+────────────────────────────────────────────────────────────────────────────────────
+
+- CRO (Chief Revenue Officer) – leads all GTM functions.
+- VP of Sales – manages AEs and Sales Strategists.
+- VP of Customer Success – manages CSMs and AMs.
+- VP of Marketing – manages marketing.
+- Director of RevOps – manages the RevOps team.
+
+All leaders participate in weekly GTM syncs and quarterly OKR sessions.
+
+────────────────────────────────────────────────────────────────────────────────────
+3.1.4. ISSUES IN THE CURRENT ORGANIZATIONAL STRUCTURE
+────────────────────────────────────────────────────────────────────────────────────
+
+1. **Blurred responsibility** – Sales Strategists spend up to 40% of their time
+   on data collection, reducing qualification efficiency.
+2. **Lack of a unified system for CS** – Gainsight is being implemented, but health score
+   is not automated and playbooks are absent.
+3. **RevOps overload** – manual report preparation distracts from strategic tasks.
+4. **Weak cross‑department alignment** – marketing data (intent) is not always
+   synchronized with sales and CS.
+
+────────────────────────────────────────────────────────────────────────────────────
+**PROJECT CONCLUSIONS**
+- The current structure generally fits the enterprise model, but requires
+  automation to eliminate manual work and improve consistency.
+- The introduction of an agent holding should support existing roles,
+  not replace them, enhancing analytical and execution functions.
+
+═══════════════════════════════════════════════════════════════════════════════════

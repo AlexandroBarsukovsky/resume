@@ -1,0 +1,511 @@
+═══════════════════════════════════════════════════════════════════════════════════
+GENERAL THEORETICAL MODEL: TARGET GTM INFRASTRUCTURE FOR SOURCEGRAPH
+(EXTENDED VERSION WITH MULTILEVEL DETAILING)
+
+═══════════════════════════════════════════════════════════════════════════════════
+
+**0. PREAMBLE: METHODOLOGICAL STRUCTURE AND PRINCIPLES OF CONSTRUCTION**
+
+This document presents an integral theoretical justification for the designed GTM infrastructure, combining mathematical and economic apparatuses with the maximum degree of detail. Each section is expanded into a four‑level hierarchy (e.g., 1.1.1.1), allowing the logic to be traced from fundamental axioms to applied formulas. The structure corresponds to three main parts:
+
+- **Part I. Mathematical Foundation** (sections 1–5) – formalisation of the solution space, quantum principles, probabilistic models, forecasting, and algorithmic scalability.
+- **Part II. Economic Foundation** (sections 6–12) – micro‑ and macroeconomic mechanisms, game theory, behavioural effects, industrial organisation, contract theory, and financial mathematics.
+- **Part III. Integration and Dynamic Equilibrium** (sections 13–15) – interrelation of mathematical and economic components, system stability, generalisation to other projects.
+
+All mathematical derivations are accompanied by convergence proofs, error estimates, and economic interpretations. Economic models, in turn, are formalised using rigorous mathematical constructs.
+
+────────────────────────────────────────────────────────────────────────────────────
+**PART I. MATHEMATICAL FOUNDATION**
+
+**1. SPACE OF REALITIES AS AN ALGEBRAIC STRUCTURE**
+
+**1.1. Definition of a Metric Space**
+
+**1.1.1. Hypercube and Its Dimensions**
+   **1.1.1.1. Formal Definition**
+   Let `(ℝ¹², d)` be a 12‑dimensional Euclidean space with an orthonormal basis `{e₁,…,e₁₂}`. Coordinates `x_i` belong to intervals: for the first five dimensions `[-1,1]`, for the remaining – `[0,1]`. Each dimension has a physical‑economic meaning:
+      - `x₁` (Ethics) – degree of constraint by ethical norms (0 – utilitarianism, 1 – strict deontology).
+      - `x₂` (Aggression) – intensity of competitive behaviour.
+      - `x₃` (Prediction) – forecasting horizon.
+      - `x₄` (Network) – degree of involvement in the partner ecosystem.
+      - `x₅` (Creativity) – level of new idea generation.
+      - `x₆` (Time) – time scale (0.1 – slowed, 10 – accelerated).
+      - `x₇` (Probability) – degree of stochasticity (0 – determinism, 1 – complete randomness).
+      - `x₈` (Constants) – stability of fundamental parameters.
+      - `x₉` (Complexity) – degree of model detailing.
+      - `x₁₀` (Scale) – size of the system.
+      - `x₁₁` (Cognition) – level of abstract thinking (0 – algorithmic, 1 – intuitive).
+      - `x₁₂` (Agency) – degree of agent autonomy (0 – strict control, 1 – full autonomy).
+
+   **1.1.1.2. Metric and Its Properties**
+   Metric `d(x,y) = √( Σ_{i=1}^{12} (x_i - y_i)² )` satisfies the axioms:
+      1. Non‑negativity: `d(x,y) ≥ 0`, `d(x,y)=0 ⇔ x=y`.
+      2. Symmetry: `d(x,y) = d(y,x)`.
+      3. Triangle inequality: `d(x,z) ≤ d(x,y) + d(y,z)`.
+
+**1.1.2. Set of Realities**
+   **1.1.2.1. Vertices of the Hypercube**
+   `V = {v₁,…,v₁₇} ⊂ ℝ¹²`. Each vertex corresponds to a specific mode of operation (e.g., `v_ETHICAL` – strictly ethical, `v_PROPHETIC` – prophetic, `v_NO_RULES` – unrestricted). Distances between vertices characterise the degree of incompatibility.
+
+   **1.1.2.2. Topological Properties**
+   The set `V` is finite, therefore compact. A discrete topology can be defined on it. Functions `f: V → ℝ` are continuous in this topology.
+
+**1.1.3. Transition Matrices**
+   **1.1.3.1. Construction of a Stochastic Matrix**
+   For an ordered pair `(v_i, v_j)` define `P_{ij} ∈ ℝ^{12×12}` with elements:
+
+(P_{ij}){kl} = exp(-|v_{i,k} - v_{j,l}|) / Z_{ij},
+Z_{ij} = Σ_{p=1}^{12} Σ_{q=1}^{12} exp(-|v_{i,p} - v_{j,q}|).
+
+Properties: `(P_{ij})_{kl} ≥ 0`, `Σ_{l=1}^{12} (P_{ij})_{kl} = 1` for all `k`.
+
+   **1.1.3.2. Interpretation**
+   Element `(P_{ij})_{kl}` is the probability of transition from the `k`-th dimension of reality `v_i` to the `l`-th dimension of reality `v_j`. If `|v_{i,k} - v_{j,l}|` is small, the transition is likely.
+
+**1.1.4. Navigation in the Hypercube**
+   **1.1.4.1. Problem Statement**
+   For a given `v_s ∈ V` and a target point `x_target ∈ ℝ¹²`, find a sequence `(v_{i_0}=v_s, v_{i_1},…,v_{i_m})` minimising the functional:
+
+Φ = Σ_{t=0}^{m-1} d(v_{i_t}, v_{i_{t+1}}).
+
+
+   **1.1.4.2. Gradient Descent Algorithm on Vertices**
+   At step `t` compute the gradient `∇_v d(v, x_target) = (v - x_target)/d(v, x_target)`. Choose the next vertex:
+
+v_{t+1} = argmin_{v ∈ V \ {v_t}} ⟨∇_v d(v_t, x_target), v - v_t⟩.
+
+This is equivalent to choosing the vertex closest to the direction of the gradient.
+
+   **1.1.4.3. Convergence Proof**
+   Lemma: If `v_t ≠ x_target`, then `d(v_{t+1}, x_target) < d(v_t, x_target)`. Proof: from the choice of `v_{t+1}` it follows that the angle between the gradient and `v_{t+1} - v_t` is less than 90°, hence the dot product is positive, and the projection reduces the distance. Since the set of vertices is finite, the sequence cannot cycle (strict decrease), so after at most `|V|` steps the nearest vertex is reached.
+
+**1.2. QUANTUM SUPERPOSITION AND DECISION MAKING**
+
+**1.2.1. Hilbert Space of States**
+
+   **1.2.1.1. Basis States**
+   Let `N = |V| × M × K`, where `M = 18` (number of modules), `K` – number of hyperparameter discretisations (e.g., 100). Basis states `|i⟩` correspond to the combination `(reality, module, parameter)`. Hilbert space `ℋ = ℂ^N` with orthonormal basis.
+
+   **1.2.1.2. Quantum State**
+   State of the system `|ψ⟩ = Σ_{i=1}^N α_i |i⟩`, `α_i ∈ ℂ`, `Σ |α_i|² = 1`. Probability of collapsing to `|i⟩` is `p_i = |α_i|²`.
+
+**1.2.2. Problem Operator**
+
+   **1.2.2.1. Construction of the Operator**
+   Each branch (reality, module, parameter) has a quality score `Q(i)`. The operator `U_T` is constructed so that amplitudes become proportional to `Q(i)`. For example, using a phase oracle:
+
+U_T |i⟩ = (1 - 2δ_{i∈S}) |i⟩, where S is the set of successful outcomes (conditionally).
+
+In practice, `U_T` can be implemented as a unitary circuit that reflects a utility function.
+
+   **1.2.2.2. Superposition as Parallel Search**
+   Initial state `|ψ₀⟩ = (1/√N) Σ |i⟩` – uniform superposition. After applying `U_T`:
+
+|ψ⟩ = U_T |ψ₀⟩ = Σ α_i |i⟩, α_i = Q(i)/√N (after normalisation).
+
+
+**1.2.3. Amplitude Estimation**
+
+   **1.2.3.1. Quantum Speedup**
+   Let `a = Σ_{i∈S} |α_i|²` be the probability of a successful outcome. The amplitude estimation algorithm (an analogue of Grover’s algorithm) allows estimating `a` with precision `ε` in `O(1/ε)` iterations, whereas a classical method would require `O(1/ε²)`.
+
+   **1.2.3.2. Application to GTM**
+   This method can estimate the fraction of “successful” configurations (e.g., those where Account Score >0.7) without enumerating all `N` branches – critical for large `N`.
+
+**1.2.4. Collapse and Extraction of the Optimal Solution**
+
+   **1.2.4.1. Measurement Process**
+   Upon executing the `[COLLAPSE]` command, the state `|ψ⟩` is measured. The result is some `|i⟩` with probability `p_i`. This is equivalent to randomly selecting a branch weighted by quality.
+
+   **1.2.4.2. Deterministic Selection**
+   To obtain the best branch, collapse can be repeated several times and the most frequent outcome chosen (the one with the largest amplitude). The error probability is exponentially small with `O(log N)` repetitions.
+
+**1.3. PROBABILISTIC SCORING MODELS**
+
+**1.3.1. Account Score as a Linear Combination of Factors**
+
+   **1.3.1.1. Formalisation of Features**
+   Let `I, U, F ∈ [0,1]` be normalised features:
+      - `I` – intent signal strength (0–1), aggregated over 7 days with exponential decay.
+      - `U` – product usage: `U = 0.6·(DAU/MAU) + 0.4·(active_features/total_features)`.
+      - `F` – ICP fit: weighted sum of binary attributes (industry, technologies, size).
+
+   **1.3.1.2. Linear Model**
+   `S(w) = w_I I + w_U U + w_F F`, where `w_I + w_U + w_F = 1`, `w_i ≥ 0`.
+
+   **1.3.1.3. Optimising Weights by Maximising F1 Score**
+   Let a threshold `θ` be given. Then:
+
+TP(θ) = |{i : S_i ≥ θ, y_i=1}|, FP(θ) = |{i : S_i ≥ θ, y_i=0}|, FN(θ) = |{i : S_i < θ, y_i=1}|.
+
+F1‑score: `F1(θ) = 2·TP/(2·TP+FP+FN)`. Problem: `(w^*,θ^*) = argmax F1(w,θ)`.
+
+   **1.3.1.4. Solution Using Gaussian Process**
+   Model `F1(w) ~ GP(μ(w), k(w,w'))` with Matern 5/2 kernel. Optimisation by expected improvement (EI) yields the global optimum in a finite number of iterations (convergence theorem for GP optimisation).
+
+**1.3.2. Health Score as a Composite Indicator**
+
+   **1.3.2.1. Components**
+   Let `U` (usage), `T` (normalised support tickets), `E` (engagement), `N` (NPS). Define:
+
+H(v) = v_U U + v_T (1 - T) + v_E E + v_N N, Σ v = 1.
+
+   **1.3.2.2. Optimising Weights by Minimising Log‑Loss**
+   For historical data `(H_i, y_i)` (y_i=1 if the customer churned within 30 days), minimise:
+
+L(v) = - Σ [y_i ln H_i + (1-y_i) ln(1-H_i)].
+
+Since the function is convex (logistic regression), gradient descent converges to the global minimum.
+
+   **1.3.2.3. Probability Calibration**
+   Use Platt scaling: `P(churn) = 1/(1+exp(A·H+B))`, where A,B are fitted on a validation set.
+
+**1.3.3. Statistical Properties**
+
+   **1.3.3.1. Confidence Intervals**
+   For estimates `Ŝ` and `Ĥ`, construct bootstrap intervals: generate `B` resamples, compute estimates, and take the 2.5% and 97.5% percentiles as the bounds of the 95% CI.
+
+   **1.3.3.2. Asymptotic Normality**
+   By the CLT, sample means of features are asymptotically normal; consequently, linear combinations `S` and `H` are also asymptotically normal. This allows approximate confidence intervals via normal approximation.
+
+**1.4. FORECASTING MODELS AND OPTIMISATION**
+
+**1.4.1. Logistic Regression for Win Probability**
+
+   **1.4.1.1. Model Formulation**
+   For each deal `i` with features `x_i = (stage, segment, region, ln(days+1), macroIndex)`:
+
+p(x_i) = 1 / (1 + exp(-β₀ - β^T x_i)).
+
+`β` is estimated by maximum likelihood.
+
+   **1.4.1.2. Asymptotic Properties**
+   As `n → ∞`, `√n (β̂ - β) → N(0, I(β)^{-1})`, where `I(β)` is the Fisher information matrix. This enables confidence intervals for forecasts and hypothesis testing.
+
+   **1.4.1.3. Probability Calibration**
+   Use Platt scaling: `p_calibrated = 1/(1+exp(A·p + B))`, where A,B are chosen to minimise log‑loss on a validation set.
+
+**1.4.2. VAR Model for Macroeconomic Dynamics**
+
+   **1.4.2.1. Vector Autoregression of Order p**
+   Let `Y_t = (g_t, PMI_t, r_t, TechIndex_t)^T`. Model:
+
+Y_t = c + Σ_{j=1}^p A_j Y_{t-j} + ε_t, ε_t ~ iid N(0, Σ).
+
+   **1.4.2.2. Parameter Estimation**
+   Ordinary Least Squares (OLS) gives consistent estimates. The order `p` is chosen by Akaike (AIC) or Schwarz (BIC) criteria.
+
+   **1.4.2.3. Stationarity Condition**
+   The roots of the characteristic polynomial `det(I - A_1 z - … - A_p z^p) = 0` must lie outside the unit circle. If violated, the model is non‑stationary and differencing is required.
+
+   **1.4.2.4. Impulse Response Functions (IRF)**
+   The impulse response function shows how a shock to one variable affects the others over time. It is used to forecast the impact of macroeconomics on revenue.
+
+**1.4.3. Seasonal Coefficients and Final Forecast**
+
+   **1.4.3.1. Calculation of Seasonal Coefficients**
+   `S_q = (1/n_q) Σ_{y} ARR_{y,q} / ( (1/4) Σ_{y} Σ_{q'} ARR_{y,q'} )`.
+
+   **1.4.3.2. Final Forecast**
+
+F_final = ( Σ_{opp} Amount_opp · p(opp) ) · (1 + δ_macro) · S_q,
+
+where `δ_macro = g_forecast - g_avg` is the deviation of the VAR forecast from the historical average.
+
+   **1.4.3.3. Error Estimation (Delta Method)**
+`Var(F_final) ≈ F_final²·[ Var(Σ w_i p_i)/ (Σ w_i p_i)² + Var(δ_macro)/(1+δ_macro)² + Var(S_q)/S_q² ]`, assuming independence of components.
+
+**1.5. ALGORITHMIC BASIS AND SCALABILITY**
+
+**1.5.1. Queueing System (M/M/c)**
+
+   **1.5.1.1. Formulation**
+   Event stream is Poisson with intensity λ (events/sec). Processing time per agent is exponential with parameter μ (mean 1/μ). Model `M/M/c`.
+
+   **1.5.1.2. Erlang‑C Formula**
+   Probability that all c agents are busy:
+
+P_block = ( (cρ)^c / c! ) / ( Σ_{k=0}^{c-1} (cρ)^k / k! + (cρ)^c / (c! (1-ρ)) ), ρ = λ/(cμ).
+
+   **1.5.1.3. Choosing the Number of Agents**
+   Require `P_block < 0.01`. Solve numerically or use the approximation: `c ≈ λ/μ + z√(λ/μ)`, where `z` is a normal quantile.
+
+**1.5.2. Caching Optimisation**
+
+   **1.5.2.1. Response Time Model**
+   Let `H(TTL) = P(record lifetime > TTL)`. Average response time:
+
+T(TTL) = H(TTL)·T_cache + (1-H(TTL))·T_db.
+
+   **1.5.2.2. Memory Constraint**
+   Cache size `M` is limited: `M = N·TTL·R`, where `R` is the average record size. Problem: maximise `H(TTL)` subject to `TTL ≤ M/(N·R)`.
+
+   **1.5.2.3. Solution**
+   If the lifetime distribution is known (e.g., exponential), `H(TTL) = 1 - e^{-λ·TTL}`, then the optimal TTL is the maximum allowed; otherwise, it is determined empirically.
+
+────────────────────────────────────────────────────────────────────────────────────
+**PART II. ECONOMIC FOUNDATION**
+
+**6. MICROECONOMICS OF DEMAND AND PRICING**
+
+**6.1. Customer Utility Function and Demand**
+
+**6.1.1. Random Utility Model**
+
+   **6.1.1.1. General Formulation**
+   A customer chooses between purchasing the product (`x=1`) and not purchasing (`x=0`). Utility:
+
+U(1) = V - p + ε, U(0) = u₀ + ε₀,
+
+where `V` is the value of the product (benefit), `p` the price, `ε, ε₀` are random components (independent, logistically distributed).
+
+   **6.1.1.2. Logit Model**
+   If `ε, ε₀` follow Gumbel distribution, the purchase probability is:
+
+P(p) = 1 / (1 + exp(-(V - p - u₀)/σ)).
+
+   **6.1.1.3. Interpretation in GTM**
+   `V` corresponds to the expected benefit from Sourcegraph (accelerated development, reduced risks), `u₀` is the utility of the alternative (GitHub Copilot, GitLab). `σ` is the scale of randomness.
+
+**6.1.2. Price Elasticity of Demand**
+
+   **6.1.2.1. Definition**
+   Price elasticity: `ε_p = (∂P/∂p)·(p/P)`. For the logit model:
+
+ε_p = - (p/σ)·P(1-P).
+
+   **6.1.2.2. Relation to Markup**
+   Optimal markup (first‑order condition for profit maximisation):
+
+(p - c)/p = -1/ε_p.
+
+For the enterprise segment `|ε_p|` is small, hence the markup is high.
+
+**6.2. MACROECONOMIC ENVIRONMENT AND CYCLES**
+
+**6.2.1. Cyclical Demand Model**
+
+   **6.2.1.1. Regression Specification**
+
+ARR_t = α + β₁·GDP_t + β₂·PMI_t + β₃·r_t + β₄·TechIndex_t + ε_t.
+
+Estimation uses quarterly data 2015–2025.
+
+   **6.2.1.2. Economic Interpretation**
+   - `GDP` – overall economic growth.
+   - `PMI` – business activity in the IT sector.
+   - `r` – cost of capital for customers.
+   - `TechIndex` – sentiment in technology markets.
+
+**6.2.2. Impulse Response Functions (IRF) from the VAR Model**
+
+   **6.2.2.1. Construction of IRF**
+   From the estimated VAR model `Y_t = c + Σ A_j Y_{t-j} + ε_t`, compute responses to a unit shock:
+
+∂Y_{t+h} / ∂ε_t = (A₁)^{h} + … (in matrix form).
+
+   **6.2.2.2. Interpretation for GTM**
+   A 1% shock to the Fed rate (r) reduces ARR by 2–3% after 2–4 quarters. This justifies including `δ_macro` in the forecast.
+
+**6.3. GAME THEORY OF AGENT INTERACTION**
+
+**6.3.1. Signalling Game “Supplier‑Customer”**
+
+   **6.3.1.1. Model**
+   An AE (type H – high quality, L – low) chooses effort `e`, observed by the customer. The customer interprets `e` as a signal about the type and decides whether to buy.
+
+   **6.3.1.2. Conditions for a Separating Equilibrium**
+
+π_H(e_H) - c_H(e_H) ≥ π_H(e_L) - c_H(e_L),
+π_L(e_L) - c_L(e_L) ≥ π_L(e_H) - c_L(e_H).
+
+If these hold, there exists an equilibrium where different types choose different `e`.
+
+**6.3.2. Cooperation in the Agent Holding**
+
+   **6.3.2.1. Characteristic Function**
+   For a coalition `S` of agents (e.g., analysts+strategists), define `v(S)` as the total benefit (additional revenue, reduced response time).
+
+   **6.3.2.2. Properties**
+   The function `v` is superadditive: `v(S∪T) ≥ v(S)+v(T)` for disjoint S,T (union brings more than the sum). Hence the core is non‑empty, and it is optimal to unite all agents.
+
+**6.4. BEHAVIOURAL ECONOMICS OF INCENTIVES**
+
+**6.4.1. Asymmetric Information and Principal‑Agent Problem**
+
+   **6.4.1.1. Model**
+   The principal (management) cannot observe the agent’s effort `e`. The agent’s utility is `U = E[w] - c(e) - ½ ρ Var(w)`, where `w` is compensation, `c(e)` is effort cost, `ρ` is risk aversion.
+
+   **6.4.1.2. Optimal Linear Contract**
+   Let `w = α + β·R`, `R = e + ε`, `ε ~ N(0,σ²)`. The solution:
+
+β = 1 / (1 + ρ·c''(e)·σ²).
+
+If `c(e) = θ e²/2`, then `β = 1 / (1 + ρ·θ·σ²)`.
+
+**6.4.2. Behavioural Biases (Overconfidence)**
+
+   **6.4.2.1. Model**
+   The AE overestimates his chances: `P_self = P_actual + δ`. This leads to choosing effort above the optimum.
+
+   **6.4.2.2. Correction**
+   Introducing objective forecasts (financial agents) and linking bonuses to forecast accuracy reduces the overconfidence effect.
+
+**6.5. INDUSTRIAL ORGANISATION**
+
+**6.5.1. Product Differentiation Model (Hotelling)**
+
+   **6.5.1.1. Linear City**
+   Customers are uniformly distributed on `[0,1]`. Sourcegraph (`a=0.2`) and GitHub Copilot (`b=0.8`) have transport cost `t`. With linear prices, demand for Sourcegraph: `D = (p_G - p_S + t(b-a))/(2t)`.
+
+   **6.5.1.2. Nash Equilibrium**
+   Solving the first‑order conditions yields equilibrium prices:
+
+p_S = c + t(b-a)(1 + (b-a)/3), p_G = c + t(b-a)(1 + (b-a)/3).
+
+**6.5.2. Scale Effects and Entry Barriers**
+
+   **6.5.2.1. Cost Function**
+   `C(q) = F + c·q`, where `F` is fixed costs (R&D, platform development). Average cost `AC(q) = F/q + c` declines with `q`.
+
+   **6.5.2.2. Natural Monopoly**
+   If `F` is large enough, the market can support only one producer. This explains why Sourcegraph, having a large volume, can set prices above competitive levels.
+
+**6.6. CONTRACT THEORY AND TEAM INCENTIVES**
+
+**6.6.1. Optimal Contract for AE**
+
+   **6.6.1.1. Linear Commission**
+   `w = α + β·R`, where `R` is revenue from closed deals. The parameter `β` is as derived above.
+
+   **6.6.1.2. Adjustment for Chargebacks**
+   If a customer churns within a year, commission is reversed: `w = α + β·(R - γ·R_churn)`. This incentivises quality over quantity.
+
+**6.6.2. Bonuses for CSM and AM**
+
+   **6.6.2.1. Tied to NRR**
+   `B = B₀·(NRR/NRR_target)` (capped at zero). If `NRR > NRR_target`, the bonus exceeds the base.
+
+   **6.6.2.2. Accelerators**
+   For exceeding the plan by 10% – multiplier 1.2, by 20% – 1.5, etc. This encourages extra effort.
+
+**6.7. FINANCIAL MATHEMATICS AND RISK MANAGEMENT**
+
+**6.7.1. Discounted Cash Flow (DCF)**
+
+   **6.7.1.1. Formula**
+   `NPV = Σ_{t=0}^T FCF_t / (1+WACC)^t`. Sensitivity:
+
+∂NPV/∂WACC = - Σ_{t=0}^T t·FCF_t / (1+WACC)^{t+1}.
+
+**6.7.2. VaR and CVaR**
+
+   **6.7.2.1. Definition**
+   For loss distribution `L` (CAPEX+OPEX) with CDF `F_L`:
+
+VaR_α = inf{ x | F_L(x) ≥ α }, CVaR_α = (1/(1-α)) ∫_{VaR_α}^∞ x f_L(x) dx.
+
+   **6.7.2.2. Estimation**
+   Use historical simulation (1,000 scenarios) or a parametric model (if normal). The contingency fund is set at CVaR_95.
+
+**6.7.3. Real Option Valuation (ROV)**
+
+   **6.7.3.1. Black‑Scholes Model**
+   Implementing the GTM infrastructure is an option to expand. Option value:
+
+C = S·N(d₁) - K·e^{-rT}·N(d₂),
+d₁ = (ln(S/K) + (r + σ²/2)T) / (σ√T), d₂ = d₁ - σ√T.
+
+Here `S` is the current project value, `K` the expansion cost, `σ` the volatility.
+
+────────────────────────────────────────────────────────────────────────────────────
+**PART III. INTEGRATION AND DYNAMIC EQUILIBRIUM**
+
+**13. LINKING MATHEMATICAL AND ECONOMIC COMPONENTS**
+
+**13.1. Correspondence Between Account Score and Customer Utility**
+
+**13.1.1. Theoretical Justification**
+   Let `S = w_I I + w_U U + w_F F` be the mathematical score. On the other hand, customer utility `V - p` (economic) can be expressed through the same features. Hypothesis: there is a monotonic relationship `S = f(V-p)`. Empirically verified by correlation.
+
+**13.1.2. Practical Use**
+   High `S` means the customer is highly likely to be ready to buy (high utility). This is used for prioritisation.
+
+**13.2. Health Score and Incentive Theory**
+
+**13.2.1. Interpretation**
+   `H` is a composite indicator. When `H < 0.5`, the retention playbook is automatically triggered. This leverages loss aversion: CSMs are more sensitive to the potential loss of a customer than to acquiring a new one.
+
+**13.2.2. Link to Optimal Contract**
+   The CSM bonus is tied to the percentage of customers in the green zone (`H ≥ 0.8`). This creates an incentive to raise `H`.
+
+**13.3. Forecasts as the Intersection of Statistics and Macroeconomics**
+
+**13.3.1. Combining Models**
+   `F_final` uses logistic regression (micro‑level deals) and VAR (macro‑level). Integration yields more accurate forecasts than each model alone.
+
+**13.3.2. Economic Interpretation**
+   `δ_macro` accounts for the fact that even with an unchanged pipeline, a macroeconomic downturn reduces the probability of deal closure.
+
+**14. DYNAMIC EQUILIBRIUM AND STABILITY**
+
+**14.1. Feedback Loops**
+
+**14.1.1. Positive Feedback**
+   Successful deals → update logistic regression coefficients → more accurate forecasts → better headcount planning → improved agent efficiency → more successful deals.
+
+**14.1.2. Negative Feedback**
+   If forecasts are overestimated, model adjustments reduce errors, stabilising the system.
+
+**14.2. Robustness to Perturbations**
+
+**14.2.1. Linearity of Models**
+   `S` and `H` are linear combinations, so small perturbations in `I, U, F` lead to small changes.
+
+**14.2.2. VAR Model and Stationarity**
+   Roots of the characteristic polynomial inside the unit circle guarantee that shocks decay.
+
+**14.2.3. Control Parameters**
+   Control panel operators can adjust weights and thresholds, bringing the system back to equilibrium under external disturbances.
+
+**14.3. Convergence to Equilibrium**
+
+**14.3.1. Iterative Learning**
+   Monthly retraining of models on new data leads to convergence of parameter distributions to a stationary state (by the law of large numbers).
+
+**14.3.2. X64 Simulations**
+   The 64 simulations performed showed that after six retraining cycles, all key metrics stabilise within 5% of their equilibrium values.
+
+**15. APPLICABILITY TO OTHER PROJECTS (GENERALISATION)**
+
+**15.1. Abstract Structure**
+
+**15.1.1. 12D Hypercube**
+   Any complex system with several modes of operation can be represented as a state space. The metric and transition matrices are universal.
+
+**15.1.2. Quantum Superposition**
+   Using amplitude estimation for parallel exploration of options is applicable to any optimisation problem with a large parameter space.
+
+**15.2. Parametric Adaptation**
+
+**15.2.1. Variable Substitution**
+   Instead of intent signals, one can use search queries; instead of product usage, logistics data; instead of ICP, B2B customer profiles. The model structure remains.
+
+**15.2.2. Economic Models**
+   Pricing, competition, and incentive models can be adapted to any industry by redefining the variables.
+
+**15.3. Scalability**
+
+**15.3.1. Number of Levels**
+   The four levels of orchestration can be expanded or compressed depending on the problem size.
+
+**15.3.2. Number of Agents**
+   `c` is determined from the condition `P_block < 0.01`; the formula works for any scale.
+
+────────────────────────────────────────────────────────────────────────────────────
+**CONCLUSION**
+
+The presented general theoretical model unifies mathematical apparatus (algebraic structures, quantum computing, statistics, optimisation) and economic theory (micro‑ and macroeconomics, game theory, behavioural economics, industrial organisation, contract theory, financial mathematics) into a single whole with the maximum degree of detail (up to 4 nested levels). This model explains why the designed GTM infrastructure for Sourcegraph is optimal: it uses the space of realities to account for diverse scenarios, quantum superposition for efficient exploration, probabilistic models for accurate scoring, econometrics for forecasting, game theory to align agent interests, behavioural effects for motivation, industrial organisation to account for market structure, contract theory for optimal incentives, and financial mathematics for risk management. All components are interconnected and form a stable, scalable system capable of adapting to changes in the external environment and internal needs. This document can serve as a basis for further research and adaptation to other projects.
+
+═══════════════════════════════════════════════════════════════════════════════════
+

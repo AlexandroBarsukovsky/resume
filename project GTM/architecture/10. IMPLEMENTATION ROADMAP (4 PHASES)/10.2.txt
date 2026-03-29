@@ -1,0 +1,127 @@
+═══════════════════════════════════════════════════════════════════════════════════
+PROTOCOL: 10.2. PHASE 2 (3–4 MONTHS): EXPANSION – STRATEGIST AND DISPATCHER AGENTS
+Project: Sourcegraph GTM Infrastructure
+═══════════════════════════════════════════════════════════════════════════════════
+
+**10.2. PHASE 2 (3–4 MONTHS): EXPANSION – STRATEGIST AND DISPATCHER AGENTS**
+
+────────────────────────────────────────────────────────────────────────────────────
+10.2.1. ACTIONS, RESOURCES, RISKS
+────────────────────────────────────────────────────────────────────────────────────
+
+**10.2.1.1. Actions**
+
+| Week | Action                                                                  | Responsible                 |
+|------|-------------------------------------------------------------------------|-----------------------------|
+| 1    | **Architectural design of the strategic layer** – define rules for selecting ideologies (conservative, balanced, aggressive). | RevOps (1), Technical Lead (1) |
+| 2–3  | **Develop Strategist agents (3)** – implement in Go, rule engine for selecting ideology based on OKRs and macro indicators, integrate with Kafka. | Engineers (2)                |
+| 4    | **Develop Dispatcher agent** – route tasks between tactical groups, load balancing, monitoring. | Engineers (1)                |
+| 5–6  | **Expand executor cluster to 800 agents** – add functions: funnel management (800 agents), financial calculations (600), reporting (400). | Engineers (3)                |
+| 7    | **Integrate with Gainsight (initial)** – configure Health Score synchronisation, create retention playbook. | RevOps (1)                  |
+| 8    | **Test in sandbox** – full run on 500+ accounts, verify distribution by ideologies, correctness of task routing. | Engineers (2), RevOps (1)    |
+| 9–10 | **Pilot deployment on 50% of accounts** – monitor for 2 weeks, collect feedback from AEs and CSMs. | RevOps (2), AE (2), CSM (2) |
+| 11–12| **Adjust weights and thresholds** – based on pilot data, configure triggers, refine rule engine. | Engineers (1), RevOps (1)    |
+
+**Action Details:**
+
+- **Strategist agents (3):** implemented in Go, deployed on Kubernetes. Each agent is responsible for one ideology:
+  * Conservative – priority on retention, low risk, long‑term contracts.
+  * Balanced – moderate growth, diversification.
+  * Aggressive – maximum expansion, high risk.
+  * Input: list of accounts from Level 1, current OKRs (ARR, NRR), macroeconomic indicators (PMI, interest rates, technology index).
+  * Output: for each account – selected ideology, saved in the `Strategic_Ideology__c` field in Salesforce via Hightouch.
+
+- **Dispatcher agent:** implemented in Go, subscribes to the Kafka topic `account_strategy`. Aggregates accounts by segment (industry, region, size) and distributes them among tactical groups (Level 3). Ensures load balancing (round‑robin).
+
+- **Expand executor cluster to 800 agents:**
+  * New types of executor agents added (in addition to the 200 from Phase 1):
+    - 600 agents – financial operations (commission calculation, forecasts, plan‑vs‑actual analysis).
+    - 400 agents – reporting (automatic preparation of QBRs, board‑packs, insights).
+  * All agents implemented as Lambda functions (fast operations) or containers (long calculations) scaling with Kafka queue.
+
+- **Gainsight integration:**
+  * Two‑way Health Score synchronisation (Salesforce ↔ Gainsight) configured.
+  * Retention playbook created (trigger: Health Score <0.5) with automatic CSM task creation and email to customer.
+  * Expansion playbook (trigger: Expansion Signal) – simplified version for Phase 2.
+
+- **Control panel (extended version):**
+  * Added monitoring dashboard for Strategist agents (distribution by ideology, load).
+  * Added capability to manually adjust rule engine weights via UI.
+  * Improved DLQ handling (ability to resend events, view logs).
+
+**10.2.1.2. Resources**
+
+| Resource Type              | Composition                                                             | Allocation              |
+|----------------------------|-------------------------------------------------------------------------|-------------------------|
+| **Engineers (development)**| 3 engineers (Go, Python, AWS, Salesforce API, Gainsight API)            | Full time, 12 weeks     |
+| **RevOps**                 | 2 specialists (rule configuration, testing, training)                   | 50% time, 12 weeks      |
+| **Technical Lead**         | 1 lead (architecture, coordination)                                    | 30% time, 12 weeks      |
+| **AE / CSM (testing)**     | 2 AEs, 2 CSMs (participate in pilot deployment)                         | 20% time, 4 weeks       |
+| **Infrastructure**         | AWS (additional Lambda, Kafka resources increase, RDS)                  | Pre‑allocated           |
+
+**Budget (CAPEX):** $400K (development, Gainsight licenses, cloud resources)
+
+**10.2.1.3. Risks and Mitigations**
+
+| Risk                                     | Likelihood | Impact | Mitigation                                                             |
+|------------------------------------------|------------|--------|------------------------------------------------------------------------|
+| Complexity of calibrating ideology weights | High     | High   | Conduct A/B testing on historical data; use control panel for manual adjustments. |
+| Salesforce overload due to increased agent count | Medium | Medium | Use Bulk API for mass updates; implement batch processing.             |
+| Gainsight integration instability         | Medium     | Medium | Configure retries (3 attempts), DLQ for events; fallback – create tasks directly in Salesforce. |
+| AE resistance to new processes (automatic distribution) | Medium | High   | Provide training, demonstrate improvements in pipeline coverage and reduced routine. |
+| Rule engine errors (incorrect ideology selection) | Medium | High   | Log every decision; enable manual override via control panel; monthly retraining. |
+
+────────────────────────────────────────────────────────────────────────────────────
+10.2.2. EXPECTED KPIs
+────────────────────────────────────────────────────────────────────────────────────
+
+**10.2.2.1. Operational KPIs**
+
+| KPI                                  | Formula / Measurement Method                     | Target Value                |
+|--------------------------------------|--------------------------------------------------|-----------------------------|
+| **Pipeline coverage**                | Pipeline sum / quarterly quota                   | >3× (vs <2× at start)        |
+| **Sales cycle reduction**            | Average deal duration (days)                     | -20% (from 120 to ≤96 days)  |
+| **Forecast accuracy**                | 1 – MAPE (for all accounts)                      | >88% (error <12%)            |
+| **Account distribution automation**  | Percentage of accounts automatically assigned to AE | >80%                        |
+| **Percentage of manual interventions** | Number of manual overrides / total assignments | <15%                        |
+
+**10.2.2.2. Technical KPIs**
+
+| KPI                                  | Formula / Measurement Method                     | Target Value                |
+|--------------------------------------|--------------------------------------------------|-----------------------------|
+| **Throughput**                       | Events processed per second by agents            | up to 1,000 events/second    |
+| **Event processing time (p99)**      | 99th percentile from event to action             | <1 second                   |
+| **Gainsight integration availability** | Percentage of successful Gainsight API calls   | >99%                        |
+| **Strategist agent reliability**     | Uptime (time without failure)                    | >99.5%                      |
+
+**10.2.2.3. Business Outcomes**
+
+- **Pipeline coverage increase** from <2× to >3×, reducing the risk of missing quarterly targets.
+- **Sales cycle reduction** by 20% due to more accurate distribution and qualification.
+- **AE time savings** – at least 5 hours per week previously spent on manual assignment and forecast updates.
+- **Improved forecast accuracy** – enables leadership to plan budget and headcount with greater confidence.
+
+────────────────────────────────────────────────────────────────────────────────────
+**CRITERIA FOR TRANSITION TO PHASE 3**
+
+Transition to Phase 3 (scaling) occurs when the following conditions are met:
+
+1. All key KPIs (pipeline coverage, forecast accuracy, sales cycle) achieved or exceeded.
+2. System stably processes 1,000+ events/second for 2 weeks.
+3. Sales, CS, and AM teams confirm that automation improves their work (NPS survey >80).
+4. Rule engine and ideology weights calibrated based on pilot data.
+5. Technical documentation for Phase 2 updated, code documented.
+
+────────────────────────────────────────────────────────────────────────────────────
+**CONCLUSIONS ON PHASE 2**
+
+- Phase 2 adds the strategic layer (ideologies) and expands the executor
+  cluster, enabling full automation of account distribution and improved
+  forecasting.
+- Gainsight integration lays the foundation for proactive customer experience
+  management.
+- The success of Phase 2 depends on the quality of rule engine calibration
+  and team engagement.
+- Achieving target KPIs confirms readiness for full‑scale deployment.
+
+═══════════════════════════════════════════════════════════════════════════════════

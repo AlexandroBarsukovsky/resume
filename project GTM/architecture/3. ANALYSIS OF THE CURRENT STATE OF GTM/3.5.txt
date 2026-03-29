@@ -1,0 +1,119 @@
+═══════════════════════════════════════════════════════════════════════════════════
+PROTOCOL: 3.5. IDENTIFIED PAIN POINTS
+Project: Sourcegraph GTM Infrastructure
+═══════════════════════════════════════════════════════════════════════════════════
+
+**3.5. IDENTIFIED PAIN POINTS (DATA FRAGMENTATION, MANUAL WORK, INACCURATE FORECASTS)**
+
+────────────────────────────────────────────────────────────────────────────────────
+3.5.1. DATA FRAGMENTATION
+────────────────────────────────────────────────────────────────────────────────────
+
+**Symptoms:**
+- Sales Strategist spends up to 40% of time collecting data from 6sense, Snowflake,
+  Excel, and Salesforce.
+- Product data (activity) is stored in Snowflake but not synchronized with CRM
+  in real time.
+- Intent signals from 6sense are exported manually, causing delays and errors.
+- No unified customer profile (Account) with up‑to‑date fields: ICP_Fit,
+  Intent_Strength, Health_Score.
+
+**Consequences:**
+- Lost opportunities due to slow reaction.
+- Incomplete customer picture for AEs and CSMs.
+- Manual data transfer errors.
+
+────────────────────────────────────────────────────────────────────────────────────
+3.5.2. MANUAL WORK AND LOW AUTOMATION
+────────────────────────────────────────────────────────────────────────────────────
+
+**Symptoms:**
+- Account prioritization is done in Excel.
+- Task creation in Salesforce is manual.
+- Opportunity fields (MEDDPICC, probability) are updated subjectively.
+- Preparing QBR and board packs takes 10–20 hours of analyst time per quarter.
+- CSM monitors clients manually, no automatic alerts.
+
+**Consequences:**
+- High operational load on teams.
+- Inability to scale (manual work grows linearly with client count).
+- Distraction from strategic tasks.
+
+────────────────────────────────────────────────────────────────────────────────────
+3.5.3. INACCURATE FORECASTS AND LACK OF FORECASTING MODELS
+────────────────────────────────────────────────────────────────────────────────────
+
+**Symptoms:**
+- MAPE = 20–30% (target <10%).
+- Forecasts based on subjective AE assessments.
+- Macroeconomic factors (PMI, interest rate, tech index) and seasonality not considered.
+- Pipeline coverage calculated manually, often outdated.
+
+**Consequences:**
+- Errors in headcount and budget planning.
+- Unpredictable revenue for investors.
+- Difficulty in making expansion or reduction decisions.
+
+────────────────────────────────────────────────────────────────────────────────────
+3.5.4. ABSENCE OF HEALTH SCORE AND EXPANSION SIGNALS
+────────────────────────────────────────────────────────────────────────────────────
+
+**Symptoms:**
+- No automatic detection of clients at high churn risk.
+- CSM learns about problems only when the client contacts them or after churn.
+- Expansion opportunities (upsell, cross‑sell) are discovered by chance.
+- No uniform criteria for assessing customer “health.”
+
+**Consequences:**
+- Churn higher than target (5–10%).
+- Lost revenue from expansion.
+- Inefficient allocation of CSM time.
+
+────────────────────────────────────────────────────────────────────────────────────
+3.5.5. WEAK INTEGRATION AND LACK OF EVENT‑DRIVEN ARCHITECTURE
+────────────────────────────────────────────────────────────────────────────────────
+
+**Symptoms:**
+- Changes in one system do not trigger automatic actions in others.
+- No triggers: when Account Score >0.7, a task is not created; when Health Score
+  <0.5, a playbook is not launched.
+- Data is synchronized in batch mode (every few hours).
+
+**Consequences:**
+- Delays in executing critical actions.
+- Loss of synchronization between teams.
+
+────────────────────────────────────────────────────────────────────────────────────
+3.5.6. CULTURAL ISSUES (RELATED TO AUTOMATION)
+────────────────────────────────────────────────────────────────────────────────────
+
+**Symptoms:**
+- Teams are used to manual work; new tools meet resistance.
+- Lack of documented processes, hindering automation.
+- High turnover in some roles due to routine.
+
+**Consequences:**
+- Difficulty implementing changes.
+- Risk of automation rejection.
+
+────────────────────────────────────────────────────────────────────────────────────
+3.5.7. FINAL PAIN POINT MATRIX
+────────────────────────────────────────────────────────────────────────────────────
+
+| Pain Point                     | Impact on Business                          | Priority |
+|--------------------------------|---------------------------------------------|----------|
+| Data fragmentation             | Delays, errors, lost opportunities          | High     |
+| Manual work                    | Inability to scale                          | High     |
+| Inaccurate forecasts           | Planning errors, instability                | High     |
+| Lack of health score           | High churn, missed expansion                | High     |
+| Weak integration               | Inefficiency, delays                        | Medium   |
+| Cultural resistance            | Risk of project failure                     | Medium   |
+
+────────────────────────────────────────────────────────────────────────────────────
+**PROJECT CONCLUSIONS**
+- All identified pain points are interconnected and require a systemic solution.
+- The target architecture must provide: a unified data fabric, automation of routine
+  operations, forecasting models, health score, and event‑driven triggers.
+- Without addressing these issues, Sourcegraph will not be able to scale enterprise sales.
+
+═══════════════════════════════════════════════════════════════════════════════════

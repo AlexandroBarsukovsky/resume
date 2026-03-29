@@ -1,0 +1,138 @@
+═══════════════════════════════════════════════════════════════════════════════════
+PROTOCOL: 9.3. CUSTOMER SUCCESS MANAGER (RETENTION, HEALTH SCORE, PLAYBOOKS)
+Project: Sourcegraph GTM Infrastructure
+═══════════════════════════════════════════════════════════════════════════════════
+
+**9.3. CUSTOMER SUCCESS MANAGER (RETENTION, HEALTH SCORE, PLAYBOOKS)**
+
+────────────────────────────────────────────────────────────────────────────────────
+9.3.1. PURPOSE AND PLACE IN THE ORGANISATIONAL STRUCTURE
+────────────────────────────────────────────────────────────────────────────────────
+
+The Customer Success Manager (CSM) is responsible for the long‑term success of customers
+after the deal is closed. The main objective is to ensure the customer achieves their
+target outcomes (time to first value, active usage), minimise churn, and identify
+opportunities for expansion. In the target GTM architecture, the CSM uses automated
+signals (Health Score, Risk Flag) and playbooks (retention, onboarding) to proactively
+manage the customer experience. The CSM reports to the VP of Customer Success,
+interacts with the AE (during handover), the AM (for expansion), and RevOps (data
+feedback).
+
+**Key value:** customer retention, increasing net retention, and turning users
+into loyal partners.
+
+────────────────────────────────────────────────────────────────────────────────────
+9.3.2. MAIN RESPONSIBILITIES AND AREAS OF ACCOUNTABILITY
+────────────────────────────────────────────────────────────────────────────────────
+
+| Area                         | Details                                                                  |
+|------------------------------|--------------------------------------------------------------------------|
+| **Onboarding**               | Conduct kick‑off meetings, training, assist with integration setup. Achieve Time to First Value (TTFV) <30 days. |
+| **Health monitoring**        | Regularly track Health Score, Risk Flag, Expansion Signal. Use data from Gainsight and the control panel. |
+| **Retention**                | When Health Score drops (<0.5), launch the retention playbook: personal communication, identify root causes, propose solutions. |
+| **Regular reviews (QBR)**    | Conduct quarterly business reviews with customers, record results in Gainsight. |
+| **Feedback collection**      | Run NPS surveys, record comments, pass them to product and marketing.    |
+| **Opportunity identification** | When expansion signals appear (increased activity, requests), pass information to the AM and participate in proposal preparation. |
+| **Product interaction**      | Report customer issues and requests to the product team (via tickets or regular syncs). |
+| **Contract renewal**         | Coordinate renewals, prepare the proposal together with the AM.           |
+
+────────────────────────────────────────────────────────────────────────────────────
+9.3.3. COMPETENCIES AND REQUIREMENTS
+────────────────────────────────────────────────────────────────────────────────────
+
+| Competency                 | Requirements                                                             |
+|----------------------------|--------------------------------------------------------------------------|
+| **Empathy and customer orientation** | Ability to build trusting relationships, understand the customer’s business needs. |
+| **Analytical thinking**    | Interpret Health Score, usage metrics, NPS. Ability to identify root causes of problems. |
+| **Product knowledge**      | Deep understanding of Code Search, Deep Search, MCP, as well as typical usage scenarios for developers and engineering teams. |
+| **Technical literacy**     | Experience with Gainsight, Salesforce, product analytics (Amplitude/Snowflake). |
+| **Communication**          | Excellent written and verbal communication, ability to give presentations, conduct training webinars. |
+| **Experience**             | 3+ years in Customer Success in B2B SaaS (preferably in technology companies). Experience with enterprise customers is an advantage. |
+
+────────────────────────────────────────────────────────────────────────────────────
+9.3.4. TYPICAL WORKDAY
+────────────────────────────────────────────────────────────────────────────────────
+
+| Time        | Action                                                                   |
+|-------------|--------------------------------------------------------------------------|
+| 9:00–9:30   | Check control panel: list of customers with red (H<0.5) and yellow (0.5≤H<0.8) status. |
+| 9:30–11:00  | Customer meetings: QBRs, problem resolution, training (usually 2–3 meetings). |
+| 11:00–12:00 | Onboarding new customers (introductory sessions, setup).                 |
+| 12:00–13:00 | Lunch.                                                                   |
+| 13:00–14:00 | Data analysis: review usage reports, prepare for meetings.               |
+| 14:00–15:00 | Retention playbook work: calls to red‑zone customers, record results in Gainsight. |
+| 15:00–16:00 | Internal syncs: discuss expansion signals with AM, pass requests to product. |
+| 16:00–17:00 | Complete tasks, log activity, plan for the next day.                     |
+
+**Note:** times may vary depending on the number of customers in the portfolio and their status.
+
+────────────────────────────────────────────────────────────────────────────────────
+9.3.5. KEY PERFORMANCE INDICATORS (KPIs)
+────────────────────────────────────────────────────────────────────────────────────
+
+| KPI                                  | Formula / Measurement Method                     | Target Value                |
+|--------------------------------------|--------------------------------------------------|-----------------------------|
+| **Net Retention (NRR)**              | (ARR_start + Expansion – Churn) / ARR_start      | >120%                       |
+| **Percentage of customers in green zone** | Number of customers with Health_Score ≥0.8 / total active customers | >80%                        |
+| **Time to First Value (TTFV)**       | Average time from deal closure to first active usage (product event) | <30 days                    |
+| **Churn rate (enterprise)**          | (Lost ARR) / ARR_start                           | <5%                         |
+| **Retention playbook success rate**  | Percentage of customers where Health Score returned to ≥0.5 after playbook launch | >60%                        |
+| **NPS (portfolio average)**          | Survey results                                   | >50 (0–100 scale)           |
+
+All KPIs are tracked in Gainsight and Tableau; the CSM has access to a personal
+dashboard with per‑customer dynamics.
+
+────────────────────────────────────────────────────────────────────────────────────
+9.3.6. INTERACTION WITH AUTOMATION AND AGENTS
+────────────────────────────────────────────────────────────────────────────────────
+
+| Automated component      | Role in CSM’s work                                                       |
+|--------------------------|--------------------------------------------------------------------------|
+| **Analyst agents (Level 1)** | Daily update Health Score, Risk Flag, Expansion Signal. The CSM receives up‑to‑date data without manual collection. |
+| **Retention playbook (8.2.1)** | When H<0.5, a task is automatically created for the CSM and an email is sent to the customer. The CSM focuses on personal communication rather than task creation. |
+| **Gainsight integration**      | Automatically synchronises Health Score, NPS, playbooks. The CSM uses Gainsight to execute playbooks and track history. |
+| **Control panel**          | The CSM sees a dashboard of their customers with colour‑coded status, can filter by risks, quickly access tasks. |
+| **Financial agents**       | Provide forecast data for expansion, but the CSM does not use them directly. |
+
+**Human actions not replaceable by automation:**
+- Conducting meetings, training, empathetic communication.
+- In‑depth analysis of Health Score decline causes (beyond automated signals).
+- Communicating complex customer requests to product.
+- Interacting with C‑level customers during strategic discussions.
+
+────────────────────────────────────────────────────────────────────────────────────
+9.3.7. INTERACTION WITH OTHER ROLES
+────────────────────────────────────────────────────────────────────────────────────
+
+| Role            | Interaction                                                              |
+|-----------------|--------------------------------------------------------------------------|
+| **AE**          | Receives information about the customer after deal closure; may participate in initial meetings for support. |
+| **AM**          | Joint work on expansion signals: the CSM shares information about customer readiness, participates in proposal preparation. |
+| **RevOps**      | Reports data issues (inaccurate Health Score, delays), helps configure playbooks. |
+| **Product**     | Transfers feature requests, bug reports, analyses of feature usage.      |
+
+────────────────────────────────────────────────────────────────────────────────────
+9.3.8. TRAINING AND ONBOARDING
+────────────────────────────────────────────────────────────────────────────────────
+
+- **Onboarding:** 4 weeks: deep product familiarisation, tools
+  (Gainsight, Salesforce), Customer Success methodology, playbooks.
+- **Mentoring:** first 2 months the CSM works with a mentor on complex cases.
+- **Certification:** internal certification on product and Gainsight usage.
+- **Continuing education:** quarterly training on advanced negotiation skills,
+  data analysis, working with enterprise customers.
+
+────────────────────────────────────────────────────────────────────────────────────
+**CONCLUSIONS ON THE CUSTOMER SUCCESS MANAGER ROLE**
+
+- The CSM is a key link in retaining and expanding the customer base,
+  using automated signals (Health Score) and playbooks for proactive
+  management.
+- Automation (monitoring, task creation, playbooks) frees the CSM from routine,
+  allowing focus on human interaction and strategy.
+- KPIs focus on long‑term success (NRR, churn, TTFV) and quality
+  of customer experience.
+- The role requires high empathy, analytical skills, and deep product
+  knowledge.
+
+═══════════════════════════════════════════════════════════════════════════════════

@@ -1,0 +1,155 @@
+╔══════════════════════════════════════════════════════════════════════════════════╗
+║  PROTOCOL 5.4. MARKET THEORY                                                     ║
+║  PROJECT: IRON KIT – 13,918 SALES                                                 ║
+║                                                                                  ║
+╚══════════════════════════════════════════════════════════════════════════════════╝
+
+═══════════════════════════════════════════════════════════════════════════════════
+**5.4. MARKET THEORY**
+───────────────────────────────────────────────────────────────────────────────────
+
+Market theory provides an understanding of the processes of new product diffusion,
+the structure of competition on Wildberries, and consumer segmentation. The models
+in this section are used by the “Assortment strategist” agent (level 2), the
+“Expansion analyst” agent (level 2), and the “Competitive intelligence” agent (level 1).
+
+────────────────────────────────────────────────────────────────────────────────────
+**5.4.1. BASS MODEL (DIFFUSION OF INNOVATIONS) FOR NEW PRODUCTS**
+───────────────────────────────────────────────────────────────────────────────────
+
+**5.4.1.1. Model Formulation**
+The Bass model describes the spread of a new product in the market as a result of
+interaction between innovators (trendsetters) and imitators (followers). The
+cumulative adoption share by time \(t\) is:
+
+\[
+F(t) = \frac{1 - e^{-(p+q)t}}{1 + \frac{q}{p} e^{-(p+q)t}}
+\]
+
+where:
+- \(p\) – coefficient of innovation (probability of purchase influenced by external
+  factors, such as advertising),
+- \(q\) – coefficient of imitation (probability of purchase influenced by reviews
+  and social proof).
+
+**5.4.1.2. Application to New Metal Products**
+When launching a new SKU (e.g., decorative picket fence), the “Assortment strategist”
+agent estimates parameters \(p\) and \(q\) based on:
+- similar competitor products (historical data),
+- product category (for building materials, \(q\) is usually higher than \(p\)).
+
+**5.4.1.3. Sales Forecast for a New Product**
+Expected number of sales by time \(t\):
+\[
+N(t) = M \cdot F(t)
+\]
+where \(M\) is the potential market capacity for that SKU (estimated from demand
+analytics and competitor data).
+
+The model is used to:
+- decide whether to launch a new product (if forecasted volume exceeds a threshold),
+- plan production volumes (phased ramp‑up),
+- estimate the time to peak sales (typically 3–6 months for metal products).
+
+**5.4.1.4. Model Calibration**
+Parameters \(p, q, M\) are calibrated using early sales data of the new product
+(first 2–3 months) via nonlinear regression. The forecast is recalculated monthly,
+and the production plan is adjusted accordingly.
+
+────────────────────────────────────────────────────────────────────────────────────
+**5.4.2. MARKET STRUCTURE ANALYSIS (COMPETITION ON WILDBERRIES)**
+───────────────────────────────────────────────────────────────────────────────────
+
+**5.4.2.1. Concentration Ratio (CRₙ)**
+For each product category (pickets, angle brackets, strips, flashings), the market
+share (by revenue) of the top \(n\) sellers is calculated. CR₃ and CR₅ indicate the
+level of competition:
+- CR₃ > 70% – high concentration, oligopoly,
+- 40% < CR₃ < 70% – moderate concentration,
+- CR₃ < 40% – fragmented market.
+
+**5.4.2.2. Herfindahl–Hirschman Index (HHI)**
+\[
+HHI = \sum_{i=1}^{N} s_i^2
+\]
+where \(s_i\) is the market share of seller \(i\) (in percent). Values:
+- HHI < 1500 – competitive market,
+- 1500 ≤ HHI < 2500 – moderately concentrated,
+- HHI ≥ 2500 – highly concentrated.
+
+For the “metal picket fence” category on Wildberries, according to data from the
+“Competitive intelligence” agent, HHI ≈ 1800 (moderate concentration).
+
+**5.4.2.3. Competitive Positioning Map**
+The agent constructs a two‑dimensional map with axes:
+- **Price** (low / medium / high),
+- **Quality / uniqueness** (standard / designer).
+
+This allows identification of:
+- direct competitors (similar price, similar assortment),
+- indirect competitors (other materials: corrugated sheet, wood),
+- niches for differentiation (high price + unique design).
+
+**5.4.2.4. Entry and Exit Barriers**
+- **Entry:** low (registration on WB, start of production), but initial advertising
+  investment is required to obtain first reviews.
+- **Exit:** moderate (liquidation of stock, loss of advertising investments).
+
+The “Expansion analyst” agent uses barrier analysis to assess the feasibility of
+entering a new category.
+
+────────────────────────────────────────────────────────────────────────────────────
+**5.4.3. AUDIENCE SEGMENTATION (B2C, CONSTRUCTION TEAMS)**
+───────────────────────────────────────────────────────────────────────────────────
+
+**5.4.3.1. Main Customer Segments for Metal Products**
+
+| Segment             | Description                                                              | Behaviour on Wildberries                                               |
+|---------------------|--------------------------------------------------------------------------|------------------------------------------------------------------------|
+| **B2C (individuals)** | Owners of private houses, summer residents. Buy pickets, angle brackets, strips for fences and small repairs. | Impulse purchases, price‑sensitive, guided by reviews and rating. Peak demand: spring‑autumn. |
+| **Construction teams** | Professional contractors performing orders for fences, canopies, etc.    | Buy in bulk (10–50 units at a time), sensitive to stock availability, require consistent quality. Often look for specific sizes and types. |
+| **Small business**   | Building materials stores, resellers.                                    | Buy regularly, seek low prices, ready for large batches.               |
+| **Wholesalers**      | Large distributors (rarely on WB, more often through direct contracts).  | Not considered a target segment for WB.                                |
+
+**5.4.3.2. Behavioural Characteristics of Segments**
+
+| Characteristic                | B2C                         | Construction teams          |
+|-------------------------------|-----------------------------|-----------------------------|
+| Average basket (RUB)          | 1500–5000                   | 5000–30000                  |
+| Price sensitivity             | High                        | Medium (availability more important) |
+| Influence of reviews          | Critical                    | High (reliability)          |
+| Purchase frequency            | 1–2 times per season         | Weekly (in season)          |
+| Preferred time                | Weekends, evening           | Weekdays, morning           |
+
+**5.4.3.3. Marketing Adaptation by Segment**
+- **For B2C:** focus on visuals (fence photos), “buy one get one” promotions,
+  automatic review replies, geo‑targeting (gardening communities).
+- **For construction teams:** bulk discounts (from 10 units), dedicated listings
+  with guaranteed availability, fast shipping, pre‑order capability, technical
+  documentation (drawings, instructions).
+
+**5.4.3.4. Segmentation via the “Demand Analyst” Agent**
+The agent analyses order history to identify:
+- orders with quantity >10 units (likely construction teams),
+- orders with quantity 1–3 units (B2C),
+- orders with regular repetition (small business).
+
+Based on this, demand forecasts are adjusted by segment, improving the accuracy of
+production and procurement planning.
+
+────────────────────────────────────────────────────────────────────────────────────
+**5.4.4. PRACTICAL IMPLEMENTATION IN AGENTS**
+───────────────────────────────────────────────────────────────────────────────────
+
+| Agent                     | Use of Market Theory                                                  |
+|---------------------------|-----------------------------------------------------------------------|
+| Assortment strategist     | Bass model for new SKU sales forecasting, niche analysis.             |
+| Competitive intelligence  | Calculation of HHI, CRₙ, construction of positioning map.             |
+| Expansion analyst         | Assessment of entry barriers into new categories, segment potential analysis. |
+| Demand analyst            | Adjustment of forecasts by B2C / construction teams segments.         |
+| Creative marketer (E3)    | Generation of creatives and descriptions tailored to segments.        |
+
+═══════════════════════════════════════════════════════════════════════════════════
+**NOTE:** Market theory is integrated into the work of agents at levels 1–3.
+All coefficients and thresholds (HHI, CRₙ, Bass model parameters) are updated
+automatically based on data from the “Competitive intelligence” agent.

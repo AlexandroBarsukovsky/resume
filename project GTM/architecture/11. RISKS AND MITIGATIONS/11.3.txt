@@ -1,0 +1,87 @@
+═══════════════════════════════════════════════════════════════════════════════════
+PROTOCOL: 11.3. FINANCIAL RISKS (BUDGET OVERRUN, UNREALISTIC EXPECTATIONS)
+Project: Sourcegraph GTM Infrastructure
+═══════════════════════════════════════════════════════════════════════════════════
+
+**11.3. FINANCIAL RISKS (BUDGET OVERRUN, UNREALISTIC EXPECTATIONS)**
+
+────────────────────────────────────────────────────────────────────────────────────
+11.3.1. DESCRIPTION AND CONTEXT
+────────────────────────────────────────────────────────────────────────────────────
+
+The implementation of the target GTM architecture requires significant investments:
+CAPEX $2.0M (development, integrations, training) and annual OPEX $1.7M (cloud resources,
+licenses, support). Financial risks are associated with the possibility of exceeding
+these costs, as well as failure to achieve the projected returns (ARR growth, efficiency
+gains), which could lead to reduced ROI and increased payback period.
+Managing financial risks involves careful budgeting, phased funding allocation,
+regular monitoring of deviations, and plan adjustments.
+
+────────────────────────────────────────────────────────────────────────────────────
+11.3.2. KEY FINANCIAL RISKS
+────────────────────────────────────────────────────────────────────────────────────
+
+| Risk                                     | Likelihood | Impact | Mitigation                                                                 | Responsible |
+|------------------------------------------|-------------|--------|----------------------------------------------------------------------------|-------------|
+| **CAPEX overrun** – exceeding the budget for development, integrations, equipment. | Medium | High | • Phased budget allocation (by phases).<br>• Contingency fund of 10% of CAPEX ($200K).<br>• Regular cost review (monthly).<br>• Use standard components instead of custom development where possible. | CFO, Technical Lead |
+| **OPEX growth** – increase in cloud resources, licenses, support costs above plan. | Medium | Medium | • Use spot instances for non‑critical workloads.<br>• Optimise Snowflake queries (reduce scanned volume, clustering).<br>• Monitor costs in AWS Cost Explorer, set up alerts.<br>• Review licenses when consumption decreases. | CFO, RevOps |
+| **Failure to achieve expected ARR growth** – automation does not lead to planned revenue growth (50% YoY). | Low | High | • Quarterly review of actual KPIs vs forecast.<br>• Adjust forecasting model on deviations.<br>• Additional marketing activities if pipeline insufficient.<br>• Plan B: increase headcount if pipeline falls short. | CRO, CFO |
+| **Increased payback period** (payback period) >12 months. | Low | High | • Accelerate implementation by working on phases in parallel.<br>• Reduce scope of Phases 1–2 if necessary.<br>• Engage additional resources for critical paths.<br>• Adjust target KPIs to more realistic levels. | CRO, CFO |
+| **Unforeseen integration rework costs** – complexity of integrating with legacy systems or API instability. | Medium | Medium | • Allocate 15% of CAPEX for unforeseen work.<br>• Use standard connectors where possible.<br>• Close collaboration with vendors (Salesforce, Gainsight) for early issue resolution. | Technical Lead |
+| **Inefficient license utilisation** – purchasing excessive Salesforce, Gainsight, SalesLoft licenses. | Low | Medium | • Monitor actual usage.<br>• Review needs quarterly.<br>• Use pay‑as‑you‑go models for new features. | RevOps, CFO |
+| **Reduced ROI due to incomplete automation** – if automation does not cover the expected volume of processes, labour savings are below plan. | Medium | Medium | • Continuously collect feedback to expand scenarios.<br>• Plan iterative expansion in the roadmap.<br>• Regularly demonstrate achieved savings to justify further investment. | RevOps, CRO |
+
+────────────────────────────────────────────────────────────────────────────────────
+11.3.3. MONITORING AND METRICS
+────────────────────────────────────────────────────────────────────────────────────
+
+| Metric                                     | Source                               | Target / Alert Condition                |
+|--------------------------------------------|--------------------------------------|-----------------------------------------|
+| **CAPEX vs plan** (cumulative)             | Financial reporting                  | Deviation >5% – warning, >10% – alert   |
+| **OPEX vs plan** (monthly)                 | AWS Cost Explorer, licenses          | Deviation >5% – warning, >10% – alert   |
+| **ARR growth (actual vs forecast)**        | Salesforce (Closed Won)              | Deviation >10% – root cause analysis    |
+| **Forecast accuracy (MAPE)**               | Financial agents                     | >12% – requires adjustment              |
+| **Payback period** (actual)                | DCF model, updated quarterly         | >12 months – investment review          |
+| **ROI (calculated vs actual)**             | Financial reporting                  | Below plan by >20% – review             |
+| **Percentage of manual interventions** (automation effectiveness indicator) | Control panel                       | >5% – insufficient automation           |
+| **Labour time savings** (hours/month)      | Surveys, agent logs                  | Below plan by >20% – review             |
+
+────────────────────────────────────────────────────────────────────────────────────
+11.3.4. RESPONSE PLAN FOR FINANCIAL DEVIATIONS
+────────────────────────────────────────────────────────────────────────────────────
+
+| Deviation                                   | Action                                                                 |
+|---------------------------------------------|------------------------------------------------------------------------|
+| **CAPEX overrun >10%**                      | • Freeze non‑critical work.<br>• Move some functionality to later phases.<br>• Draw from contingency fund.<br>• Revise plan with management approval. |
+| **OPEX overrun >10% for two consecutive months** | • Optimise cloud resources (reduce instances, switch to spot).<br>• Review licenses, drop unused ones.<br>• Reduce monitoring scope (if excessive). |
+| **ARR underperformance >10%**               | • Analyse root causes (win rate, pipeline coverage).<br>• Strengthen marketing (ABM campaigns).<br>• Adjust forecasts for remaining quarters.<br>• Consider headcount reduction (if not automation‑related). |
+| **Payback period >12 months**               | • Reassess budget for subsequent phases.<br>• Accelerate implementation (additional resources).<br>• Adjust target KPIs (lower the bar).<br>• Suspend investment until performance recovers. |
+| **ROI below plan**                          | • Analyse factors (CAPEX, OPEX, ARR growth).<br>• Adjust financial model.<br>• Amend roadmap to improve efficiency. |
+
+────────────────────────────────────────────────────────────────────────────────────
+11.3.5. CONTINGENCY FUND AND CONTROL MECHANISMS
+────────────────────────────────────────────────────────────────────────────────────
+
+- **Contingency fund:** $200K (10% of CAPEX) reserved for unforeseen expenses.
+  Use only with approval from CRO and CFO, upon occurrence of critical unforeseen costs.
+- **Monthly financial review:** in the operational meeting of RevOps and the finance
+  department, actual costs vs plan are analysed, deviations identified.
+- **Quarterly budget review:** when market conditions or revenue forecasts change
+  significantly, the budget is adjusted.
+- **Investment efficiency control:** ROI (additional revenue / automation costs)
+  is calculated each quarter, broken down by function.
+  If ROI <3 (over three years), a review is initiated.
+
+────────────────────────────────────────────────────────────────────────────────────
+**CONCLUSIONS ON FINANCIAL RISKS**
+
+- Financial risks require constant monitoring, strict budget control,
+  and flexibility in plan adjustments.
+- Key measures: phased funding, contingency fund, regular comparison
+  of forecasts and actuals, optimisation of cloud resource costs.
+- Transparency of financial indicators (dashboards, monthly reviews) enables
+  timely detection of deviations.
+- Managing financial risks is a shared responsibility of the technical
+  team, RevOps, and the finance department.
+
+═══════════════════════════════════════════════════════════════════════════════════

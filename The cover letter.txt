@@ -1,0 +1,31 @@
+**Cover Letter**
+
+Dear Sourcegraph Team,
+
+I would like to offer my candidacy for the position of Revenue Strategy and Operations Manager (M3). My professional background has been shaped in government agencies (8 years in analytics and strategic planning), where I worked with large volumes of data, designed analytical systems, and solved high‑complexity problems under strict confidentiality requirements.
+
+To give you the opportunity to evaluate my approach and level of expertise, I have prepared three independent projects, each completed in a very short timeframe. All of them represent complete architectural solutions and, in most cases, working prototypes.
+
+---
+
+### 1. GTM Infrastructure for Sourcegraph (Enterprise)
+- **Complete architectural document** (70+ pages): current state analysis, four‑level orchestration (1,024 analysts, 3 strategists, 96 tactical groups, 3,000 executors), scoring and forecasting models (logistic regression, VAR, seasonality), financial justification (NPV $102–185M, payback <2 years, ROI >300%), roadmap, risk management.
+- **Draft implementation** (working prototype): backend in Python (FastAPI, Celery), frontend in React, Redis Streams queues, Kafka, Docker containerisation, stubbed integrations with Salesforce, Gainsight, 6sense, SalesLoft. The prototype demonstrates practical feasibility of the architecture.
+
+### 2. AI Ecosystem for a Metal Products Manufacturer (“Iron Kit”)
+- **Complete architectural document**: 38 agents, 4 levels of orchestration, demand forecasting models (Prophet, ARIMA), inventory management (s,S), dynamic pricing (logit model), feedback processing (NLP), new product generation (GENESIS), financial model (NPV, ROI).
+- **Draft implementation** (working prototype): backend, integration with Wildberries API, agents, frontend, Docker. Assembled in **45 minutes**. The document and code are ready for handover to development.
+
+### 3. Study of Recommendation Algorithms for Short‑Video Platforms (YouTube Shorts, TikTok, Instagram Reels)
+- **Analytical report** (20+ pages): decomposition of the algorithm into 8 levels, mathematical ranking models, data collection framework, A/B testing methodology and iterative optimisation, comparative analysis of three platforms, forecast of evolution up to 2030.
+- The document was used by an international marketing agency as a strategic guide.
+
+---
+
+All projects share a common methodology: diagnosis → principles → architecture → detailing → implementation plan → risks → appendices (formulas, SQL, configurations, plain‑language explanations). I work in an **asynchronous written format**, in blocks of 12–14 hours, 3–4 days per week. I am ready to provide additional materials.
+
+I would be happy to discuss how my experience could benefit your company.
+
+Sincerely,  
+Aleksandr Robertovich Andreev  
+alisaaiclub@gmail.com, +79583919420

@@ -1,0 +1,293 @@
+═══════════════════════════════════════════════════════════════════════════════════
+PROTOCOL: 12.3. SALESFORCE CONFIGURATION FILES (PROCESS BUILDER, FLOW, APEX SNIPPETS)
+Project: Sourcegraph GTM Infrastructure
+═══════════════════════════════════════════════════════════════════════════════════
+
+**12.3. SALESFORCE CONFIGURATION FILES (PROCESS BUILDER, FLOW, APEX SNIPPETS)**
+
+This protocol contains configurations and code snippets for implementing
+automation within Salesforce: Platform Events, Process Builder/Flow, and Apex.
+All examples correspond to the descriptions in Section 5.2 (automation via triggers)
+and can be deployed in a sandbox before being moved to production.
+
+────────────────────────────────────────────────────────────────────────────────────
+12.3.1. PLATFORM EVENTS
+────────────────────────────────────────────────────────────────────────────────────
+
+Platform Events are used to publish data changes that trigger agents via EventBridge.
+
+**12.3.1.1. Account_Change__e**
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<PlatformEvent xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Account_Change__e</fullName>
+    <description>Notification of changes to key Account fields</description>
+    <fields>
+        <fullName>Account_Id__c</fullName>
+        <description>Account ID</description>
+        <type>Text</type>
+        <length>18</length>
+    </fields>
+    <fields>
+        <fullName>Changed_Fields__c</fullName>
+        <description>JSON list of changed fields</description>
+        <type>TextArea</type>
+        <length>500</length>
+    </fields>
+</PlatformEvent>
+
+12.3.1.2. Opportunity_Change__e
+xml
+
+<?xml version="1.0" encoding="UTF-8"?>
+<PlatformEvent xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Opportunity_Change__e</fullName>
+    <description>Notification of changes to an Opportunity</description>
+    <fields>
+        <fullName>Opportunity_Id__c</fullName>
+        <type>Text</type>
+        <length>18</length>
+    </fields>
+    <fields>
+        <fullName>Stage__c</fullName>
+        <type>Text</type>
+        <length>40</length>
+    </fields>
+    <fields>
+        <fullName>Win_Probability__c</fullName>
+        <type>Number</type>
+        <precision>3</precision>
+        <scale>2</scale>
+    </fields>
+</PlatformEvent>
+
+────────────────────────────────────────────────────────────────────────────────────
+12.3.2. PROCESS BUILDER / FLOW (TASK CREATION)
+────────────────────────────────────────────────────────────────────────────────────
+
+Below is the Process Builder configuration for creating a Sales Strategist task
+when Account Score > 0.7.
+
+12.3.2.1. Process Builder: «Create Task for Strategist»
+
+Field                      Value
+Object                     Account
+Start Process              When a record is created or edited
+Criteria                   [Account].Account_Score__c > 0.7 AND [Account].OwnerId != null
+Immediate Actions          Create a Task
+Task Details               - Subject: «Qualification: [Account].Name»
+                           - Priority: High
+                           - OwnerId: [Account].OwnerId
+                           - Status: Not Started
+                           - Due Date: TODAY + 2
+                           - Description: «Account Score [Account].Account_Score__c. Perform outreach.»
+
+12.3.2.2. Flow (Record‑Triggered) for automatically updating the «DaysInStage» field
+xml
+
+<?xml version="1.0" encoding="UTF-8"?>
+<Flow xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>58.0</apiVersion>
+    <processMetadataValues>
+        <name>BuilderType</name>
+        <value>LightningFlowBuilder</value>
+    </processMetadataValues>
+    <start>
+        <locationX>100</locationX>
+        <locationY>0</locationY>
+        <connector>
+            <targetReference>Update_Opportunity</targetReference>
+        </connector>
+        <recordTrigger>
+            <object>Opportunity</object>
+            <triggerEvents>
+                <event>AfterUpdate</event>
+            </triggerEvents>
+            <filterConditions>
+                <conditions>
+                    <leftValueReference>StageName</leftValueReference>
+                    <operator>Changed</operator>
+                </conditions>
+            </filterConditions>
+        </recordTrigger>
+    </start>
+    <assignments>
+        <name>Update_Opportunity</name>
+        <label>Update Opportunity</label>
+        <locationX>200</locationX>
+        <locationY>100</locationY>
+        <assignmentItems>
+            <assignToReference>recordVar</assignToReference>
+            <field>Last_Stage_Change__c</field>
+            <value>
+                <elementReference>NOW()</elementReference>
+            </value>
+        </assignmentItems>
+        <connector>
+            <targetReference>Update_Record</targetReference>
+        </connector>
+    </assignments>
+    <recordUpdates>
+        <name>Update_Record</name>
+        <label>Update Record</label>
+        <locationX>300</locationX>
+        <locationY>100</locationY>
+        <inputReference>recordVar</inputReference>
+        <faultConnector>
+            <targetReference>Fault</targetReference>
+        </faultConnector>
+    </recordUpdates>
+</Flow>
+
+────────────────────────────────────────────────────────────────────────────────────
+12.3.3. APEX TRIGGERS
+────────────────────────────────────────────────────────────────────────────────────
+
+12.3.3.1. Apex Trigger on Account (after update) – publish Platform Event
+apex
+
+trigger AccountTrigger on Account (after update) {
+    List<Account_Change__e> events = new List<Account_Change__e>();
+    for (Account acc : Trigger.new) {
+        Account oldAcc = Trigger.oldMap.get(acc.Id);
+        Set<String> changedFields = new Set<String>();
+        if (acc.Account_Score__c != oldAcc.Account_Score__c) {
+            changedFields.add('Account_Score__c');
+        }
+        if (acc.Intent_Strength__c != oldAcc.Intent_Strength__c) {
+            changedFields.add('Intent_Strength__c');
+        }
+        if (acc.Health_Score__c != oldAcc.Health_Score__c) {
+            changedFields.add('Health_Score__c');
+        }
+        if (!changedFields.isEmpty()) {
+            Account_Change__e ev = new Account_Change__e();
+            ev.Account_Id__c = acc.Id;
+            ev.Changed_Fields__c = JSON.serialize(changedFields);
+            events.add(ev);
+        }
+    }
+    if (!events.isEmpty()) {
+        EventBus.publish(events);
+    }
+}
+
+12.3.3.2. Apex Trigger on Opportunity – create task for CSM when deal is closed
+apex
+
+trigger OpportunityTrigger on Opportunity (after update) {
+    List<Task> tasksToCreate = new List<Task>();
+    for (Opportunity opp : Trigger.new) {
+        Opportunity oldOpp = Trigger.oldMap.get(opp.Id);
+        if (opp.StageName == 'Closed Won' && oldOpp.StageName != 'Closed Won') {
+            // Find the CSM assigned to the account
+            Account acc = [SELECT CSM_Owner__c FROM Account WHERE Id = :opp.AccountId LIMIT 1];
+            if (acc.CSM_Owner__c != null) {
+                Task t = new Task(
+                    Subject = 'Onboarding: ' + opp.Account.Name,
+                    Priority = 'High',
+                    Status = 'Not Started',
+                    OwnerId = acc.CSM_Owner__c,
+                    WhatId = opp.AccountId,
+                    ActivityDate = Date.today().addDays(2)
+                );
+                tasksToCreate.add(t);
+            }
+        }
+    }
+    if (!tasksToCreate.isEmpty()) {
+        insert tasksToCreate;
+    }
+}
+
+12.3.3.3. Apex class for sending Slack notifications (Invocable)
+apex
+
+public class SlackNotifier {
+    @InvocableMethod(label='Send Slack Notification' description='Sends message to Slack channel')
+    public static void sendNotification(List<String> messages) {
+        String message = messages[0];
+        String webhookUrl = System.Label.SlackWebhookUrl; // Custom Label
+        HttpRequest req = new HttpRequest();
+        req.setEndpoint(webhookUrl);
+        req.setMethod('POST');
+        req.setHeader('Content-Type', 'application/json');
+        String body = '{"text": "' + message.replace('"', '\\"') + '"}';
+        req.setBody(body);
+        Http http = new Http();
+        try {
+            HttpResponse res = http.send(req);
+        } catch (Exception e) {
+            System.debug('Slack notification failed: ' + e.getMessage());
+        }
+    }
+}
+
+12.3.3.4. Apex class for calling external API (Ironclad) via Named Credential
+apex
+
+public class IroncladCallout {
+    @future(callout=true)
+    public static void createContract(Set<Id> oppIds) {
+        List<Opportunity> opps = [SELECT Id, Name, AccountId, Amount, CloseDate FROM Opportunity WHERE Id IN :oppIds];
+        for (Opportunity opp : opps) {
+            HttpRequest req = new HttpRequest();
+            req.setEndpoint('callout:Ironclad/api/contracts');
+            req.setMethod('POST');
+            req.setHeader('Content-Type', 'application/json');
+            Map<String, Object> payload = new Map<String, Object>{
+                'opportunityId' => opp.Id,
+                'accountId' => opp.AccountId,
+                'amount' => opp.Amount,
+                'closeDate' => opp.CloseDate
+            };
+            req.setBody(JSON.serialize(payload));
+            Http http = new Http();
+            HttpResponse res = http.send(req);
+            if (res.getStatusCode() == 200) {
+                Opportunity oppUpdate = new Opportunity(Id = opp.Id, Contract_Status__c = 'Created');
+                update oppUpdate;
+            } else {
+                System.debug('Ironclad error: ' + res.getBody());
+            }
+        }
+    }
+}
+
+────────────────────────────────────────────────────────────────────────────────────
+12.3.4. INTEGRATION SETUP (NAMED CREDENTIALS)
+────────────────────────────────────────────────────────────────────────────────────
+
+Named Credentials are used to call external APIs (Ironclad, Gainsight, SalesLoft).
+
+Example Named Credential for Ironclad:
+xml
+
+<?xml version="1.0" encoding="UTF-8"?>
+<NamedCredential xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Ironclad</fullName>
+    <label>Ironclad API</label>
+    <endpoint>https://api.ironcladapp.com</endpoint>
+    <principalType>NamedUser</principalType>
+    <protocol>Oauth2</protocol>
+    <generateAuthorizationHeader>true</generateAuthorizationHeader>
+    <oauth2ClientId>your_client_id</oauth2ClientId>
+    <oauth2ClientSecret>your_client_secret</oauth2ClientSecret>
+</NamedCredential>
+
+────────────────────────────────────────────────────────────────────────────────────
+CONCLUSIONS
+
+    The presented configurations cover the main automations within Salesforce,
+    described in Section 5.2.
+
+    Platform Events publish changes for external agents.
+
+    Process Builder / Flow automate task creation and field updates.
+
+    Apex triggers and classes provide complex logic and external API calls.
+
+    All components can be deployed using Metadata API or Change Sets.
+
+═══════════════════════════════════════════════════════════════════════════════════

@@ -1,0 +1,135 @@
+═══════════════════════════════════════════════════════════════════════════════════
+PROTOCOL: 9.5. REVOPS (AGENT HOLDING MANAGEMENT, AUTOMATION CONFIGURATION, REPORTING)
+Project: Sourcegraph GTM Infrastructure
+═══════════════════════════════════════════════════════════════════════════════════
+
+**9.5. REVOPS (AGENT HOLDING MANAGEMENT, AUTOMATION CONFIGURATION, REPORTING)**
+
+────────────────────────────────────────────────────────────────────────────────────
+9.5.1. PURPOSE AND PLACE IN THE ORGANISATIONAL STRUCTURE
+────────────────────────────────────────────────────────────────────────────────────
+
+Revenue Operations (RevOps) is the central role responsible for the architecture,
+configuration, and support of the entire GTM infrastructure. In the target architecture,
+RevOps manages the agent holding, integrations, data, reporting, and annual planning
+processes. This is a strategic role that unites Sales, CS, Marketing, and Finance
+through a unified data‑driven platform. RevOps reports to the CRO (or CFO,
+depending on the structure) and interacts with all GTM departments.
+
+**Key value:** ensuring the smooth operation of automation,
+data accuracy, timely reporting, and process scalability.
+
+────────────────────────────────────────────────────────────────────────────────────
+9.5.2. MAIN RESPONSIBILITIES AND AREAS OF ACCOUNTABILITY
+────────────────────────────────────────────────────────────────────────────────────
+
+| Area                         | Details                                                                  |
+|------------------------------|--------------------------------------------------------------------------|
+| **Agent holding management** | Monitoring agent operations (Levels 1–4) via the control panel. Configuring parameters (weights, thresholds), restarting failed agents, performance analysis. |
+| **Automation configuration** | Configuring triggers, playbooks, integrations (Salesforce, Gainsight, Hightouch, 6sense, SalesLoft). Supporting the event‑driven architecture. |
+| **Data management**          | Ensuring data quality in Salesforce (completeness, accuracy). Configuring reverse ETL (Hightouch), data marts in Snowflake. Maintaining a single source of truth. |
+| **Reporting and analytics**  | Preparing weekly digests, quarterly reports (QBR), board‑packs using reporting agents. Configuring dashboards in Tableau and Salesforce. |
+| **Planning and budgeting**   | Participating in annual planning (OKRs, budgets). Calculating headcount (7.1), territories (7.2), compensation (7.3). Scenario modelling. |
+| **Training and support**     | Training teams on tool usage (Salesforce, Gainsight, control panel). User support, handling requests. |
+| **Exception handling**       | Processing the Dead Letter Queue (DLQ), manual intervention in automation failures. Collaborating with the technical team on integration issues. |
+| **Model retraining**         | Collecting feedback from Strategists, AEs, CSMs, AMs to improve scoring and forecasting models. Coordinating with financial agents. |
+
+────────────────────────────────────────────────────────────────────────────────────
+9.5.3. COMPETENCIES AND REQUIREMENTS
+────────────────────────────────────────────────────────────────────────────────────
+
+| Competency                 | Requirements                                                             |
+|----------------------------|--------------------------------------------------------------------------|
+| **Systems thinking**       | Understanding the architecture of complex systems, interconnections between CRM, data warehouse, event‑driven components. |
+| **Technical expertise**    | Experience with Salesforce (administration, Apex, Flow, Platform Events), Snowflake (SQL), Tableau, Hightouch, Gainsight. |
+| **Analytical skills**      | Ability to interpret data, build forecasts, identify anomalies.          |
+| **Project management**     | Experience coordinating cross‑functional initiatives, implementing automation. |
+| **Communication**          | Ability to explain technical concepts to non‑technical audiences, document processes. |
+| **Experience**             | 5+ years in RevOps, Sales Operations, Business Operations in B2B SaaS. Experience implementing automation and managing CRM is mandatory. |
+
+────────────────────────────────────────────────────────────────────────────────────
+9.5.4. TYPICAL WORKDAY
+────────────────────────────────────────────────────────────────────────────────────
+
+| Time        | Action                                                                   |
+|-------------|--------------------------------------------------------------------------|
+| 9:00–9:30   | Check control panel: agent status, errors, DLQ, key metrics (pipeline coverage, forecast accuracy). |
+| 9:30–10:30  | Process DLQ: handle unprocessed events, analyse failure causes, adjust configuration as needed. |
+| 10:30–12:00 | Internal syncs: meetings with Sales, CS teams on data issues, new automation requests. |
+| 12:00–13:00 | Lunch.                                                                   |
+| 13:00–14:00 | Automation configuration: update Account Score weights, add new triggers, test in sandbox. |
+| 14:00–15:00 | Prepare reporting: create weekly digest for leadership, review dashboards. |
+| 15:00–16:00 | Planning: participate in forecast session, analyse OKR progress, adjust headcount model. |
+| 16:00–17:00 | Document changes, update handbook, respond to user requests.             |
+
+────────────────────────────────────────────────────────────────────────────────────
+9.5.5. KEY PERFORMANCE INDICATORS (KPIs)
+────────────────────────────────────────────────────────────────────────────────────
+
+| KPI                                  | Formula / Measurement Method                     | Target Value                |
+|--------------------------------------|--------------------------------------------------|-----------------------------|
+| **Forecast accuracy (MAPE)**         | Average forecast error by quarter                | <10%                        |
+| **QBR preparation time**             | Hours spent producing the quarterly report       | <2 hours                    |
+| **DLQ processing time**              | Average time from event entering DLQ to resolution | <1 hour                     |
+| **Agent holding availability**       | Percentage of time all agents are operational without failures | >99.5%                      |
+| **New integration setup speed**      | Time from request to integration deployment      | <5 business days            |
+| **Internal customer satisfaction**   | NPS from Sales, CS, AM teams                     | >80                         |
+
+All KPIs are tracked in the control panel and Tableau; RevOps has access
+to detailed logs and metrics.
+
+────────────────────────────────────────────────────────────────────────────────────
+9.5.6. INTERACTION WITH AUTOMATION AND AGENTS
+────────────────────────────────────────────────────────────────────────────────────
+
+| Automated component      | Role in RevOps work                                                    |
+|--------------------------|------------------------------------------------------------------------|
+| **Control panel**        | Central interface for monitoring agents, configuring parameters, processing DLQ. |
+| **Analyst agents (Level 1)** | RevOps sets the weights and thresholds that guide agents. Agents provide data for analysis. |
+| **Financial agents (Level 4)** | RevOps configures forecasting, headcount, and compensation models. Financial agents perform calculations. |
+| **Reporting agents**     | RevOps defines report templates that agents automatically generate.    |
+| **Salesforce, Gainsight, Hightouch** | RevOps manages configurations, users, integrations.                    |
+
+**Human actions not replaceable by automation:**
+- Strategic decisions on process and architecture changes.
+- Root cause analysis requiring deep technical investigation.
+- Coordination between teams, user training.
+- Approval of changes to compensation models and budgets.
+
+────────────────────────────────────────────────────────────────────────────────────
+9.5.7. INTERACTION WITH OTHER ROLES
+────────────────────────────────────────────────────────────────────────────────────
+
+| Role            | Interaction                                                              |
+|-----------------|--------------------------------------------------------------------------|
+| **Sales Strategist, AE, CSM, AM** | RevOps trains, supports, collects feedback to improve automation.       |
+| **Leadership (CRO, CFO)** | RevOps provides reports, participates in planning, approves changes.   |
+| **Technical team (IT)** | Collaborate on integrations, performance, security.                     |
+| **Product team** | Share customer needs data obtained from CSM and AM.                     |
+
+────────────────────────────────────────────────────────────────────────────────────
+9.5.8. TRAINING AND ONBOARDING
+────────────────────────────────────────────────────────────────────────────────────
+
+- **Onboarding:** 2–3 months: familiarisation with the architecture,
+  tools (Salesforce, Snowflake, Tableau, AWS, Kafka), and processes.
+- **Certifications:** Salesforce Admin, Tableau Desktop Specialist,
+  AWS Solutions Architect are desirable.
+- **Continuing education:** regular workshops on new technologies,
+  knowledge sharing with the RevOps community.
+
+────────────────────────────────────────────────────────────────────────────────────
+**CONCLUSIONS ON THE REVOPS ROLE**
+
+- RevOps is the architect and administrator of the GTM infrastructure, ensuring
+  smooth automation operation and data accuracy.
+- The role requires deep technical knowledge (Salesforce, data warehouse,
+  event‑driven architecture), analytical skills, and the ability to manage
+  complex systems.
+- Automation (control panel, agents) provides RevOps with tools for monitoring
+  and rapid configuration, but strategic decisions and coordination
+  remain with the human.
+- KPIs focus on quality (accuracy, processing time, satisfaction)
+  and system reliability.
+
+═══════════════════════════════════════════════════════════════════════════════════

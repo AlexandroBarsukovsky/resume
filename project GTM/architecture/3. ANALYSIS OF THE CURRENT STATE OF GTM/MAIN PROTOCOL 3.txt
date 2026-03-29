@@ -1,0 +1,148 @@
+═══════════════════════════════════════════════════════════════════════════════════
+GENERAL PROTOCOL: SECTION 3. ANALYSIS OF CURRENT GTM STATE
+Project: Sourcegraph GTM Infrastructure
+═══════════════════════════════════════════════════════════════════════════════════
+
+**3. ANALYSIS OF CURRENT GTM STATE**
+
+This section provides a detailed diagnosis of the existing GTM infrastructure of Sourcegraph. Based on data from open sources (handbook, blog posts, interviews), analysis of the technology stack and operational processes, key characteristics, bottlenecks, and cultural factors affecting automation are identified. This section serves as a justification for the need for the target architecture described later.
+
+────────────────────────────────────────────────────────────────────────────────────
+3.1. SALES AND MARKETING ORGANIZATIONAL STRUCTURE
+────────────────────────────────────────────────────────────────────────────────────
+
+The GTM organizational structure of Sourcegraph follows a functional principle, with roles responsible for different stages of the customer lifecycle. The main departments are: Sales (AE, Sales Strategist), Customer Success (CSM, AM), Marketing (ABM, content, events), Revenue Operations (RevOps). All departments report to the CRO.
+
+**Key roles:**
+- **Sales Strategist** (8–12 people) – analytical qualification of intent signals, data enrichment, primary outreach, handover to AEs. KPIs: number of qualified opportunities, response time.
+- **Account Executive (AE)** (15–20 people) – management of enterprise deals, MEDDPICC qualification, negotiations, contract closing. KPIs: quota, win rate, deal cycle.
+- **Customer Success Manager (CSM)** (8–10 people) – onboarding, training, retention, risk identification. KPIs: net retention, time to first value.
+- **Account Manager (AM)** (4–5 people) – expansion and contract renewals for top‑100 clients. KPIs: expansion ARR, renewal rate.
+- **Marketing** (6–8 people) – ABM campaigns, content, events. KPIs: number of intent signals, campaign ROI.
+- **RevOps** (4–6 people) – Salesforce administration, reporting, compensation, performance analysis.
+
+**Issues in the current structure:**
+- Sales Strategists spend up to 40% of their time collecting data, reducing qualification efficiency.
+- Lack of an automated system for CS (Gainsight is being implemented, health score not configured).
+- RevOps overloaded with manual report preparation (10–20 hours per month).
+
+────────────────────────────────────────────────────────────────────────────────────
+3.2. TECHNOLOGY STACK AND ITS USAGE
+────────────────────────────────────────────────────────────────────────────────────
+
+| Category               | Tool                | Current level of integration / automation                |
+|------------------------|---------------------|----------------------------------------------------------|
+| CRM                    | Salesforce          | Central source of truth, but product and intent data     |
+|                        |                     | are synchronized with delay; fields are filled manually.|
+| Data Warehouse         | Snowflake           | Storage for product events, but no reverse ETL in       |
+|                        |                     | real time.                                               |
+| Reverse ETL            | Hightouch           | Partially used; synchronization configured for some     |
+|                        |                     | objects only.                                            |
+| Intent Data            | 6sense              | Signals are collected but exported manually (CSV).      |
+| Outreach               | SalesLoft           | Manual creation of sequences, no automatic triggering.  |
+| Customer Success       | Gainsight           | Being implemented; health score and playbooks not       |
+|                        |                     | configured.                                              |
+| BI                     | Tableau / Looker    | Dashboards built manually, updated weekly.              |
+
+**Bottlenecks:**
+- Lack of real‑time data synchronization between Snowflake and Salesforce.
+- Manual export of intent signals from 6sense → delays and errors.
+- No event‑driven architecture – changes in CRM do not trigger automatic actions in external systems.
+
+────────────────────────────────────────────────────────────────────────────────────
+3.3. PROCESSES: FROM LEAD TO DEAL, FROM ONBOARDING TO EXPANSION
+────────────────────────────────────────────────────────────────────────────────────
+
+**From intent signal to qualification (Sales Strategist)**
+1. 6sense records activity → Strategist manually exports data to Excel, checks ICP, product activity (query to Snowflake).
+2. Prioritization (intuitive) → outreach via SalesLoft.
+3. If response positive – create Opportunity and hand over to AE.
+**Time estimates:** signal reaction up to 2 days; intent → Opportunity conversion ~15–20%.
+
+**From qualification to deal (AE)**
+1. AE receives Opportunity, conducts demo.
+2. Fills MEDDPICC manually, negotiates.
+3. When moving to Proposal – contract preparation via Legal.
+**Deal cycle:** 90–120 days; win rate ~20%; forecast accuracy 70–80%.
+
+**From closed deal to onboarding (CSM)**
+1. After Closed Won, a task for CSM is created (Process Builder).
+2. CSM contacts client within 2–3 days, conducts training.
+**TTFV:** 30–45 days (above target).
+
+**Expansion (AM)**
+1. AM manually monitors client activity and requests.
+2. When an opportunity is identified, prepares a proposal.
+**Issues:** lack of automatic expansion signals, missed opportunities.
+
+────────────────────────────────────────────────────────────────────────────────────
+3.4. KEY METRICS AND THEIR RELIABILITY
+────────────────────────────────────────────────────────────────────────────────────
+
+| Metric                     | Current Value         | Collection Method / Issues                             |
+|----------------------------|-----------------------|--------------------------------------------------------|
+| ARR                        | $50–100M (estimate)   | Post‑factum, no forecasting model                      |
+| Net retention (NRR)        | 100–110%              | Calculated quarterly, reasons not analyzed             |
+| Win rate (enterprise)      | ~20%                  | Based on history, no segmentation                      |
+| Deal cycle                 | 90–120 days           | Manual collection, no automatic tracking               |
+| Pipeline coverage          | <2×                   | Calculated manually before QBR                         |
+| Forecast accuracy (MAPE)   | 20–30%                | Subjective AE estimates, no macro factors              |
+| Health score               | Not measured          | Absent                                                 |
+| Churn rate                 | 5–10%                 | Post‑factum, no early warning                          |
+| CAC Payback                | >24 months            | Not calculated regularly                               |
+
+**Reliability issues:**
+- Data lag (post‑factum).
+- Subjectivity of forecasts.
+- Fragmented sources.
+- Lack of automatic alerts.
+
+────────────────────────────────────────────────────────────────────────────────────
+3.5. IDENTIFIED PAIN POINTS
+────────────────────────────────────────────────────────────────────────────────────
+
+| Category                 | Description                                                                 |
+|--------------------------|-----------------------------------------------------------------------------|
+| **Data fragmentation**   | Intent signals, product events, CRM are not synchronized in real time.      |
+|                          | Strategist spends 40% of time collecting data from Excel.                   |
+| **Manual work**          | Manual account prioritization, task creation, field updates,                |
+|                          | QBR and board pack preparation.                                             |
+| **Inaccurate forecasts** | MAPE = 20–30%. Forecasts based on subjective AE estimates,                  |
+|                          | without macroeconomics or seasonality.                                      |
+| **Lack of health score** | CSM learns of problems only when client contacts or after churn.            |
+| **Weak integration**     | No event‑driven architecture; data synchronized in batch (hours).           |
+| **Cultural challenges**  | Teams accustomed to manual work; new tools face resistance;                 |
+|                          | absence of documented processes.                                            |
+
+────────────────────────────────────────────────────────────────────────────────────
+3.6. CULTURAL CHARACTERISTICS (HIGH AGENCY, REMOTE-FIRST)
+────────────────────────────────────────────────────────────────────────────────────
+
+**Key principles (from handbook):**
+- **High agency** – each employee acts as an owner, takes responsibility for solving problems.
+- **Direct communication** – honesty and directness, no politicking.
+- **Remote-first** – all processes built on written communication, documentation, asynchronous discussions.
+- **Transparency** – salaries, OKRs, financial information are open.
+- **Love for developers** – deep understanding of developers’ pain points.
+
+**Impact on automation:**
+- **Pros:** team ready for change if justified; written culture facilitates implementation of documented processes.
+- **Challenges:** automation must not feel like “police”; transparency, ability to manually override, asynchronous interfaces required.
+
+────────────────────────────────────────────────────────────────────────────────────
+**CONCLUSIONS FROM THE CURRENT STATE ANALYSIS**
+
+1. **Organizational structure** generally fits the enterprise model, but requires automation to eliminate manual work.
+2. **Technology stack** allows building an event‑driven architecture, but integration improvements (6sense, Hightouch, Gainsight) are needed.
+3. **Processes** suffer from manual handoffs between roles and lack of automatic signals (health score, expansion).
+4. **Metrics** are inaccurate and delayed, hindering planning.
+5. **Pain points** (data fragmentation, manual work, inaccurate forecasts) require a systemic solution.
+6. **Culture** of high agency and remote‑first creates a favorable environment for implementing transparent, documented automation.
+
+These conclusions serve as a starting point for designing the target GTM architecture (Sections 4–6) and implementation roadmap (Section 10).
+
+═══════════════════════════════════════════════════════════════════════════════════
+
+═══════════════════════════════════════════════════════════════════════════════════
+**Note:** Separate extended protocols for each subsection are provided in this folder. They can be used as standalone documents or as inserts into the main section.
+═══════════════════════════════════════════════════════════════════════════════════

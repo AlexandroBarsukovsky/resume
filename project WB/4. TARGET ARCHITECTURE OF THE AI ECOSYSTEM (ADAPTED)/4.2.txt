@@ -1,0 +1,218 @@
+╔══════════════════════════════════════════════════════════════════════════════════╗
+║  PROTOCOL 4.2. MULTI‑LEVEL ORCHESTRATION (4 LEVELS)                              ║
+║  PROJECT: IRON KIT – 13,918 SALES                                                 ║
+║                                                                                  ║
+╚══════════════════════════════════════════════════════════════════════════════════╝
+
+═══════════════════════════════════════════════════════════════════════════════════
+**4.2. MULTI‑LEVEL ORCHESTRATION (4 LEVELS)**
+───────────────────────────────────────────────────────────────────────────────────
+
+Multi‑level orchestration is the central mechanism of the target architecture,
+implementing the principle of division of labour, proven effective in historical
+simulations (from Roman quaestors to modern corporations). Each level has clearly
+defined functions, independent scalability, and standardised data exchange interfaces.
+Communication between levels is carried out via an event bus (Redis Streams / Kafka),
+ensuring asynchronicity, reliability, and traceability.
+
+────────────────────────────────────────────────────────────────────────────────────
+**4.2.1. LEVEL 1 – ANALYTICAL AGENTS (6)**
+───────────────────────────────────────────────────────────────────────────────────
+
+Level 1 is the “eyes” of the system. Six specialised agents collect, enrich and
+structure data from all available sources, transforming raw information into
+analysis‑ready features.
+
+**4.2.1.1. Competitive Intelligence**
+- **Purpose:** monitoring competitor prices, promotions, assortment, and ratings.
+- **Sources:** Wildberries (product card parsing), 6sense (optional), manual input.
+- **Tracked parameters:** price, promotion status, rating, review count, stock availability, delivery time.
+- **Frequency:** every 30 minutes.
+- **Signals:** `competitor_price_drop` (price drop >5% in 24 hours), `competitor_promotion_started`, `competitor_new_product`.
+- **Technologies:** Python, BeautifulSoup4/requests, Redis (cache), PostgreSQL.
+
+**4.2.1.2. WB API Monitor**
+- **Purpose:** collection of all operational data from the Wildberries personal account via the official API.
+- **Endpoints:** orders, stock, reviews, sales statistics, finances, shipment requests.
+- **Frequency:** real‑time (webhooks) for reviews, pull every 5–30 min for others.
+- **Critical events:** `order.created`, `stock.low`, `review.new`, `finance.commission_updated`.
+- **Technologies:** Python (aiohttp), Celery (periodic tasks), webhooks on FastAPI.
+
+**4.2.1.3. Demand Analyst**
+- **Purpose:** building sales forecasts (7, 30, 90 days) based on history, seasonality, weather.
+- **Models:** Prophet (primary), ARIMA (short‑term), Holt‑Winters (medium‑term), ensemble.
+- **Output:** forecast values with confidence intervals, MAPE, MAE.
+- **Frequency:** daily (02:00) and on request.
+- **Technologies:** Python (prophet, statsmodels, scikit‑learn), PostgreSQL.
+
+**4.2.1.4. Review Processor (NLP)**
+- **Purpose:** sentiment analysis, topic extraction, defect identification, draft response generation.
+- **Models:** ruBERT (sentiment classification), embedding clustering, keyword extraction.
+- **Output:** `sentiment`, `topics`, `defect_type`, `embedding` (pgvector), `auto_response`.
+- **Frequency:** real‑time (on review arrival).
+- **Technologies:** Python (transformers, pgvector), LLM (YandexGPT / GigaChat).
+
+**4.2.1.5. News Monitor**
+- **Purpose:** collecting and filtering news about Wildberries, metal products, competitors, legislation.
+- **Sources:** RSS, Telegram channels, official notifications, Google News API.
+- **Classification:** `marketplace_rule_change`, `competitor_news`, `industry_trend`, `general`.
+- **Output:** daily digest, `critical_news` events for important changes.
+- **Frequency:** collection every 30 min, digest once per day.
+
+**4.2.1.6. Seasonal Forecaster**
+- **Purpose:** calculating seasonal coefficients accounting for weather and holidays.
+- **Method:** STL decomposition, adjustment via linear regression (temperature, precipitation).
+- **Output:** `seasonal_factors` (baseline and adjusted) for each SKU.
+- **Frequency:** monthly, also on anomalous weather deviations.
+- **Technologies:** Python (statsmodels, scikit‑learn), integration with OpenWeatherMap.
+
+────────────────────────────────────────────────────────────────────────────────────
+**4.2.2. LEVEL 2 – STRATEGIC AGENTS (6)**
+───────────────────────────────────────────────────────────────────────────────────
+
+Level 2 is the “brain” of the system. Agents at this level make decisions based on
+analytics from Level 1 and current business objectives.
+
+**4.2.2.1. Pricing Strategist**
+- **Purpose:** determining the optimal price considering cost, competitor prices, demand elasticity, and seasonality.
+- **Model:** logistic regression (purchase probability vs price and competitor prices) + minimum margin rule.
+- **Input:** cost (from 1С), competitor prices (from agent 1), demand forecast (from agent 3), current margin.
+- **Output:** recommended price, signal `price_adjustment_needed`.
+- **Rule:** if deviation from current price >20% – requires owner confirmation; otherwise automatic application via Scriptor #3.
+- **Frequency:** on every competitor price or cost change, also weekly.
+
+**4.2.2.2. Assortment Strategist**
+- **Purpose:** generating new product ideas, eliminating unprofitable items, optimising the assortment matrix.
+- **Input:** sales by SKU, reviews (identified defects, wishes), competitor data (new products), trends (from agent 5).
+- **Model:** ABC‑XYZ analysis for product classification, Pareto rule (20% of SKUs generate 80% of revenue).
+- **Output:** proposals for new SKUs (via GENESIS), recommendations for removal, production focus shifts.
+- **Frequency:** weekly, also when new trends appear.
+
+**4.2.2.3. Risk Manager**
+- **Purpose:** calculating the business Health Score, identifying risks of shortage, overstocking, margin decline.
+- **Formula:** `H = 0.4·(1 – shortage_norm) + 0.3·(turnover_norm) + 0.3·(margin_norm)`, where `_norm` is normalisation 0..1.
+- **Thresholds:** green zone (H ≥ 0.7), yellow zone (0.5 ≤ H < 0.7), red zone (H < 0.5).
+- **Output:** colour indicator, `risk_alert` signals when entering the red zone, launch of retention playbook.
+- **Frequency:** daily.
+
+**4.2.2.4. Marketing Analyst**
+- **Purpose:** optimising advertising budget allocation across products and channels.
+- **Input:** advertising campaign data (CTR, conversion, ROMI), sales forecasts, seasonal coefficients.
+- **Model:** linear optimisation (maximising ROMI under budget constraints).
+- **Output:** recommended budget allocation by SKU and period, signal `budget_optimization`.
+- **Frequency:** weekly.
+
+**4.2.2.5. Quality Control**
+- **Purpose:** analysing defects identified in reviews and providing feedback to production.
+- **Input:** data from agent 4 (reviews with `defect_type`), defect reports from production.
+- **Method:** defect clustering, frequency calculation, technology improvement suggestions.
+- **Output:** defect reports, `quality_alert` signals when defect rate rises >10% per month.
+- **Frequency:** weekly.
+
+**4.2.2.6. Expansion Analyst**
+- **Purpose:** analysing new sales channels (Ozon, Yandex.Market) and searching for expansion niches.
+- **Input:** competitor data on other platforms (parsing), commissions, delivery conditions, audience size.
+- **Method:** comparative analysis (entry costs, potential revenue increase).
+- **Output:** recommendations for entering new platforms, channel prioritisation.
+- **Frequency:** monthly.
+
+────────────────────────────────────────────────────────────────────────────────────
+**4.2.3. LEVEL 3 – TACTICAL COORDINATORS (8)**
+───────────────────────────────────────────────────────────────────────────────────
+
+Level 3 adapts strategy to product groups and coordinates execution.
+
+**4.2.3.1. Product Group Coordinators (4)**
+- **Specialisation:** pickets, angle brackets, wind strips, flashings.
+- **Functions:**
+  – receive strategic recommendations from level 2,
+  – adapt them to the group’s characteristics (e.g., more aggressive pricing for pickets in season, year‑round stability for angle brackets),
+  – distribute tasks among executive agents,
+  – track execution and collect feedback.
+- **Technologies:** Python, JSON rules, event‑bus integration.
+
+**4.2.3.2. Scriptor #1 (Link)**
+- **Purpose:** ensuring reliable data transfer between levels (especially between the core and the executive coalition).
+- **Functions:**
+  – receive events from levels 1 and 2,
+  – form task queues for level 4,
+  – delivery control (retry, DLQ),
+  – maintain logs for audit.
+- **Technologies:** Python, Redis Streams, REST API.
+
+**4.2.3.3. Archivist**
+- **Purpose:** storing and indexing all reports, logs, events.
+- **Functions:**
+  – save all agent operation protocols,
+  – prepare data for dashboards (aggregation),
+  – backup (daily to S3),
+  – enable historical search (by SKU, date, event type).
+- **Technologies:** PostgreSQL, S3, Python.
+
+**4.2.3.4. Supervisor**
+- **Purpose:** monitoring agent load, restarting failed ones, load balancing.
+- **Functions:**
+  – monitor task queues (Redis),
+  – alerts for delays >30 sec or errors >2%,
+  – automatic container restart (via orchestrator API),
+  – escalate to operator on critical failures.
+- **Technologies:** Python, Docker API, Kubernetes (when scaling).
+
+**4.2.3.5. Production Scheduler**
+- **Purpose:** generating production tasks based on forecasts, stock, and orders.
+- **Input:** demand forecast (from agent 3), warehouse stock (from agent 2), current orders.
+- **Output:** production task (date, SKU, quantity), assignment to teams.
+- **Rules:** priority – fulfilling existing orders, then replenishing stock to target level.
+- **Frequency:** daily.
+
+────────────────────────────────────────────────────────────────────────────────────
+**4.2.4. LEVEL 4 – EXECUTIVE AGENTS (18)**
+───────────────────────────────────────────────────────────────────────────────────
+
+Level 4 is the “hands” of the system. Agents perform concrete operations: API calls,
+accounting, shipping, document generation, creative tasks.
+
+**4.2.4.1. Basic Executive Agents (10)**
+| ID  | Agent Name           | Function                                                                 |
+|-----|----------------------|--------------------------------------------------------------------------|
+| D1  | Tax Calculator       | Calculate simplified tax/VAT, advance payments, generate payment orders  |
+| D2  | Ad Optimiser         | Manage WB bids, start/stop campaigns, calculate ROMI                     |
+| D3  | Inventory Manager    | Create supplier orders when stock falls, track deliveries                |
+| D4  | Logistics Dispatcher | Create WB shipment requests (FBO/FBS), print labels, tracking            |
+| D5  | Financial Controller | Record revenue, commissions, cost, generate P&L                         |
+| D6  | Legal Assistant      | Check contracts, generate claims, monitor legal risks                    |
+| D7  | Customer Service     | Auto‑replies to reviews (templates + LLM), escalate complex cases       |
+| D8  | Document Flow        | Generate invoices, waybills, certificates (PDF/Excel)                    |
+| D9  | Scriptor #2 (Treasury)| Budget management, allocate funds across categories                     |
+| D10 | Scriptor #3 (Execution)| Integration with WB API, 1С, bank (external API calls)                  |
+
+**4.2.4.2. Creative Agents (8 – emergent, added in Phase 4)**
+| ID  | Agent Name           | Function                                                                 |
+|-----|----------------------|--------------------------------------------------------------------------|
+| E1  | Creative Designer    | Generate 3D models and drawings of new products (based on trends)       |
+| E2  | Process Engineer     | Check manufacturability, calculate cost, select materials               |
+| E3  | Creative Marketer    | Create names, descriptions, creatives for new products                  |
+| E4  | Test Analyst         | Run A/B tests for new products, assess potential                        |
+| E5  | Trend Scout          | Analyse social media, search queries to detect emerging trends          |
+| E6  | System Architect     | Optimise agent hierarchy, self‑learning                                 |
+| E7  | Partner Integrator   | Search for and automatically connect new suppliers, marketplaces        |
+| E8  | Quantum Synthesizer  | Create hybrid products (e.g., pickets with solar panels)                |
+
+────────────────────────────────────────────────────────────────────────────────────
+**SUMMARY CHARACTERISTICS OF LEVELS**
+───────────────────────────────────────────────────────────────────────────────────
+
+| Level | Name                 | Number of Agents | Main Functions                          | Technologies                    |
+|-------|----------------------|------------------|-----------------------------------------|---------------------------------|
+| L1    | Analytical agents    | 6                | Collection, enrichment, initial scoring | Python, ruBERT, Prophet,        |
+|       |                      |                  |                                         | PostgreSQL, Redis               |
+| L2    | Strategic agents     | 6                | Decision‑making (prices, assortment, risks)| Python, logistic regression,  |
+|       |                      |                  |                                         | linear optimisation, rules      |
+| L3    | Tactical coordinators| 8                | Adaptation to product groups, coordination| Python, event‑bus, rules        |
+| L4    | Executive agents     | 18               | Operations, creativity                  | Python, FastAPI, WB API, LLM    |
+
+═══════════════════════════════════════════════════════════════════════════════════
+**NOTE:** All levels operate asynchronously, exchanging events via Redis Streams.
+When scaling (assortment increasing to 500+ SKUs), each agent can be horizontally
+scaled independently. Creative agents are enabled in later implementation phases
+(Phase 4) after basic automation is stabilised.

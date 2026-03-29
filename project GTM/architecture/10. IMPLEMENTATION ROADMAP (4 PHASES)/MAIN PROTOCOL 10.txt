@@ -1,0 +1,130 @@
+═══════════════════════════════════════════════════════════════════════════════════
+SECTION 10. IMPLEMENTATION ROADMAP (4 PHASES)
+Project: Sourcegraph GTM Infrastructure
+═══════════════════════════════════════════════════════════════════════════════════
+
+**10. IMPLEMENTATION ROADMAP (4 PHASES)**
+
+The implementation of the target GTM architecture is divided into four phases with a
+total duration of 12 months. This approach minimises risks, ensures rapid feedback,
+and enables iterative improvement. Each phase concludes with measurable KPIs and
+readiness to move to the next stage. All phases include parallel work by the
+technical team (agents, integrations) and GTM teams (training, process adaptation).
+Below is the overall plan; detailed protocols for each phase will be presented
+separately (10.1 – 10.4).
+
+────────────────────────────────────────────────────────────────────────────────────
+10.1. PHASE 1 (1–2 MONTHS): PILOT – ANALYST AGENT + 200 EXECUTORS
+────────────────────────────────────────────────────────────────────────────────────
+
+**Goal:** Launch basic automation of qualification and account distribution,
+verify the functionality of the event‑driven architecture on a limited scale.
+
+**Key Components:**
+- Analyst agents (Level 1) – intent signal collection, Account Score calculation.
+- Executor cluster (200 agents) – task creation, field updates,
+  integration with SalesLoft.
+- Basic integrations: Salesforce, Hightouch, 6sense, SalesLoft.
+- Control panel (basic version) – monitoring and DLQ processing.
+
+**Expected Results:**
+- Response time to intent signals reduced from 2 days to 2 hours.
+- Win rate in the pilot group increased by 15%.
+- Forecast accuracy for pilot accounts >85%.
+- At least 2,000 events processed automatically per day.
+
+**Resources:** 2 engineers (agents), 1 RevOps, 1 technical lead.
+**Risks and Mitigations:** Integration delays → phased API connection;
+team resistance → demonstrate quick wins.
+
+────────────────────────────────────────────────────────────────────────────────────
+10.2. PHASE 2 (3–4 MONTHS): EXPANSION – STRATEGIST AND DISPATCHER AGENTS
+────────────────────────────────────────────────────────────────────────────────────
+
+**Goal:** Add the strategic layer (ideologies) and expand the executor cluster,
+fully automate account distribution.
+
+**Key Components:**
+- Strategist agents (Level 2) – 3 ideologies, account distribution.
+- Dispatcher agents – routing tasks between tactical groups.
+- Expansion of executor cluster to 800 agents (funnel, financial).
+- Gainsight integration (initial health score setup).
+
+**Expected Results:**
+- Pipeline coverage >3×.
+- Deal cycle reduction by 20%.
+- Forecast accuracy >88%.
+- Automatic preparation of weekly forecasts.
+
+**Resources:** 3 engineers, 2 RevOps, 1 project manager.
+**Risks and Mitigations:** Complexity of weight calibration → A/B testing;
+Salesforce overload → batch processing, API optimisation.
+
+────────────────────────────────────────────────────────────────────────────────────
+10.3. PHASE 3 (5–6 MONTHS): SCALING – 3,000 EXECUTORS, ALL FUNCTIONS
+────────────────────────────────────────────────────────────────────────────────────
+
+**Goal:** Launch the full version of the agent holding (all 3,000 agents),
+integrate CS functions, and deploy a full‑featured control panel.
+
+**Key Components:**
+- 3,000 executor agents (intent, funnel, CS, finance, reporting).
+- Gainsight integration (retention and expansion playbooks).
+- Full‑featured control panel (React, WebSocket, all functions).
+- Real‑time Tableau dashboards.
+
+**Expected Results:**
+- Net retention >120%.
+- Percentage of customers in green health score zone >80%.
+- Savings of 20 hours/month on QBR report preparation.
+- Processing up to 10⁵ events/second.
+
+**Resources:** 4 engineers, 3 RevOps, 2 UI/UX, 1 technical director.
+**Risks and Mitigations:** Infrastructure load → horizontal scaling,
+auto‑scaling in Kubernetes; health score quality → continuous calibration.
+
+────────────────────────────────────────────────────────────────────────────────────
+10.4. PHASE 4 (7–12 MONTHS): OPTIMISATION AND RETRAINING
+────────────────────────────────────────────────────────────────────────────────────
+
+**Goal:** Stabilise the system, retrain models on new data, implement
+foresight processes for continuous improvement.
+
+**Key Components:**
+- Collection of agent metrics (success rate, latency, accuracy).
+- Regular model retraining (monthly) on new data.
+- Implementation of quantum encryption for critical operations.
+- Foresight sessions (every 6 months) to adjust the roadmap.
+
+**Expected Results:**
+- Forecast accuracy >92%.
+- Time to insight for leadership <1 hour after quarter close.
+- ROI >300% over 3 years.
+- Percentage of manual interventions <5%.
+
+**Resources:** 2 ML engineers, 1 analyst, 1 financial consultant.
+**Risks and Mitigations:** Model quality degradation → automated testing,
+rollback; architecture obsolescence → regular roadmap review.
+
+────────────────────────────────────────────────────────────────────────────────────
+**CONCLUSIONS ON THE ROADMAP**
+
+- Phased implementation (4 phases, 12 months) allows for risk management,
+  feedback collection, and course correction.
+- Each phase has clear goals, resources, risks, and measurable KPIs.
+- Financial and technical resources are allocated with scaling in mind.
+- After Phase 4 completion, the system is ready for production operation
+  and further development.
+
+────────────────────────────────────────────────────────────────────────────────────
+**NOTE:** Separate detailed protocols will follow for each phase (10.1 – 10.4), containing:
+- Detailed action list with weekly breakdown.
+- Technical specifications for each component.
+- Phase budget (CAPEX/OPEX).
+- Rollback scenarios for critical failures.
+- Criteria for moving to the next phase (gates).
+
+These protocols will be used by the project office for planning,
+execution control, and reporting.
+
+═══════════════════════════════════════════════════════════════════════════════════

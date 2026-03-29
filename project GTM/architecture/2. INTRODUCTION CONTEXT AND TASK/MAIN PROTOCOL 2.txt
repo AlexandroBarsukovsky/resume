@@ -1,0 +1,213 @@
+═══════════════════════════════════════════════════════════════════════════════════
+GENERAL PROTOCOL: SECTION 2. INTRODUCTION: CONTEXT AND OBJECTIVE
+Project: Sourcegraph GTM Infrastructure
+═══════════════════════════════════════════════════════════════════════════════════
+
+**2.1. About Sourcegraph (Product, Market, Customers)**
+**2.2. Current GTM Transformation (PLG → Enterprise)**
+**2.3. Project Goals and Constraints**
+**2.4. Document Structure**
+
+This section sets the context in which the target GTM architecture is developed.
+It describes the company, its products, the current state of processes, the reasons
+for transformation, and formulates the goals and boundaries of the project. All
+information is based on open sources (handbook, blog posts, executive interviews),
+market analytics, and preliminary diagnostic results.
+
+────────────────────────────────────────────────────────────────────────────────────
+2.1. ABOUT SOURCEGRAPH (PRODUCT, MARKET, CUSTOMERS) – EXTENDED PROTOCOL
+────────────────────────────────────────────────────────────────────────────────────
+
+**Product and its Evolution**
+Sourcegraph develops a code intelligence platform that enables developers and
+engineering teams to:
+- Find code at organizational scale (Code Search) – semantic search with regular
+  expressions, navigation through dependency graphs, and understanding of
+  programming languages.
+- Analyze hidden dependencies, data flows, and assess the impact of changes
+  (Deep Search) – advanced static analysis that identifies vulnerabilities,
+  technical debt, and non‑obvious connections.
+- Integrate with AI agents for automatic refactoring, documentation, and
+  vulnerability detection (Model Context Protocol, MCP).
+
+The product has existed since 2013 (first open‑source release) and has evolved
+from a tool for individual developers to an enterprise‑grade platform.
+Key milestones:
+- 2013–2018: open‑source code, community growth.
+- 2018–2021: transition to SaaS, product development under managed hosting.
+- 2021–2023: raising investment (Series D of $125 million, valuation >$2.6 billion),
+  team expansion, beginning of GTM transformation.
+- 2024–2026: active shift from product‑led growth (PLG) to enterprise sales.
+
+**Market and Competitive Landscape**
+The code intelligence market is in a phase of active formation. Main competitors:
+- GitHub Copilot Workspace (AI assistant integration, but limited depth of
+  dependency analysis).
+- GitLab Code Search (part of a DevSecOps platform, but less specialized).
+- In‑house developments of large companies (e.g., Google’s Kythe, Facebook’s
+  Nuclide) – not commercial products.
+Sourcegraph maintains technological leadership due to:
+- Support for monolithic repositories with billions of lines of code.
+- Deep language‑level dependency analysis (Java, Go, Python, Rust, and others).
+- Open API and ability to integrate with existing tools.
+
+**Customer Base and Profile**
+Sourcegraph is used by over 2 million developers (including open‑source and free
+accounts), and paying enterprise customers include:
+- Stripe, Uber, Palo Alto Networks, Atlassian, Figma, Dropbox, Shopify,
+  Datadog, GitLab, Slack, Reddit, Yelp, Lyft, Netflix.
+Customers have the following characteristics:
+- Engineering team size: from 50 to 10,000+ developers.
+- Architecture: often microservices or monoliths with numerous dependencies.
+- Requirements: high security (SOC2, GDPR), audit, SLA, complex contracts.
+- Key pain points: slow code search, risk of breakage when changes are made,
+  non‑obvious vulnerabilities.
+
+────────────────────────────────────────────────────────────────────────────────────
+2.2. CURRENT GTM TRANSFORMATION (PLG → ENTERPRISE) – EXTENDED PROTOCOL
+────────────────────────────────────────────────────────────────────────────────────
+
+**Reasons for the Transition**
+1. **ARR growth requires scaling** – PLG works for small teams, but to reach ARR
+   >$100M, large contracts with predictable cycles are needed.
+2. **Enterprise customers demand a structured approach** – complex procurement,
+   legal agreements, security, training, dedicated managers.
+3. **Competition** – GitHub, GitLab, Atlassian already have enterprise sales;
+   Sourcegraph must compete in this space.
+4. **Retention and expansion** – without formalized customer success, it is
+   difficult to manage net retention.
+
+**What Is Changing in GTM Organization**
+| Aspect               | PLG Model                            | Enterprise Model (Target)              |
+|----------------------|--------------------------------------|----------------------------------------|
+| Customer acquisition | Virality, self‑service, marketing    | ABM, direct sales, partners            |
+|                      | targeted at developers               |                                        |
+| Qualification        | Automatic (subscription)             | Analytical (Sales Strategist)          |
+| Sales                | Online, cards, free trial            | Contracts, demos, tenders, MEDDPICC    |
+| Retention            | None (customers leave on their own)  | Customer Success, health score         |
+| Expansion            | Viral (users bring others)           | Account Management, expansion signals  |
+| Technology stack     | Developer tools                      | Salesforce, Gainsight, 6sense          |
+
+**Current Structure of GTM Functions (based on handbook and interviews)**
+- **Sales Strategist** (formerly SDR) – analytical role using intent data (6sense)
+  and product analytics (Amplitude, Snowflake) to qualify and hand off to AEs.
+  Currently manual: strategists export data to Excel, assign scores, schedule meetings.
+- **Account Executive (AE)** – manage deals, use MEDDPICC. Forecasts are updated
+  weekly, but accuracy is low due to lack of structured data.
+- **Customer Success (CSM)** – onboarding, training, retention. No automated health
+  score; risk signals are identified intuitively.
+- **Account Manager (AM)** – work with top clients, but expansion signals are not
+  automated.
+- **RevOps** – manage CRM, reporting. Preparing QBR and board packs takes dozens
+  of hours manually.
+
+**Pain Points (Diagnostics)**
+1. **Fragmented data** – product, intent, and CRM are not synchronized.
+   Sales Strategists spend up to 40% of their time collecting data from multiple sources.
+2. **Manual routing** – account prioritization is done manually, reaction time
+   to intent signals is 2 days (according to 6sense data).
+3. **No health score or expansion signals** – CSMs and AMs work intuitively,
+   leading to unexpected churn and missed opportunities.
+4. **Inaccurate forecasts** – a simple weighted pipeline is used without
+   macroeconomics or seasonality. MAPE = 20–30%.
+5. **Manual reporting** – QBR and board packs require 10–20 hours of analyst
+   work per quarter.
+6. **Cultural challenge** – high agency, remote‑first, direct communication
+   require written, transparent processes, which are currently absent.
+
+────────────────────────────────────────────────────────────────────────────────────
+2.3. PROJECT GOALS AND CONSTRAINTS – EXTENDED PROTOCOL
+────────────────────────────────────────────────────────────────────────────────────
+
+**Main Objectives**
+1. **Automation of GTM operations** – build an event‑driven system where data
+   is synchronized in real time and actions are triggered automatically.
+2. **Improve forecasting accuracy** – develop a model that accounts for weighted
+   pipeline, macroeconomic factors, and seasonality.
+   Goal: MAPE <10%.
+3. **Manage customer experience** – implement health score, automatically detect
+   risk and expansion signals, trigger playbooks.
+4. **Reduce reaction time** – cut time from intent signal to first contact from
+   2 days to 2 hours.
+5. **Scalability** – the system must support ARR growth to $100M+ and handle up to
+   10⁵ events per second.
+6. **Integration with existing stack** – use Salesforce, Snowflake, Hightouch,
+   6sense, Gainsight, Tableau without replacement.
+
+**Operational Goals (KPIs)**
+| Metric                                     | Baseline Value | Target Value     |
+|---------------------------------------------|----------------|------------------|
+| Reaction time to intent signal              | 2 days         | 2 hours          |
+| Win rate (enterprise)                       | ~20%           | >25%             |
+| Deal cycle                                  | 120 days       | ≤96 days         |
+| Net retention (NRR)                         | ~100%          | >120%            |
+| Share of customers in green health score zone| not measured  | >80%             |
+| Forecast accuracy (MAPE)                    | 20–30%         | <10%             |
+| Pipeline coverage                           | <2×            | >3×              |
+| Churn rate (enterprise)                     | 5–10%          | <5%              |
+| CAC Payback                                 | >24 months     | <18 months       |
+
+**Project Constraints**
+1. **Budget** – CAPEX not to exceed $2.5M, OPEX not to exceed $2.0M/year.
+2. **Timeline** – first phase (pilot) no more than 2 months, full implementation
+   within 12 months.
+3. **Preserve existing stack** – cannot replace Salesforce, Snowflake, Hightouch,
+   6sense, Gainsight. Modifications via API and custom development are allowed.
+4. **Cultural constraints** – all solutions must support high agency,
+   remote‑first, written communication.
+5. **Security** – compliance with SOC2 Type II, GDPR, encryption at rest and in transit.
+6. **Compatibility** – the system must work with the current version of Salesforce
+   (API version 58+), Snowflake, Hightouch.
+
+────────────────────────────────────────────────────────────────────────────────────
+2.4. DOCUMENT STRUCTURE – EXTENDED PROTOCOL
+────────────────────────────────────────────────────────────────────────────────────
+
+The document “Target GTM Infrastructure for Sourcegraph” consists of 12 main
+sections and appendices:
+
+**Section 1. Executive Summary** – a brief overview of the project for management,
+investors, and key stakeholders.
+
+**Section 2. Introduction: Context and Objective** – a detailed description of the
+company, product, market, reasons for transformation, goals, and constraints
+(this section).
+
+**Section 3. Analysis of Current GTM State** – an in‑depth diagnosis of the
+organizational structure, technology stack, processes, metrics, pain points,
+and cultural characteristics.
+
+**Section 4. Target GTM Architecture** – description of design principles,
+four‑level orchestration, the role of human operators, and integration with the
+existing stack.
+
+**Section 5. CRM Design (Salesforce)** – details of objects, fields, automation
+(triggers, processes), reports, and dashboards.
+
+**Section 6. Scoring and Forecasting Models** – formulas for Account Score,
+Health Score, Expansion Signals, quarterly forecast methodology (VAR, seasonality),
+and accuracy assessment.
+
+**Section 7. Resource Planning** – headcount model, territory design, compensation
+model, annual planning process (OKR, budgeting).
+
+**Section 8. Automation: Triggers and Workflows** – complete list of triggers,
+description of playbooks, customer lifecycle, and automatic transitions.
+
+**Section 9. Roles and Responsibilities** – detailed profiles of Sales Strategist,
+AE, CSM, AM, RevOps, and control panel operators.
+
+**Section 10. Implementation Roadmap (4 Phases)** – phased plan with actions,
+resources, risks, and expected KPIs.
+
+**Section 11. Risks and Mitigations** – classification of risks (organizational,
+technical, financial, security) and response measures.
+
+**Section 12. Appendices** – formulas, SQL queries, Salesforce configurations,
+data schemas, simple language explanations, glossary, literature.
+
+Each section is written in a style consistent with Sourcegraph’s culture: direct,
+without excessive detail, and focused on practical benefit. All calculations and
+models are based on current state data, historical management patterns, and
+multi‑variant simulations conducted within the project team.
+

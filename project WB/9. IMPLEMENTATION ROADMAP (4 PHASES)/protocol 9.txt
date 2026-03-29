@@ -1,0 +1,217 @@
+╔══════════════════════════════════════════════════════════════════════════════════╗
+║  SECTION 9. IMPLEMENTATION ROADMAP (4 PHASES) – MASTER PROTOCOL                   ║
+║  PROJECT: IRON KIT – 13,918 SALES                                                 ║
+║                                                                                  ║
+╚══════════════════════════════════════════════════════════════════════════════════╝
+
+═══════════════════════════════════════════════════════════════════════════════════
+**9. IMPLEMENTATION ROADMAP (4 PHASES)**
+───────────────────────────────────────────────────────────────────────────────────
+
+The implementation of the AI ecosystem is divided into five stages (Phase 0 – preparatory,
+Phases 1–4 – main). This approach minimises risks, ensures rapid feedback, and
+enables iterative improvement. Each phase concludes with the achievement of measurable
+KPIs and is ready for transition to the next stage. All phases include parallel work
+by the technical team and the business owner (training, process adaptation).
+
+────────────────────────────────────────────────────────────────────────────────────
+**9.1. PHASE 0 (2 WEEKS): PREPARATORY STAGE**
+───────────────────────────────────────────────────────────────────────────────────
+
+**Goal:** Create the technical and organisational foundation for launching the agents.
+
+**9.1.1. Actions**
+
+| Week | Action                                                                 | Responsible               |
+|------|------------------------------------------------------------------------|---------------------------|
+| 1    | **Obtain Wildberries API access** – register application, generate tokens, test connection. | Owner, developer          |
+| 1    | **Collect historical data** – export orders, stock, reviews, competitor prices for the last 12 months (Excel/CSV). | Owner (WB personal account) |
+| 2    | **Set up environment** – deploy basic infrastructure (PostgreSQL, Redis, Python environment) on a local server or cloud. | DevOps, developer         |
+| 2    | **Create DB tables** – execute SQL scripts (see Section 6.1), import historical data. | Developer                 |
+| 2    | **Train owner** – install and first acquaintance with the console (demo mode). | Developer, analyst        |
+
+**9.1.2. Resources**
+- **Developer (Python)** – 0.5 FTE for 2 weeks.
+- **DevOps** – 0.5 FTE for 1 week.
+- **Business owner** – 2–3 hours for obtaining API access and data export.
+
+**9.1.3. Expected results**
+- Working environment (DB, Redis, API keys).
+- Historical data loaded and available for model training.
+- Owner familiarised with console interface.
+
+────────────────────────────────────────────────────────────────────────────────────
+**9.2. PHASE 1 (1–2 MONTHS): ANALYTICAL AGENTS, BASIC DASHBOARD**
+───────────────────────────────────────────────────────────────────────────────────
+
+**Goal:** Launch the first agents for data collection and analysis, provide visualisation of key metrics.
+
+**9.2.1. Actions**
+
+| Week | Action                                                                 | Responsible               |
+|------|------------------------------------------------------------------------|---------------------------|
+| 1–2  | **Develop analytical agents (3,4,5,6,18,20):**                         | Developers (2)            |
+|      | – A3 “Demand analyst” (basic forecast based on history)                |                           |
+|      | – A4 “Review processor” (NLP classification, ruBERT)                   |                           |
+|      | – A5 “News monitor” (RSS/Telegram parsing)                             |                           |
+|      | – A6 “Seasonal forecaster” (calculate coefficients)                   |                           |
+|      | – A1 “Competitive intelligence” (price parsing)                       |                           |
+|      | – A2 “WB API monitor” (fetch orders, stock, reviews)                  |                           |
+| 3    | **Create basic dashboard** – display revenue, stock, rating, task list. | Frontend developer (1)    |
+| 4    | **Integrate with WB API** – set up periodic data collection (Scriptor #3). | Developer                 |
+| 5–6  | **Test in sandbox** – verify agent operation on historical data, calibrate thresholds. | Analyst, developer        |
+| 7–8  | **Pilot launch** – activate agents in real time, monitor, train owner on dashboard use. | Owner, analyst            |
+
+**9.2.2. Resources**
+- **Developers (Python)** – 2 persons × 50% for 2 months.
+- **Frontend developer (React)** – 1 person × 50% for 1 month.
+- **Data analyst** – 1 person × 50% for 1 month.
+- **Business owner** – 2–3 hours per week for feedback.
+
+**9.2.3. Expected KPIs**
+
+| KPI                                        | Baseline | Target (after 2 months) |
+|--------------------------------------------|---------|-------------------------|
+| Review response time (hours)               | 48      | ≤12                     |
+| Demand forecast accuracy (MAPE)            | –       | <25%                    |
+| Share of automatically processed reviews   | 0%      | >60% (classification)   |
+| Data update frequency in dashboard         | –       | real‑time (delay <5 min)|
+
+**9.2.4. Transition criteria to Phase 2**
+- All six analytical agents operate stably (error rate <2%).
+- Owner confirms the dashboard is useful and ready for expansion.
+- Demand forecast accuracy MAPE <25% on the test set.
+
+────────────────────────────────────────────────────────────────────────────────────
+**9.3. PHASE 2 (3–4 MONTHS): FORECAST MODULE, PRICING, INVENTORY MANAGEMENT**
+───────────────────────────────────────────────────────────────────────────────────
+
+**Goal:** Implement demand forecasting, dynamic pricing, and procurement automation.
+
+**9.3.1. Actions**
+
+| Week | Action                                                                 | Responsible               |
+|------|------------------------------------------------------------------------|---------------------------|
+| 1–2  | **Enhance demand forecast model (A3)** – implement ensemble (Prophet + ARIMA + Holt‑Winters), account for weather and holidays. | Analyst, developer        |
+| 3–4  | **Develop “Pricing strategist” agent (B1)** – logit model, integrate with A1 and A3, calculate optimal price. | Developer (ML)            |
+| 4–5  | **Develop “Inventory manager” agent (D3)** – (s,S) model, create production orders. | Developer                 |
+| 6    | **Integrate with 1С** – import cost, update `sku.cost`. | Developer                 |
+| 7–8  | **Test in sandbox** – run on historical data, calibrate thresholds (s, minimum margin). | Analyst, developer        |
+| 9–10 | **Pilot launch** on 5–10 SKUs (fast‑moving items). Monitor margin, shortages. | Owner, analyst            |
+| 11–12| **Adjust** – retrain models, set thresholds for automatic price application. | Analyst, developer        |
+
+**9.3.2. Resources**
+- **Developers (Python/ML)** – 2 persons × 100% for 2 months.
+- **Data analyst** – 1 person × 100% for 2 months.
+- **Business owner** – 3–4 hours per week (price approval, feedback).
+
+**9.3.3. Expected KPIs**
+
+| KPI                                        | Baseline | Target (after 4 months) |
+|--------------------------------------------|----------|-------------------------|
+| Gross margin                               | 27%      | 32% (+5 p.p.)           |
+| Inventory turnover (days)                  | 45       | 30                      |
+| Peak‑season shortage (%)                   | 15%      | 8%                      |
+| Share of automatically set prices          | 0%       | >60% (fast‑moving SKUs) |
+| Forecast accuracy (MAPE)                   | 25%      | <20%                    |
+
+**9.3.4. Transition criteria to Phase 3**
+- Pricing model improves margin by at least 3 percentage points on the pilot group.
+- Inventory management system prevents shortages for pilot SKUs (shortage <5%).
+- Owner trusts automated recommendations (acceptance rate >70%).
+
+────────────────────────────────────────────────────────────────────────────────────
+**9.4. PHASE 3 (5–6 MONTHS): EXECUTIVE AGENTS, OPERATOR CONSOLE**
+───────────────────────────────────────────────────────────────────────────────────
+
+**Goal:** Automate routine executive operations: taxes, advertising, logistics, finance, customer service.
+
+**9.4.1. Actions**
+
+| Week | Action                                                                 | Responsible               |
+|------|------------------------------------------------------------------------|---------------------------|
+| 1–2  | **Develop executive agents:**                                         | Developers (2)            |
+|      | – D1 “Tax calculator” (calculate simplified tax, generate payment orders) |                           |
+|      | – D2 “Ad optimiser” (manage bids, budgets)                            |                           |
+|      | – D4 “Logistics dispatcher” (shipment requests, print labels)         |                           |
+|      | – D5 “Financial controller” (P&L, cash flow)                          |                           |
+|      | – D6 “Legal assistant” (check contracts, claims)                      |                           |
+|      | – D7 “Customer service” (auto‑replies to reviews, escalation)         |                           |
+|      | – D8 “Document flow” (invoices, waybills)                             |                           |
+| 3–4  | **Integrate with bank** – download statements, generate payment orders in 1С/CSV format. | Developer                 |
+| 5–6  | **Develop full operator console** – web interface with dashboards, task queue, settings. | Frontend developer (1), UX designer (1) |
+| 7–8  | **Test** – run all executive agents in sandbox, verify correctness of payments, shipments, replies. | Developers, analyst       |
+| 9–10 | **Canary deployment** – gradually enable on real operations (first taxes and documents, then advertising, then logistics). | Owner, analyst            |
+| 11–12| **Train owner** – console management, setting limits, handling exceptions. | Analyst, developer        |
+
+**9.4.2. Resources**
+- **Developers (Python)** – 2 persons × 100% for 2 months.
+- **Frontend developer (React)** – 1 person × 100% for 2 months.
+- **UX designer** – 1 person × 50% for 1 month.
+- **Analyst** – 1 person × 50% for 2 months.
+
+**9.4.3. Expected KPIs**
+
+| KPI                                        | Baseline | Target (after 6 months) |
+|--------------------------------------------|----------|-------------------------|
+| Automation of routine operations (%)       | 5%       | 70%                     |
+| Owner time saved (hours/month)             | –        | 20                      |
+| ROMI (advertising)                         | not measured | >200%                 |
+| Shipment request processing time (min)     | 30       | 5                       |
+| Share of automatically paid taxes          | 0%       | 100% (with confirmation)|
+
+**9.4.4. Transition criteria to Phase 4**
+- At least 70% of routine operations are performed by agents without human intervention.
+- Owner spends no more than 10 hours per week on business management (vs 35+).
+- Financial reports and taxes are generated automatically with >99% accuracy.
+
+────────────────────────────────────────────────────────────────────────────────────
+**9.5. PHASE 4 (7–12 MONTHS): CREATIVE AGENTS, ASSORTMENT SCALING, NEW CHANNELS**
+───────────────────────────────────────────────────────────────────────────────────
+
+**Goal:** Achieve “singularity” – fully autonomous business orchestration, enable new product generation and expansion to other marketplaces.
+
+**9.5.1. Actions**
+
+| Month | Action                                                                 | Responsible               |
+|-------|------------------------------------------------------------------------|---------------------------|
+| 7     | **Activate GENESIS (E1)** – launch idea generator based on trends and reviews. | Developer (ML)            |
+| 7     | **Develop creative agents:**                                           | Developers (2)            |
+|       | – E2 “Process engineer” (check manufacturability)                      |                           |
+|       | – E3 “Creative marketer” (generate descriptions, creatives)           |                           |
+|       | – E4 “Test analyst” (A/B tests)                                       |                           |
+|       | – E5 “Trend scout” (social media, search queries analysis)            |                           |
+| 8     | **Integrate with Ozon / Yandex.Market** – expand sales channels.       | Developer                 |
+| 9     | **Create autonomous product launch loop** – chain GENESIS → E2 → E3 → E4 → D2 → D4. | Developers                |
+| 10    | **Scale assortment** – automatically test and launch 5–10 new SKUs per month. | Developers, analyst       |
+| 11    | **Enhance console** – add creative agent management panel (new product approval). | Frontend developer        |
+| 12    | **Achieve singularity** – full autonomy (owner only sets strategic goals). | Owner, analyst            |
+
+**9.5.2. Resources**
+- **Developers (ML/Backend)** – 2 persons × 100% for 6 months.
+- **Frontend developer** – 1 person × 50% for 3 months.
+- **Analyst** – 1 person × 50% for 6 months.
+
+**9.5.3. Expected KPIs**
+
+| KPI                                        | Baseline | Target (after 12 months) |
+|--------------------------------------------|----------|--------------------------|
+| Revenue (monthly, million RUB)             | 6.1      | +50% YoY (9–10)          |
+| Number of SKUs                             | 40       | >500                     |
+| Share of successful new products (%)       | –        | >30% (ROMI >50%)         |
+| Time to launch new product (days)          | 60–90    | <30                      |
+| Share of revenue from new channels (Ozon etc.) | 0%    | >20%                     |
+| Automation of operations (%)               | 70% (after Phase 3) | 95%                      |
+| Singularity (year achieved)                | –        | 2027 (end of year)       |
+
+**9.5.4. Project completion criteria**
+- Revenue increased by at least 50% compared to the base year.
+- The system autonomously generates and launches at least 5 new products per month.
+- Owner spends less than 5 hours per week on operational management, focused on strategy.
+- Technical documentation and code transferred to the owner (or a support contract signed).
+
+═══════════════════════════════════════════════════════════════════════════════════
+**NOTE:** The roadmap may be adjusted based on actual implementation progress and
+owner feedback. Each phase has clear transition criteria, allowing the project to be
+paused or rolled back if necessary. The flexible approach ensures achievement of
+target KPIs without undue risk.

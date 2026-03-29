@@ -1,0 +1,166 @@
+═══════════════════════════════════════════════════════════════════════════════════
+PROTOCOL: 4.4. INTEGRATION WITH THE EXISTING STACK
+Project: Sourcegraph GTM Infrastructure
+═══════════════════════════════════════════════════════════════════════════════════
+
+**4.4. INTEGRATION WITH THE EXISTING STACK (SALESFORCE, SNOWFLAKE, HIGHTOUCH, 6SENSE, SALESLOFT, GAINSIGHT, TABLEAU)**
+
+The target architecture does not replace Sourcegraph’s existing tools but builds on top of them, using their APIs and event‑driven integration capabilities. All systems remain sources of truth in their respective domains but are connected into a unified data fabric via an event bus (AWS EventBridge + Kafka) and reverse ETL (Hightouch). This protocol details the role of each tool, integration methods, data flows, and measures for security and reliability.
+
+────────────────────────────────────────────────────────────────────────────────────
+4.4.1. OVERALL INTEGRATION ARCHITECTURE
+────────────────────────────────────────────────────────────────────────────────────
+
+**Central elements**
+
+1. **Event Bus** – AWS EventBridge (primary) + Apache Kafka (for long‑term storage and handling of large volumes). All systems publish events (data changes) to EventBridge, which routes them to subscribers (agents, other systems). Kafka is used for job queues and reliable transfer between orchestration levels.
+
+2. **Data Warehouse** – Snowflake. Stores all historical data: product events, intent signals, financial data, agent logs. Serves as a source for analytics, model training, and reverse ETL.
+
+3. **Reverse ETL** – Hightouch. Synchronizes data from Snowflake to Salesforce in real time (webhooks), updating Account, Opportunity, Activity fields.
+
+4. **CRM** – Salesforce. System of truth for customer data, deals, activities. All automated agent actions that require writing to CRM are performed via Salesforce API or Platform Events.
+
+5. **Source systems** – 6sense (intent), Gainsight (customer success), SalesLoft (outreach), Tableau (BI). They provide data and accept commands from agents via APIs.
+
+**Data flow diagram (textual description)**
+
+[6sense] --(REST API)--> [Snowflake] --(reverse ETL)--> [Salesforce] --(Platform Events)--> [EventBridge] --> [Agents]
+[Snowflake] <--(Streams)--> [Agents] --(API)--> [Salesforce, Gainsight, SalesLoft, Tableau]
+[Gainsight] --(API)--> [Salesforce] --(Events)--> [EventBridge]
+[SalesLoft] --(API)--> [Salesforce] --(Events)--> [EventBridge]
+
+────────────────────────────────────────────────────────────────────────────────────
+4.4.2. DETAILED INTEGRATIONS BY TOOL
+────────────────────────────────────────────────────────────────────────────────────
+
+**4.4.2.1. Salesforce (CRM)**
+- **Role in architecture:** central system of truth for customer data, deals, activities, forecasts. All operational data (Account, Opportunity, Activity) is stored here and synchronized with other systems via API.
+- **Integration mechanisms:**
+  - **Platform Events** – publish events when records are created/updated. Used to trigger agents (e.g., when an Opportunity is updated).
+  - **REST API (v58+)** – for agents to update data (create tasks, change fields). Custom objects (e.g., `Agent_Task__c`) are used to track actions.
+  - **Bulk API** – for mass updates (e.g., initial data loading). Used rarely, mainly for backfills.
+- **Key objects and fields (additions to existing):**
+  - **Account:** `ICP_Fit__c`, `Intent_Strength__c`, `Health_Score__c`, `Strategic_Ideology__c`, `Last_Activity_Date__c`, `Risk_Flag__c`.
+  - **Opportunity:** `Win_Probability__c`, `Forecast_Category__c`, `MEDDPICC_Fields__c` (JSON), `Forecast_Accuracy__c`.
+  - **Activity:** `Created_by_Agent_ID__c`, `Agent_Task_ID__c`, `Outcome__c`.
+- **Security:** OAuth2 (Connected App) with least privilege policy; API keys stored in AWS Secrets Manager.
+
+**4.4.2.2. Snowflake (Data Warehouse)**
+- **Role in architecture:** storage for all events, logs, aggregated data. Serves as source for model training, analytics, and reverse ETL.
+- **Integration mechanisms:**
+  - **Snowpipe Streaming** – loads raw events from Kafka and S3 in real time.
+  - **Snowpark** – executes Python code of agents directly inside Snowflake (used for complex aggregations and calculations).
+  - **Streams & Tasks** – automatically refresh data marts (e.g., weekly Health Score calculation for all accounts).
+- **Data flows:**
+  - Incoming: 6sense (via API → S3), product events (Amplitude → S3), Salesforce (via Hightouch reverse ETL, but data already in Salesforce, not duplicated in Snowflake for operational speed).
+  - Outgoing: via Hightouch to Salesforce, via SQL queries to agents.
+- **Security:** Role‑based access (RBAC), encryption at rest (AES‑256) and in transit (TLS 1.3).
+
+**4.4.2.3. Hightouch (Reverse ETL)**
+- **Role in architecture:** synchronizes data from Snowflake to Salesforce in real time. Replaces batch exports (CSV → manual import).
+- **Integration mechanisms:**
+  - **Webhooks (Real‑time sync)** – configured for `Account` and `Opportunity` objects. When data changes in Snowflake (via Streams), Hightouch sends a webhook to Salesforce REST API, updating the corresponding fields.
+  - **Batch synchronization** (for historical data) – used rarely.
+- **Example:** An analyst agent calculates Account Score and writes the result to Snowflake (table `account_scores`). Hightouch detects the change and updates the `Account.Intent_Strength__c` field in Salesforce.
+- **Monitoring:** Hightouch provides a dashboard with sync status; errors are logged to CloudWatch.
+
+**4.4.2.4. 6sense (Intent Data)**
+- **Role in architecture:** provides intent signals (search activity, page visits, competitor queries). Data is used for account prioritization.
+- **Integration mechanisms:**
+  - **REST API** – analyst agents (Level 1) call the 6sense API to get signals for a list of accounts. Frequency: every 30 minutes.
+  - **Webhooks (optional)** – if 6sense supports, push notifications can be configured; current architecture uses pull.
+- **Data flow:**
+  1. Analyst agent requests signals for accounts with high ICP_Fit or those updated recently.
+  2. Retrieved data is enriched and saved to Snowflake.
+  3. Via Hightouch, the `Intent_Strength` field is updated in Salesforce.
+- **Caching:** Results are cached in Redis for 5 minutes to avoid frequent API calls.
+
+**4.4.2.5. SalesLoft (Outreach)**
+- **Role in architecture:** automates email sequences, tracks opens and clicks, records interactions.
+- **Integration mechanisms:**
+  - **REST API** – executor agents (Level 4) create cadences, add contacts, track results.
+  - **Webhooks** – SalesLoft sends events (email open, click, reply) to endpoints that publish events to EventBridge.
+- **Data flow:**
+  - Outgoing: tactical groups (Level 3) create tasks for executor agents, which via API create sequences and add contacts.
+  - Incoming: webhooks from SalesLoft about interactions → EventBridge → analyst agents update `Engagement` fields in Snowflake and Salesforce.
+- **Synchronization with Salesforce:** The standard SalesLoft – Salesforce connector is configured for two‑way sync (contacts, activities). This provides a unified history of interactions.
+
+**4.4.2.6. Gainsight (Customer Success)**
+- **Role in architecture:** manages health score, playbooks, NPS surveys.
+- **Integration mechanisms:**
+  - **REST API** – CS agents (Level 4) update Health Score, trigger playbooks, create tasks for CSMs.
+  - **Salesforce Connector** – standard two‑way Gainsight – Salesforce connector synchronizes Account, Opportunity, Health Score objects.
+- **Data flow:**
+  - Outgoing: analyst agents (Level 1) send Health Score via Gainsight API or through Salesforce (via reverse ETL). Gainsight automatically triggers playbooks when the score changes.
+  - Incoming: Gainsight publishes webhooks about playbook execution, which go to EventBridge and can initiate further actions.
+- **Health Score model:** Uses a custom formula (see 6.2), calculated by analyst agents and synchronized with Gainsight via API or reverse ETL.
+
+**4.4.2.7. Tableau (BI)**
+- **Role in architecture:** visualizes dashboards for leadership, managers, operators. Dashboards update in real time.
+- **Integration mechanisms:**
+  - **Live connection** to Snowflake and Salesforce – for dashboards requiring up‑to‑date data.
+  - **REST API** – executor agents (reporting) can publish pre‑built dashboards or update extracts.
+- **Data flow:**
+  - Executor agents (400) prepare data in Snowflake (aggregates, calculations) and use Tableau API to automatically publish dashboards (e.g., weekly).
+  - Leaders and operators view dashboards via Tableau Server (embedded in the control panel via iframe).
+- **Settings:** Extracts are used for speed, updated on a schedule (every 15 minutes) for non‑critical dashboards; live connection for critical ones (e.g., pipeline coverage).
+
+────────────────────────────────────────────────────────────────────────────────────
+4.4.3. UNIFIED EVENT BUS (AWS EVENTBRIDGE + KAFKA)
+────────────────────────────────────────────────────────────────────────────────────
+
+**4.4.3.1. Role and advantages**
+- **AWS EventBridge** – central event router. Receives events from Salesforce (Platform Events), Gainsight (webhooks), SalesLoft (webhooks), and other systems, and routes them to subscribers (agents, lambda functions).
+- **Apache Kafka (MSK)** – for long‑term event storage, handling large volumes (10⁵ events/sec), and transferring data between orchestration levels (Level 1 → Level 2 → Level 3 → Level 4). Kafka guarantees delivery and allows event replay in case of failures.
+
+**4.4.3.2. Event types and handling**
+
+| Source               | Event Type                      | Handler                                     |
+|----------------------|---------------------------------|---------------------------------------------|
+| Salesforce           | Account/Opportunity change      | EventBridge → analyst agent (Level 1)       |
+| 6sense (pull)        | New intent signals              | Analyst agent (periodic request)            |
+| Gainsight            | Health Score change             | EventBridge → CS agent (Level 4)            |
+| SalesLoft            | Interaction (email open)        | EventBridge → analyst agent (update Engagement) |
+| Agents (results)     | Task completion                 | Kafka → logging, status update              |
+
+**4.4.3.3. EventBridge and Kafka integration scheme**
+- Salesforce Platform Events → EventBridge → (if needed) into Kafka for agent processing.
+- Kafka is used as the primary broker for jobs between levels (e.g., Level 2 publishes accounts with ideologies to a topic that Level 3 reads).
+- EventBridge is used for integration with external webhooks (SalesLoft, Gainsight) and for calling lambda functions (fast handlers).
+
+────────────────────────────────────────────────────────────────────────────────────
+4.4.4. ENSURING RELIABILITY, SECURITY, AND CONSISTENCY
+────────────────────────────────────────────────────────────────────────────────────
+
+**4.4.4.1. Idempotency and transactionality**
+- Each event has a unique `event_id`. Agents check whether an event has already been processed (via Redis or a table in Snowflake) before performing an action. This prevents duplication.
+- For complex chains (e.g., updating Salesforce + calling Gainsight), the Saga pattern is used (orchestrated via EventBridge) with compensating actions on failure.
+
+**4.4.4.2. Fault tolerance**
+- **EventBridge:** automatically replicated across three availability zones.
+- **Kafka:** configured with replication factor = 3, min.insync.replicas = 2.
+- **Lambda:** retries on failures with exponential backoff.
+- **Dead Letter Queue (DLQ):** all events not processed after 3 attempts are placed in SQS for manual handling by operators.
+
+**4.4.4.3. Security**
+- **Authentication:** OAuth2 (Salesforce), API keys (6sense, Gainsight, SalesLoft), IAM (AWS). All keys stored in AWS Secrets Manager, rotated every 90 days.
+- **Encryption:** TLS 1.3 for all external APIs, encryption at rest in Snowflake and S3 (AES‑256).
+- **Audit:** all integration calls are logged in CloudTrail and CloudWatch; logs retained for 1 year.
+
+**4.4.4.4. Monitoring and alerts**
+- **CloudWatch:** metrics per API (latency, errors), Kafka (lag, consumer group health), Lambda (invocations, errors).
+- **Alerts:**
+  - p99 latency > 500 ms for any API → PagerDuty.
+  - error rate > 1% over 5 minutes → email to operators.
+  - Kafka consumer lag > 10,000 → escalation.
+
+────────────────────────────────────────────────────────────────────────────────────
+**CONCLUSIONS ON INTEGRATION WITH THE EXISTING STACK**
+
+- The target architecture fully utilizes Sourcegraph’s existing tools, requiring no replacement. This reduces risks and accelerates implementation.
+- The central integration elements are EventBridge (for events) and Hightouch (for reverse ETL), which provide real‑time synchronization.
+- All data flows are documented, with built‑in reliability mechanisms (retry, DLQ, idempotency) and security.
+- Monitoring and alerts ensure that any failures are detected and handled by operators in a short time.
+
+═══════════════════════════════════════════════════════════════════════════════════

@@ -1,0 +1,135 @@
+═══════════════════════════════════════════════════════════════════════════════════
+PROTOCOL: 12.5. SIMPLE LANGUAGE FOR NON‑TECHNICAL AUDIENCES
+Project: Sourcegraph GTM Infrastructure
+═══════════════════════════════════════════════════════════════════════════════════
+
+**12.5. SIMPLE LANGUAGE FOR NON‑TECHNICAL AUDIENCES**
+
+This section is created for those who want to quickly understand how the new
+GTM system works without diving into technical details. Here we explain key
+concepts in simple words, using everyday analogies.
+
+────────────────────────────────────────────────────────────────────────────────────
+12.5.1. WHAT IS THE AGENT HOLDING?
+────────────────────────────────────────────────────────────────────────────────────
+
+Imagine a **large factory** where thousands of robots work (we call them “agents”).
+The robots do not replace people; they help them by doing boring, repetitive work.
+
+- **On the first floor** there are scout robots (1,024 of them). They gather
+  information from everywhere: who is searching for our products online, which companies
+  are actively using Sourcegraph, which are the best fit for us. They assign each
+  company a score and say: “Call this one urgently, this one can wait.”
+
+- **On the second floor** there are three strategist robots. They decide which
+  tactic to choose: conservative (retain and avoid risk), balanced (grow moderately),
+  or aggressive (go all in, capture the market). They choose a strategy for each
+  customer based on their behaviour and the company’s goals.
+
+- **On the third floor** there are 96 specialised groups. Each knows its industry
+  (finance, technology, retail), its region, and customer size. They tailor emails,
+  prices, and approaches to a specific audience.
+
+- **On the fourth floor** there are 3,000 executor robots. They do all the dirty work:
+  * 500 robots process interest signals (who is searching for our product).
+  * 800 manage the sales funnel (create tasks, remind about meetings).
+  * 700 monitor customer health (if someone stops using the product – alert immediately).
+  * 600 calculate money, commissions, forecasts.
+  * 400 prepare reports for leadership.
+
+And the human dispatchers sit at the control panel, watching screens and managing
+this whole operation: setting goals, changing rules, handling complex cases.
+
+**The main idea:** robots do the routine, people do what really matters – talking
+to customers, strategy, and creativity.
+
+────────────────────────────────────────────────────────────────────────────────────
+12.5.2. HOW DOES HEALTH SCORE WORK?
+────────────────────────────────────────────────────────────────────────────────────
+
+**Health Score** is a “traffic light” for a customer. The system constantly monitors
+how the customer uses the product, whether they contact support, whether they
+participate in webinars. Based on this, each customer receives a score from 0 to 1.
+
+- **Green light (0.8–1.0)** – the customer is happy, actively uses the product,
+  risk of churn is low. We can offer them additional features (upsell).
+- **Yellow light (0.5–0.8)** – there are minor issues. We need to pay attention,
+  talk to the customer, find out what’s wrong.
+- **Red light (below 0.5)** – the customer is about to leave. The system automatically
+  creates a task for the Customer Success Manager (CSM), sends an email to the customer
+  offering help. If nothing changes within a few days, the manager is escalated.
+
+**Why is this needed?** Previously, managers learned about problems when the customer
+was already leaving. Now the system alerts us early, and we can intervene before it’s
+too late. It’s like an oil pressure sensor in a car: if the light comes on, you go
+to a service station, you don’t wait for the engine to seize.
+
+────────────────────────────────────────────────────────────────────────────────────
+12.5.3. WHY ARE FORECASTS IMPORTANT?
+────────────────────────────────────────────────────────────────────────────────────
+
+Imagine you are planning your family budget for the year. You know how much money
+will come in, when you need to pay rent, for school, for vacation. Without this,
+you either overspend or run out of money at the worst time.
+
+In business, it’s the same. To hire new salespeople on time, plan advertising
+campaigns, meet investor commitments, you need to know in advance how much money
+we will earn in the next quarter.
+
+Our system forecasts revenue based on:
+- Current negotiations (which deals we are working on, what stage they are at).
+- History of successful deals (how often we close similar types of deals).
+- The economic situation (if there is a crisis, companies spend less).
+
+Forecast accuracy is above 90%. This means we make mistakes less than 10% of the time,
+which is very good for business.
+
+**The main point:** accurate forecasts allow us to plan the future confidently,
+rather than guess.
+
+────────────────────────────────────────────────────────────────────────────────────
+12.5.4. HOW DO TRIGGERS HELP SELLERS?
+────────────────────────────────────────────────────────────────────────────────────
+
+**Triggers** are automatic rules “if A happens, then do B”.
+They work like a smart assistant that tells you what needs to be done.
+
+Examples:
+
+- **“Interest” trigger**  
+  *If* a potential customer starts searching online for “code search”
+  or “code intelligence”, *then* the system immediately creates a task for the
+  analyst (Sales Strategist): “Call Ivan Ivanov, he is looking for a solution.”
+
+- **“Risk” trigger**  
+  *If* a customer stops using the product for 14 days, *then* the system
+  automatically includes them in a mailing list with useful materials and reminds
+  the manager to reach out.
+
+- **“Expansion” trigger**  
+  *If* a customer is actively using the product and their number of employees
+  has increased by 30%, *then* the system creates a task for the account manager:
+  “Offer this customer additional licenses.”
+
+- **“Pipeline alert” trigger**  
+  *If* at the beginning of the quarter we see that there are too few deals in the
+  pipeline, *then* the system sends a warning to leadership: “We urgently need to
+  increase the marketing budget, otherwise the plan will not be met.”
+
+**Why is this useful for sellers?** Instead of having to browse customer lists
+every day hoping to find something, the seller receives ready‑made tasks only when
+they are actually needed. This saves time and allows them to focus on negotiations
+rather than searching for information.
+
+────────────────────────────────────────────────────────────────────────────────────
+**CONCLUSIONS FOR NON‑TECHNICAL AUDIENCES**
+
+- The agent holding is a factory of helper robots that take over routine tasks.
+- Health Score is a traffic light showing how a customer is feeling.
+- Forecasts are a navigation tool that helps plan budgets and resources.
+- Triggers are smart reminders that tell you what to do and when.
+
+All these tools work together so we can react faster, plan more accurately,
+and spend less time on boring work.
+
+═══════════════════════════════════════════════════════════════════════════════════

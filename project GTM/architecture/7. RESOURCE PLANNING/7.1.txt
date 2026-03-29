@@ -1,0 +1,179 @@
+═══════════════════════════════════════════════════════════════════════════════════
+PROTOCOL: 7.1. HEADCOUNT MODEL (AE, CSM, AM, REVOPS STAFFING)
+Project: Sourcegraph GTM Infrastructure
+═══════════════════════════════════════════════════════════════════════════════════
+
+**7.1. HEADCOUNT MODEL (AE, CSM, AM, REVOPS STAFFING)**
+
+────────────────────────────────────────────────────────────────────────────────────
+7.1.1. PURPOSE AND CONTEXT
+────────────────────────────────────────────────────────────────────────────────────
+
+The headcount model determines the optimal number of key GTM roles (Account Executive,
+Customer Success Manager, Account Manager, Revenue Operations) to achieve target
+ARR, net retention, and win rate given budget constraints. The model is an integral
+part of annual planning (see 7.4) and is recalculated quarterly based on current
+revenue forecasts (Section 6.4) and team performance data.
+
+**Key principles:**
+- **Data‑driven:** all calculations are based on historical metrics (performance,
+  hiring time, ramp‑up) and forecast models.
+- **Automation:** financial agents (Level 4) update the calculations monthly,
+  providing recommendations to RevOps and management.
+- **Flexibility:** RevOps operators can adjust coefficients (e.g., CSM service ratio)
+  via the control panel.
+
+────────────────────────────────────────────────────────────────────────────────────
+7.1.2. INPUT DATA AND METRICS
+────────────────────────────────────────────────────────────────────────────────────
+
+| Metric                                      | Symbol    | Source                                  | Update Frequency    |
+|---------------------------------------------|-----------|-----------------------------------------|---------------------|
+| Target ARR (new customers)                  | ARR_new   | Strategic OKRs / forecast               | Year / Quarter      |
+| Target ARR from expansion                   | ARR_exp   | Strategic OKRs / forecast               | Year / Quarter      |
+| Average AE productivity (ARR/year)          | AE_prod   | Historical data (Salesforce)            | Monthly             |
+| Win rate (enterprise)                       | WR        | Historical data (Salesforce)            | Monthly             |
+| Average sales cycle length (days)           | Cycle     | Historical data (Salesforce)            | Monthly             |
+| Number of active enterprise customers       | N_cust    | Salesforce (Account)                    | Monthly             |
+| CSM service ratio (customers per CSM)       | CSM_ratio | Industry benchmark / history            | Configurable        |
+| AM workload ratio (customers per AM)        | AM_ratio  | Industry benchmark / history            | Configurable        |
+| Number of active agents (in the holding)    | N_agents  | Agent system monitoring                 | Daily               |
+| RevOps support ratio (agents per RevOps)    | RevOps_ratio | Complexity estimate / experience      | Configurable        |
+
+All metrics are stored in Snowflake (data marts) and accessible to financial agents
+via Snowpark.
+
+────────────────────────────────────────────────────────────────────────────────────
+7.1.3. CALCULATION FORMULAS BY ROLE
+────────────────────────────────────────────────────────────────────────────────────
+
+**7.1.3.1. Account Executive (AE)**
+
+The number of AEs needed to achieve the target ARR from new customers:
+
+`AE_needed = (ARR_new_target / AE_prod) × (1 / (1 – vacancy_rate))`
+
+where:
+- `ARR_new_target` – target annual ARR from new customers (excluding expansion).
+- `AE_prod` – average annual productivity of one AE (historical, adjusted for
+  expected win rate and cycle length). Detailed formula:
+  `AE_prod = (average deal size) × (number of closed deals per year)`
+- `vacancy_rate` – vacancy factor (usually 5–10%) accounting for hiring and ramp‑up time.
+
+Example (hypothetical):
+- ARR_new_target = $30M
+- AE_prod = $2.5M (average for enterprise AEs)
+- vacancy_rate = 0.1
+  `AE_needed = (30 / 2.5) × (1 / 0.9) = 12 × 1.111 ≈ 13.3` → 14 AEs.
+
+**7.1.3.2. Customer Success Manager (CSM)**
+
+The number of CSMs is determined by the number of active enterprise customers
+and the service ratio:
+
+`CSM_needed = N_cust_enterprise / CSM_ratio`
+
+where:
+- `N_cust_enterprise` – number of customers requiring a dedicated CSM
+  (usually enterprise segment, possibly also mid‑market with high risk).
+- `CSM_ratio` – service ratio, e.g., 50–100 customers per CSM
+  (depending on product complexity and lifecycle stage).
+
+Example:
+- N_cust_enterprise = 400
+- CSM_ratio = 80
+  `CSM_needed = 400 / 80 = 5` CSMs.
+
+**7.1.3.3. Account Manager (AM)**
+
+The number of AMs is calculated based on the number of customers ready for expansion
+(or in the “green” Health Score zone) and the AM workload ratio:
+
+`AM_needed = N_cust_expansion_ready / AM_ratio`
+
+where:
+- `N_cust_expansion_ready` – number of customers with `Health_Score__c ≥ 0.8`
+  and/or with active expansion signals.
+- `AM_ratio` – workload ratio, e.g., 100–150 customers per AM.
+
+Example:
+- N_cust_expansion_ready = 300
+- AM_ratio = 120
+  `AM_needed = 300 / 120 = 2.5` → 3 AMs.
+
+**7.1.3.4. Revenue Operations (RevOps)**
+
+The number of RevOps staff depends on the complexity of automation, the number of agents,
+and the volume of integrations:
+
+`RevOps_needed = (N_agents × complexity_factor + N_integrations × 0.1) / RevOps_ratio`
+
+where:
+- `N_agents` – total number of agents in the holding (see Section 4.2).
+- `complexity_factor` – complexity factor (e.g., 0.05 for simple agents,
+  0.1 for complex ones).
+- `N_integrations` – number of external systems (Salesforce, 6sense, Gainsight, …).
+- `RevOps_ratio` – support ratio: how many agents can one RevOps support
+  (e.g., 50–100).
+
+Example:
+- N_agents = 3000
+- complexity_factor = 0.07 (average)
+- N_integrations = 7
+- RevOps_ratio = 80
+  `RevOps_needed = (3000 × 0.07 + 7 × 0.1) / 80 = (210 + 0.7) / 80 ≈ 2.63` → 3 RevOps.
+
+────────────────────────────────────────────────────────────────────────────────────
+7.1.4. AUTOMATION AND THE ROLE OF AGENTS
+────────────────────────────────────────────────────────────────────────────────────
+
+- **Financial agents (Level 4)** perform the following steps monthly:
+  1. Extract target OKRs (ARR_new_target, ARR_exp_target) from the planning system
+     (e.g., from a custom object in Salesforce).
+  2. Query historical performance data (AE_prod, CSM_ratio, …) from Snowflake.
+  3. Calculate the required headcount using the formulas above.
+  4. Save the results in Snowflake (table `headcount_forecast`).
+  5. Via Hightouch, update fields in Salesforce (e.g., on the `Plan__c` object)
+     and publish an event to notify RevOps.
+
+- **The control panel** displays the current headcount, forecasted demand,
+  and the difference. RevOps operators can adjust coefficients (CSM_ratio,
+  AM_ratio, vacancy_rate) and rerun the calculation.
+
+────────────────────────────────────────────────────────────────────────────────────
+7.1.5. EXAMPLE FINAL CALCULATION (Q1, 2027)
+────────────────────────────────────────────────────────────────────────────────────
+
+| Role      | Formula                                      | Result (rounded) |
+|-----------|----------------------------------------------|------------------|
+| AE        | (ARR_new=30M / AE_prod=2.5M) × (1/(1-0.1))  | 14               |
+| CSM       | N_cust=400 / CSM_ratio=80                    | 5                |
+| AM        | N_exp=300 / AM_ratio=120                     | 3                |
+| RevOps    | (3000×0.07 + 7×0.1) / 80                     | 3                |
+
+**Total headcount:** 25 people (excluding managers, who are considered separately).
+
+────────────────────────────────────────────────────────────────────────────────────
+7.1.6. CALIBRATION AND ADJUSTMENT
+────────────────────────────────────────────────────────────────────────────────────
+
+- **Quarterly:** actual metrics (ARR attainment, AE productivity, number of customers)
+  are compared to the forecast. If the deviation exceeds 15%, the model is recalculated
+  with new parameters.
+- **Annually:** coefficients (CSM_ratio, AM_ratio, vacancy_rate) are reviewed based on
+  industry benchmarks and feedback from management.
+- **Manual adjustment:** RevOps operators can temporarily increase headcount for
+  strategic initiatives (e.g., launch of a new product) via the control panel,
+  with comments recorded.
+
+────────────────────────────────────────────────────────────────────────────────────
+**CONCLUSIONS ON THE HEADCOUNT MODEL**
+
+- The model provides objective, data‑driven planning of key GTM role headcount,
+  aligned with revenue forecasts and strategic goals.
+- Automation through financial agents reduces the RevOps workload and increases
+  calculation accuracy.
+- Flexible parameter adjustment allows the model to adapt to business changes
+  without rewriting code.
+
+═══════════════════════════════════════════════════════════════════════════════════

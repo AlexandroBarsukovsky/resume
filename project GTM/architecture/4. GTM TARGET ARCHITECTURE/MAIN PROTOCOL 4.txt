@@ -1,0 +1,290 @@
+═══════════════════════════════════════════════════════════════════════════════════
+SECTION 4. TARGET GTM ARCHITECTURE
+Project: Sourcegraph GTM Infrastructure
+═══════════════════════════════════════════════════════════════════════════════════
+
+**4. TARGET GTM ARCHITECTURE**
+
+This section describes the target architecture of Sourcegraph’s GTM infrastructure.
+The architecture is built on four key principles:
+data atomicity, event‑driven automation, multi‑level orchestration,
+and hybrid governance. It ensures scalability, transparency,
+and high precision of operational decisions required for successfully completing
+Sourcegraph’s GTM transformation.
+
+────────────────────────────────────────────────────────────────────────────────────
+4.1. DESIGN PRINCIPLES
+────────────────────────────────────────────────────────────────────────────────────
+
+**4.1.1. Data Atomicity**
+Every significant event is captured as an indivisible unit. This is the foundation
+upon which all automation is built.
+
+- **Intent signal** (6sense) – captured with a timestamp, source,
+  activity type (search, page view, competitor query).
+- **Product event** (Snowflake) – every click, login,
+  feature usage, configuration change.
+- **CRM change** – creation/update of Account, Opportunity, Activity,
+  stage change, field update.
+
+All events are assigned a unique identifier, timestamp,
+account/contact identifier, and action type. This allows
+restoration of chronology, building of models, and triggering of events.
+
+**4.1.2. Event‑driven Automation**
+Instead of batch processing and manual actions, the system reacts to events
+in real time. Each event (or combination of events) triggers
+a predefined sequence of actions.
+
+- **Event stream:** Salesforce Platform Events + AWS EventBridge.
+- **Handlers:** microservices (agents) that listen to events and execute
+  logic (scoring, task creation, API calls).
+- **Example:** When the Intent_Strength field changes to >0.7, an event is generated,
+  which triggers an analyst agent that creates a task for the Sales Strategist.
+
+**4.1.3. Multi‑Level Orchestration (4 Levels)**
+Functionality is divided into four hierarchical levels, each with its own
+specialization and degree of abstraction. This allows each level to be scaled
+independently and adapted to different segments.
+
+- **Level 1: Mass analysis** – processing large volumes of data,
+  feature extraction, scoring. High parallelism.
+- **Level 2: Strategic ideologies** – selecting a course of action
+  based on business objectives (conservative, balanced, aggressive).
+- **Level 3: Tactical groups** – specialization by industry,
+  region, customer size. Adapting strategy to the segment.
+- **Level 4: Execution cluster** – performing specific operations
+  (task creation, email sending, CRM updates, calculations).
+
+**4.1.4. Hybrid Governance (People + AI Agents)**
+Agents perform routine, predictable operations, but final decisions
+at critical points remain with humans. Human operators set goals,
+adjust thresholds, and handle exceptions.
+
+- **Agent responsibilities:** routine actions that do not require
+  creativity or intuition.
+- **Human responsibilities:** strategic planning, handling
+  complex cases, auditing, model calibration.
+- **The “Control Panel” interface** allows monitoring agent activity
+  and intervening when necessary.
+
+────────────────────────────────────────────────────────────────────────────────────
+4.2. MULTI‑LEVEL ORCHESTRATION (4 LEVELS)
+────────────────────────────────────────────────────────────────────────────────────
+
+**4.2.1. Level 1: Mass Analysis (Collection, Enrichment, Scoring)**
+
+**Composition:**
+- 1,024 analyst agents (horizontally scalable microservices).
+- Data sources: 6sense (intent), Snowflake (product events),
+  Clearbit/ZoomInfo (enrichment), Salesforce (current status).
+
+**Functions:**
+1. **Real‑time data collection** – subscription to event streams.
+2. **Enrichment** – augmenting accounts with data on technology, industry,
+   size, ICP fit.
+3. **Scoring** – calculating Account Score using the formula:
+   `S = 0.4·Intent + 0.3·Usage + 0.3·ICP_Fit`
+   - Intent – strength of the intent signal (0–1) from 6sense, normalized
+     by historical distribution.
+   - Usage – normalized product usage:
+     `U = (DAU/MAU)×0.6 + (active_features/total_features)×0.4`
+   - ICP_Fit – fit to ideal customer profile (0–1) based on Clearbit.
+4. **Risk identification** – monitoring activity decline, negative
+   feedback, health score drops (based on historical data).
+5. **Queue formation** – prioritized account lists
+   for different purposes (outreach, upsell, retention).
+
+**Technical implementation:**
+- Analyst agents are implemented in Python (FastAPI) using
+  Pandas, Scikit-learn for scoring.
+- Data is cached in Redis (TTL 5 min) to reduce load on sources.
+- Results are published to Kafka for delivery to subsequent levels.
+
+**4.2.2. Level 2: Strategic Ideologies**
+
+**Composition:**
+- 3 strategist agents, each implementing one ideology:
+  * **Conservative** – focus on retention, low risk, long‑term
+    contracts, cautious expansion.
+  * **Balanced** – moderate growth, diversification, optimization
+    between retention and market capture.
+  * **Aggressive** – maximum expansion, high risk, priority
+    on new clients, aggressive investment.
+
+**Functions:**
+- Receive prioritized account lists from Level 1.
+- Based on current business objectives (OKRs) and macroeconomic indicators,
+  choose which ideology to apply to each account (or group).
+- Allocate resources (AE attention, marketing budget, channels)
+  according to the chosen strategy.
+- Pass accounts with the assigned strategy to Level 3.
+
+**Technical implementation:**
+- Strategist agents are implemented in Go (high performance,
+  concurrency).
+- They use rules (rule engine) and simple models (logistic regression)
+  to select the ideology.
+- Decisions are recorded in a special Account field (Strategic_Ideology).
+
+**4.2.3. Level 3: Tactical Groups**
+
+**Composition:**
+- 96 tactical groups, specializing in:
+  * **Industries:** finance, technology, retail, manufacturing, healthcare.
+  * **Regions:** US, EMEA, APAC, LATAM.
+  * **Customer size:** SMB (<100 developers), mid‑market (100–1000),
+    enterprise (>1000).
+
+**Functions:**
+- Receive accounts from Level 2 along with the chosen ideology.
+- Adapt tactics to their specialization:
+  * **Messaging** – personalized templates for email/LinkedIn.
+  * **Channels** – selection of preferred channels (direct sales,
+    partners, self‑service).
+  * **Pricing and terms** – base prices, discounts, contract terms.
+- Form concrete tasks for the execution cluster.
+
+**Technical implementation:**
+- Each group is a separate container (Kubernetes), scaled independently.
+- Use templates (Jinja2) to generate personalized messages.
+- Integration with SalesLoft for automated outreach.
+
+**4.2.4. Level 4: Execution Cluster**
+
+**Composition:**
+- 3,000 executor agents, divided by function:
+  * **500 agents – intent signal processing** – enrichment, scoring,
+    preparing data for Level 1.
+  * **800 agents – funnel management** – creating/updating
+    Opportunities, demo tasks, follow‑ups, stage updates.
+  * **700 agents – customer success** – health score monitoring,
+    playbook execution, CSM task creation.
+  * **600 agents – financial operations** – commission calculation,
+    forecasts, plan‑to‑actual analysis, reports for the CFO.
+  * **400 agents – reporting and dashboards** – automatic preparation
+    of QBRs, board packs, insights for leadership.
+
+**Functions:**
+- Perform concrete actions prescribed by higher levels.
+- All actions are logged and audited.
+- If an action cannot be performed (API error, data missing),
+  an incident is raised for the operator.
+
+**Technical implementation:**
+- Executor agents are serverless functions (AWS Lambda) for fast
+  operations, and containers (Kubernetes) for long‑running tasks.
+- They use APIs of Salesforce, SalesLoft, Gainsight, Tableau.
+- For financial calculations – Python with NumPy/Pandas; results stored
+  in Snowflake.
+
+────────────────────────────────────────────────────────────────────────────────────
+4.3. ROLE OF HUMAN OPERATORS (REVOPS, MANAGERS) AND THE CONTROL PANEL INTERFACE
+────────────────────────────────────────────────────────────────────────────────────
+
+**4.3.1. Human Roles and Responsibilities**
+
+- **RevOps Operators** – manage agent work: monitor load,
+  success rates, adjust thresholds and model weights, handle incidents.
+- **Leaders (CRO, VP of Sales, VP of CS)** – set global goals
+  (OKRs), approve ideology changes, analyze reports.
+- **Managers (Sales, CS)** – receive aggregated information about agent
+  work, can override decisions in exceptional cases.
+
+**4.3.2. Control Panel Interface**
+
+The Control Panel is a web application (React) displaying:
+- **Overall dashboard:** number of active agents, operation success rates,
+  key metrics (pipeline coverage, forecast accuracy, health score).
+- **Load by level:** number of tasks in queue, average execution
+  time, errors.
+- **Problem areas:** high‑risk accounts, stalled deals,
+  agents with high error rates.
+- **Action history:** all automatic actions with the ability
+  to view and undo.
+
+Functionality:
+- **Manual intervention:** operator can change an agent’s decision,
+  recalculate scoring, reassign accounts.
+- **Threshold adjustment:** changing weights in Account Score and
+  Health Score formulas without developer involvement.
+- **Log viewing:** detailed information per agent and event.
+
+────────────────────────────────────────────────────────────────────────────────────
+4.4. INTEGRATION WITH THE EXISTING STACK
+────────────────────────────────────────────────────────────────────────────────────
+
+**4.4.1. Overall Integration Architecture**
+
+The target architecture does not replace existing tools but builds
+on top of them, using APIs and an event‑driven approach. Central elements are:
+
+- **Event Bus:** AWS EventBridge + Salesforce Platform Events.
+- **Data Lake / Warehouse:** Snowflake.
+- **Reverse ETL:** Hightouch (real‑time webhooks).
+- **CRM:** Salesforce (system of truth).
+
+**4.4.2. Detailed Tool Integrations**
+
+| Tool         | Role in Architecture                                     | Integration Method                                    |
+|--------------|----------------------------------------------------------|-------------------------------------------------------|
+| Salesforce   | System of truth, Account, Opportunity, Activity objects  | Platform Events for publishing changes; REST API      |
+|              |                                                          | for updating data by agents                           |
+| Snowflake    | Storage for product events, analytics,                   | Reverse ETL via Hightouch (webhooks) to transfer      |
+|              | intent data                                              | data to Salesforce; agents read directly via          |
+|              |                                                          | Snowpark                                              |
+| Hightouch    | Synchronization from Snowflake to Salesforce             | Configure real‑time sync (webhooks), publish          |
+|              |                                                          | events to EventBridge                                 |
+| 6sense       | Intent data                                              | REST API for automatic extraction of intent signals   |
+|              |                                                          | into Snowflake; analyst agents subscribe to           |
+|              |                                                          | updates                                               |
+| SalesLoft    | Outreach, sequences                                      | REST API for creating/updating sequences,             |
+|              |                                                          | tracking opens; integration with Salesforce           |
+|              |                                                          | via custom objects                                    |
+| Gainsight    | Customer success, health score, playbooks                | REST API for health score sync, playbook              |
+|              |                                                          | launch; integration with Salesforce via standard      |
+|              |                                                          | connector                                             |
+| Tableau      | Visualization, dashboards                                | Connection to Salesforce and Snowflake; dashboards    |
+|              |                                                          | updated in real time via live connections             |
+
+**4.4.3. Event‑driven Data Flows**
+
+1. **Intent signal from 6sense** → loaded into Snowflake → Hightouch
+   (real‑time) → update Intent_Strength field in Salesforce →
+   Platform Event → analyst agent recalculates Account Score →
+   if threshold exceeded, creates a task for the Sales Strategist.
+2. **Health Score change** (CS agents) → update in Gainsight →
+   Gainsight API → Salesforce (Health_Score field) → Platform Event →
+   if Health_Score <0.5, an executor agent triggers the retention playbook.
+3. **Opportunity closed (Closed Won)** → Platform Event → executor agent
+   creates a task for the CSM, sends data to Gainsight to begin onboarding.
+4. **Pipeline Coverage <3×** (analyst agents weekly) → create
+   an alert in the Control Panel, send email to CRO.
+
+**4.4.4. Ensuring Reliability and Consistency**
+
+- **Idempotency** – all operations are repeatable; reprocessing an event
+  does not create duplicates.
+- **Dead Letter Queue (DLQ)** – events not processed after three attempts
+  go to a queue for manual handling by operators.
+- **Transactionality** – updates in Salesforce and external systems
+  are performed within a single logical transaction (Saga pattern).
+- **Monitoring** – all integrations are logged in CloudWatch; alerts
+  when latency exceeds 500 ms or error rate exceeds 1%.
+
+────────────────────────────────────────────────────────────────────────────────────
+**PROJECT CONCLUSIONS**
+- The proposed architecture fully satisfies the principles of atomicity,
+  event‑driven, multi‑level orchestration, and hybrid governance.
+- It ensures scalability (3,000+ agents, 10⁵ events/sec)
+  and transparency.
+- Integration with the existing stack does not require replacing tools,
+  only fine‑tuning APIs and implementing an event bus.
+- The role of human operators and the Control Panel interface guarantee
+  the preservation of high agency and manual control capabilities.
+
+═══════════════════════════════════════════════════════════════════════════════════
+**Note:** This protocol is a complete exposition of Section 4.
+All numerical parameters (number of agents, thresholds) may be adjusted
+during calibration, but the architectural approach remains unchanged. Additional appendices for each subsection are provided in the folder.
+═══════════════════════════════════════════════════════════════════════════════════

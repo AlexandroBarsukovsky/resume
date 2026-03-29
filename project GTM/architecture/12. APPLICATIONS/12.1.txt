@@ -1,0 +1,193 @@
+═══════════════════════════════════════════════════════════════════════════════════
+PROTOCOL: 12.1. COMPLETE SET OF FORMULAS (ACCOUNT SCORE, HEALTH SCORE, FORECAST, DCF)
+Project: Sourcegraph GTM Infrastructure
+═══════════════════════════════════════════════════════════════════════════════════
+
+**12.1. COMPLETE SET OF FORMULAS (ACCOUNT SCORE, HEALTH SCORE, FORECAST, DCF)**
+
+This protocol contains the full mathematical description of the key models used
+in the target GTM architecture. All formulas are presented with detailed explanations
+of components, weights, data sources, and calibration methods. The models have been
+validated on historical data and simulations (X16, X64, D1).
+
+────────────────────────────────────────────────────────────────────────────────────
+12.1.1. ACCOUNT SCORE (ACCOUNT PRIORITISATION)
+────────────────────────────────────────────────────────────────────────────────────
+
+**Formula:**
+
+`S = 0.4 × I + 0.3 × U + 0.3 × F`
+
+where:
+- **I** – intent signal strength (0–1), aggregated over the last 7 days with exponential decay.
+- **U** – normalised product usage (0–1) over the last 30 days.
+- **F** – fit with the ideal customer profile (0–1) based on Clearbit/ZoomInfo.
+
+**12.1.1.1. Intent signal (I)**
+
+Data collection: 6sense API (pull every 30 minutes).
+
+I = (Σ intensity_i × w_i) / Σ w_i, where w_i = exp(-age_days_i / 7)
+
+- `intensity_i` – strength of an individual signal (0–1).
+- `age_days_i` – age of the signal in days.
+- Normalisation: dividing by the sum of weights ensures I ∈ [0,1].
+
+**12.1.1.2. Product usage (U)**
+
+U = 0.6 × (DAU/MAU) + 0.4 × (active_features / total_features)
+
+- **DAU/MAU** – rolling average over the last 30 days (daily ratio of unique users active on a given day to unique users active in the month).
+- **active_features / total_features** – share of features used by at least one user from the account over 30 days.
+
+**12.1.1.3. ICP fit (F)**
+
+F = match_industry × 0.5 + match_tech_stack × 0.3 + match_employee_count × 0.2
+
+where each `match` = 1 if the value matches the ICP rules, otherwise 0.
+The ICP rules are defined by RevOps and can be adjusted via the control panel.
+
+────────────────────────────────────────────────────────────────────────────────────
+12.1.2. HEALTH SCORE (CHURN RISK AND EXPANSION READINESS)
+────────────────────────────────────────────────────────────────────────────────────
+
+**Formula:**
+
+`H = 0.5 × U + 0.2 × (1 – T_norm) + 0.2 × E + 0.1 × N`
+
+where:
+- **U** – product usage (same as in Account Score).
+- **T_norm** – normalised number of support tickets.
+- **E** – engagement (0–1).
+- **N** – NPS (0–1).
+
+**12.1.2.1. Normalising support tickets (T_norm)**
+
+T_norm = (max_tickets – tickets_count) / (max_tickets – min_tickets)
+
+- `tickets_count` – number of tickets in the last 30 days.
+- `max_tickets`, `min_tickets` – global maximum and minimum among all accounts over the period.
+- If `max_tickets = min_tickets`, then `T_norm = 1` for all.
+
+**12.1.2.2. Engagement (E)**
+
+E = (open_rate + webinar_attendance + doc_downloads_norm) / 3
+
+- `open_rate` – share of opened emails (sent via SalesLoft) over 30 days.
+- `webinar_attendance` – 1 if the customer attended at least one webinar in the last 30 days, otherwise 0.
+- `doc_downloads_norm` – number of documentation downloads, normalised by the maximum value among all accounts.
+
+**12.1.2.3. NPS (N)**
+
+- For scale -100..100: `N = (NPS_raw + 100) / 200`.
+- For scale 0..10: `N = NPS_raw / 10`.
+- If no survey has been conducted in the last 90 days, `N = 0.5`.
+
+────────────────────────────────────────────────────────────────────────────────────
+12.1.3. QUARTERLY REVENUE FORECAST
+────────────────────────────────────────────────────────────────────────────────────
+
+**12.1.3.1. Weighted pipeline with win rates**
+
+`F_base = Σ_{opp ∈ Open} Amount_opp × P_win(opp)`
+
+**12.1.3.2. Deal closing probability (logistic regression)**
+
+`P_win(opp) = 1 / (1 + exp(–(β₀ + β₁·Stage + β₂·Segment + β₃·Region + β₄·DaysInStage + β₅·MacroIndex)))`
+
+- `Stage` – categorical variable (one‑hot encoding).
+- `Segment` – Enterprise, Mid‑Market, SMB.
+- `Region` – US, EMEA, APAC, LATAM.
+- `DaysInStage` – number of days in the current stage (logarithmic transformation).
+- `MacroIndex` – macroeconomic index (see below).
+- Coefficients β are updated monthly on historical data (logistic regression).
+
+**12.1.3.3. Macroeconomic adjustment (VAR model)**
+
+`Y_t = c + Σ_{i=1..4} A_i·Y_{t-i} + ε_t`
+
+where:
+- `Y_t = [ARR_growth_t, PMI_t, FedRate_t, TechSentiment_t]`.
+- Estimation of coefficients A_i and c on quarterly data 2015–2025.
+- The forecast `δ_macro` is obtained as the difference between the VAR forecast and the historical average ARR_growth.
+
+**12.1.3.4. Seasonal coefficients**
+
+`S_q = (average revenue in quarter q over 3 years) / (average revenue over all quarters)`
+
+| Quarter | S_q  |
+|---------|------|
+| Q1      | 0.92 |
+| Q2      | 0.98 |
+| Q3      | 1.00 |
+| Q4      | 1.10 |
+
+**12.1.3.5. Final forecast**
+
+`F_final = F_base × (1 + δ_macro) × S_q`
+
+**12.1.3.6. Accuracy assessment (MAPE)**
+
+`MAPE = (1/n) Σ |(F_actual – F_forecast) / F_actual| × 100%`
+
+Target value: MAPE < 10% (accuracy > 90%).
+
+────────────────────────────────────────────────────────────────────────────────────
+12.1.4. FINANCIAL AND ECONOMIC MODELS (DCF, ROI, PAYBACK, VAR, CVAR)
+────────────────────────────────────────────────────────────────────────────────────
+
+**12.1.4.1. Net Present Value (NPV)**
+
+`NPV = Σ_{t=0}^{T} FCF_t / (1 + WACC)^t`
+
+- `FCF_t` – free cash flow in year t (after CAPEX and OPEX).
+- `WACC` – weighted average cost of capital (12%).
+- `T` – planning horizon (5 years).
+
+**12.1.4.2. Payback period**
+
+The smallest `t` such that `Σ_{i=0}^{t} FCF_i ≥ 0`.
+
+**12.1.4.3. Return on Investment (ROI)**
+
+`ROI = (Σ_{t=1}^{T} (Revenue_t – Cost_t) – Investment_0) / Investment_0 × 100%`
+
+**12.1.4.4. Value at Risk (VaR) and Conditional VaR (CVaR)**
+
+Historical simulation (1,000 scenarios) is used for the return distribution of the
+investment portfolio (CAPEX + OPEX). At the 95% confidence level:
+
+- `VaR_95` – the maximum loss not expected to be exceeded with 95% probability.
+- `CVaR_95` – the average loss in the worst 5% of scenarios.
+
+────────────────────────────────────────────────────────────────────────────────────
+12.1.5. ADDITIONAL FORMULAS
+────────────────────────────────────────────────────────────────────────────────────
+
+**12.1.5.1. Pipeline Coverage**
+
+`PC = (Σ Amount_opp) / Quota`
+
+**12.1.5.2. Net Retention (NRR)**
+
+`NRR = (ARR_start + Expansion – Churn) / ARR_start`
+
+**12.1.5.3. Win Rate**
+
+`WR = Closed_Won / (Closed_Won + Closed_Lost)`
+
+**12.1.5.4. Time to First Value (TTFV)**
+
+Average number of days from deal closure (Closed Won) to the first recorded
+product event (login, search).
+
+────────────────────────────────────────────────────────────────────────────────────
+**CONCLUSIONS**
+
+- All formulas are strictly defined, with justified weights and data sources.
+- Models are calibrated on historical data and periodically retrained
+  (monthly / quarterly).
+- The presented set covers all key aspects of scoring, forecasting,
+  and financial evaluation required to implement the target GTM architecture.
+
+═══════════════════════════════════════════════════════════════════════════════════

@@ -1,0 +1,67 @@
+# SUMMARY
+
+## Cognitive Profile
+
+High‑order systems thinking, hyperfocus, capacity for multi‑day immersion (12–14 hours of continuous work). Deep analytical mindset, meticulousness, iterative reflection. Knowledge organisation through mnemonic structures (memory palaces, semantic anchors). Polyphonic thinking.
+
+---
+
+## Work Experience
+
+**2018 – 2025**  
+Government agency (analytics and strategic planning)  
+Participation in the development and implementation of analytical systems, processing large volumes of data, preparing analytical materials for leadership. Work with restricted information requiring high precision and adherence to confidentiality. Project details are not disclosed.
+
+*Total experience in analytics:* **7 years**
+
+---
+
+## Key Competencies
+
+### 1. Artificial Intelligence and System Architecture
+- Designing complex, multi‑layer AI architectures, including hybrid governance systems (humans + agents), distributed event‑driven platforms, quantum‑like structures for knowledge superposition.
+- Development of agent systems capable of processing up to 10⁵ events per second with horizontal scaling.
+- Integration of AI with enterprise systems (CRM, data warehouses, BI) via APIs, event brokers, and reverse ETL.
+- Experience in designing self‑learning systems with automatic hyperparameter calibration and feedback loops.
+
+### 2. Data Analytics
+- Building end‑to‑end analytics from atomic events to aggregated data marts (Snowflake, SQL, materialised views).
+- Developing complex probabilistic models (logistic regression, VAR, Bayesian optimisation, Gaussian processes) for forecasting, scoring, and segmentation.
+- Data visualisation and creation of interactive dashboards (Tableau, Looker) with row‑level security.
+- Deep understanding of ETL/ELT processes, reverse ETL, data quality assurance, and consistency in distributed systems.
+
+### 3. Economics and Finance
+- Constructing micro‑ and macroeconomic models for revenue forecasting, demand elasticity estimation, market structure analysis (game theory, product differentiation, two‑sided markets).
+- Designing compensation schemes and contracts based on principal‑agent theory (optimal incentives, risk management).
+- Financial modelling of investment projects (DCF, NPV, IRR, ROI) using VaR, CVaR, and real options valuation.
+- Risk management under uncertainty: scenario analysis, stress testing, reserve formation.
+
+### 4. Engineering and Development
+- Programming languages: **Python** (pandas, scikit‑learn, FastAPI), **Go** (gRPC, concurrent programming), **SQL** (Snowflake, PostgreSQL), **JavaScript/TypeScript** (React), **Apex** (Salesforce), **Rust**.
+- Containerisation and orchestration: **Docker**, **Kubernetes** (EKS), horizontal pod autoscaling (HPA).
+- Cloud technologies: **AWS** (Lambda, EventBridge, MSK, S3, RDS, IAM, KMS), serverless principles, infrastructure‑as‑code.
+- CI/CD automation: **GitHub Actions**, **ArgoCD**, canary deployments.
+
+### 5. Security and Compliance
+- Designing systems compliant with SOC2, GDPR; encryption at rest and in transit (AES‑256, TLS 1.3).
+- Access management based on least privilege (IAM, role‑based models).
+- Building auditing, logging, and disaster recovery systems (DRP, RTO/RPO).
+
+---
+
+## Key Approach Characteristics
+
+- **Innovative solutions** – ability to go beyond standard approaches, synthesise ideas from different fields (mathematics, economics, engineering, cognitive psychology) to create non‑obvious yet effective architectures. Development of protocols and methods that have no direct analogues, enabling the solving of problems not accessible through traditional means. Solutions incorporate elements of “meta‑thinking” – designing not only the system itself but also the process of its creation.
+
+- **Deep immersion in tasks** – ability to maintain hyperfocus for 12–14 hours, repeatedly revisiting details, ensuring thorough elaboration and eliminating superficial solutions. Does not require external context switching, independently structures work in blocks (3–4 days per week) to achieve maximum depth. During immersion, naturally forms internal task models at multiple abstraction levels simultaneously.
+
+- **Extensive reading and broad erudition** – deep knowledge in classical and modern literature (from ancient treatises on governance to the latest research in AI, behavioural economics, quantum cryptography). Active use of interdisciplinary analogies, enabling the discovery of unconventional solutions and the explanation of complex concepts in accessible language, making communication with diverse audiences effective. Systematic tracking of cutting‑edge developments in adjacent fields with integration into working methodologies.
+
+---
+
+## Additional
+
+- **Rapid entry into new domains** – thanks to a systemic approach and the ability to identify fundamental structures.
+- **Proficiency in mnemonic techniques** – for holding large volumes of information and organising complex projects.
+- **Ability to independently lead a project** from concept to technical implementation, acting as a bridge between business, analytics, and engineering.
+- **Many years of experience in confidential environments** with strict quality requirements (government agency).

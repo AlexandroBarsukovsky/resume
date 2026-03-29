@@ -1,0 +1,167 @@
+═══════════════════════════════════════════════════════════════════════════════════
+PROTOCOL: 2.4. DOCUMENT STRUCTURE
+Project: Sourcegraph GTM Infrastructure
+═══════════════════════════════════════════════════════════════════════════════════
+
+**2.4. DOCUMENT STRUCTURE**
+
+This document, “Target GTM Infrastructure for Sourcegraph”, is a complete architectural specification intended for company leadership, RevOps, Sales, CS, and technical specialists involved in implementation. The document follows a “general to specific” structure and includes 12 main sections, as well as appendices with detailed data and materials for various audiences.
+
+────────────────────────────────────────────────────────────────────────────────────
+**2.4.1. GENERAL DOCUMENT STRUCTURE LOGIC**
+────────────────────────────────────────────────────────────────────────────────────
+
+1. **Introductory Part (Sections 1–2)** – sets the context, formulates objectives, describes the current state and constraints. Aimed at a broad audience, including C‑level, investors, key stakeholders.
+
+2. **Diagnostic Part (Section 3)** – detailed analysis of the current GTM state, identification of pain points, quantitative assessment of the gap between the current and target states.
+
+3. **Architectural Part (Sections 4–6)** – description of the target architecture, CRM design, scoring and forecasting models. Aimed at RevOps, technical specialists, architects.
+
+4. **Planning and Organizational Part (Sections 7–10)** – resource planning, process automation, roles and responsibilities, implementation roadmap. Aimed at managers, executives, implementation teams.
+
+5. **Analytical Part (Section 11)** – risks and mitigations, uncertainty management. Aimed at management and the project office.
+
+6. **Appendices (Section 12)** – technical details, formulas, SQL queries, configurations, materials for non‑technical audiences, glossary. Aimed at all stakeholders.
+
+────────────────────────────────────────────────────────────────────────────────────
+**2.4.2. FULL TABLE OF CONTENTS WITH SECTION DESCRIPTIONS**
+────────────────────────────────────────────────────────────────────────────────────
+
+**Section 1. Executive Summary**
+A brief overview of the project: objective, methodology, key results, expected benefits. Length: 1–2 pages. Intended for CRO, CPO, Sourcegraph leadership, investors.
+
+**Section 2. Introduction: Context and Objective** (this section)
+– 2.1. About Sourcegraph (product, market, customers)
+– 2.2. Current GTM Transformation (PLG → Enterprise)
+– 2.3. Project Goals and Constraints
+– 2.4. Document Structure
+
+**Section 3. Analysis of Current GTM State**
+– 3.1. Sales and Marketing Organizational Structure
+– 3.2. Technology Stack and Its Usage
+– 3.3. Processes: From Lead to Deal, From Onboarding to Expansion
+– 3.4. Key Metrics and Their Reliability
+– 3.5. Identified Pain Points (data fragmentation, manual work, inaccurate forecasts)
+– 3.6. Cultural Characteristics (high agency, remote‑first) and Their Impact on Automation
+
+**Section 4. Target GTM Architecture**
+– 4.1. Design Principles (atomic data, event‑driven, multi‑level orchestration, hybrid governance)
+– 4.2. Multi‑Level Orchestration (4 Levels)
+     4.2.1. Level 1: Mass Analysis (collection, enrichment, scoring)
+     4.2.2. Level 2: Strategic Ideologies (conservative, balanced, aggressive)
+     4.2.3. Level 3: Tactical Groups (specialization by industry, region, size)
+     4.2.4. Level 4: Execution Cluster (automated services by function)
+– 4.3. Role of Human Operators (RevOps, managers) and the Control Panel Interface
+– 4.4. Integration with the Existing Stack (Salesforce, Snowflake, Hightouch, 6sense, SalesLoft, Gainsight, Tableau)
+
+**Section 5. CRM Design (Salesforce)**
+– 5.1. Objects and Key Fields
+     5.1.1. Account (ICP_Fit, Intent_Strength, Health_Score, Last_Activity)
+     5.1.2. Opportunity (Stage, Win_Probability, Forecast_Category, MEDDPICC fields)
+     5.1.3. Activity (Type, Outcome, Created_by_Agent_ID)
+– 5.2. Automation via Triggers (Platform Events, Process Builder, Apex)
+– 5.3. Integration with External Sources (Hightouch, 6sense, Gainsight)
+– 5.4. Reports and Dashboards (Executive Dashboard, Sales Dashboard, CS Dashboard)
+
+**Section 6. Scoring and Forecasting Models**
+– 6.1. Account Score (account prioritization)
+     6.1.1. Formula and Weights
+     6.1.2. Data Sources (intent, product, ICP)
+     6.1.3. Thresholds and Interpretation
+– 6.2. Health Score (churn risk and expansion readiness)
+     6.2.1. Formula and Weights
+     6.2.2. Data Sources (activity, support, engagement, NPS)
+     6.2.3. Color Zones and Playbooks
+– 6.3. Expansion Signals (upsell/cross‑sell signals)
+     6.3.1. Trigger Conditions
+     6.3.2. Automatic Actions
+– 6.4. Quarterly Revenue Forecast
+     6.4.1. Weighted Pipeline Model with Win Rates
+     6.4.2. Macroeconomic Adjustments (VAR Model)
+     6.4.3. Seasonal Coefficients
+     6.4.4. Accuracy Assessment (MAPE)
+
+**Section 7. Resource Planning**
+– 7.1. Headcount Model (AE, CSM, AM, RevOps numbers)
+– 7.2. Territory Design (market segmentation among AEs)
+– 7.3. Compensation Model (base + variable, optimal contract)
+– 7.4. Annual Planning Process (OKR, budgeting)
+
+**Section 8. Automation: Triggers and Workflows**
+– 8.1. Full List of Triggers (event → action)
+– 8.2. Key Playbook Descriptions:
+     8.2.1. Playbook “Retention” (Health Score <0.5)
+     8.2.2. Playbook “Expansion” (Expansion Signal)
+     8.2.3. Playbook “Qualification” (Account Score >0.7)
+     8.2.4. Playbook “Forecast Panic” (Pipeline Coverage <3×)
+– 8.3. Customer Lifecycle and Automatic Role Transitions
+     8.3.1. From Intent Signal to Qualification (Sales Strategist)
+     8.3.2. From Qualification to Deal (AE)
+     8.3.3. From Closed Deal to Onboarding (CSM)
+     8.3.4. From Successful Usage to Expansion (AM)
+
+**Section 9. Roles and Responsibilities**
+– 9.1. Sales Strategist (data analyst, intent handling, handover to AE)
+– 9.2. Account Executive (deal management, MEDDPICC qualification)
+– 9.3. Customer Success Manager (retention, health score, playbooks)
+– 9.4. Account Manager (expansion, contract renewals)
+– 9.5. RevOps (holding management, automation configuration, reporting)
+– 9.6. Control Panel Operators (monitoring, exception handling)
+
+**Section 10. Implementation Roadmap (4 Phases)**
+– 10.1. Phase 1 (1–2 months): Pilot – Analyst Agent + 200 Executors
+     10.1.1. Actions, Resources, Risks
+     10.1.2. Expected KPIs
+– 10.2. Phase 2 (3–4 months): Expansion – Strategist Agent and Dispatcher
+     10.2.1. Actions, Resources, Risks
+     10.2.2. Expected KPIs
+– 10.3. Phase 3 (5–6 months): Scaling – 3,000 Executors, All Functions
+     10.3.1. Actions, Resources, Risks
+     10.3.2. Expected KPIs
+– 10.4. Phase 4 (7–12 months): Optimization and Retraining
+     10.4.1. Actions, Resources, Risks
+     10.4.2. Expected KPIs
+
+**Section 11. Risks and Mitigations**
+– 11.1. Organizational Risks (resistance to change)
+– 11.2. Technical Risks (integration, reliability)
+– 11.3. Financial Risks (budget overrun, unmet expectations)
+– 11.4. Security and Compliance Risks
+– 11.5. Response Plan and Contingency Measures
+
+**Section 12. Appendices**
+– 12.1. Complete Set of Formulas (Account Score, Health Score, Forecast, DCF)
+– 12.2. SQL Queries for Snowflake (examples)
+– 12.3. Salesforce Configuration Files (Process Builder, Flow, Apex snippets)
+– 12.4. Data Schemas (diagrams)
+– 12.5. Simple Language for Non‑Technical Audiences:
+       – What is an Agent Holding?
+       – How does Health Score work?
+       – Why are forecasts important?
+       – How do triggers help sales reps?
+– 12.6. Glossary of Terms
+– 12.7. Literature and Sources
+
+────────────────────────────────────────────────────────────────────────────────────
+**2.4.3. PRESENTATION STYLE**
+────────────────────────────────────────────────────────────────────────────────────
+
+- **Style** – businesslike, direct, without excessive detail, but with the necessary depth. All statements are supported by data, references to sources, or modeling results.
+- **Target audience** – the document is intended for a mixed audience: leadership (C‑level), operational teams (RevOps, Sales, CS), technical specialists (engineers, architects). Appropriate levels of detail are provided for each group (Executive Summary for leadership, technical specifications for engineers, simple language for a broad audience).
+- **Visualization** – the final version will include diagrams (four‑level orchestration scheme, data flows, microservice architecture), which are placed in the appendices (section 12.4).
+
+────────────────────────────────────────────────────────────────────────────────────
+**2.4.4. RELATIONSHIP WITH OTHER ARTIFACTS**
+────────────────────────────────────────────────────────────────────────────────────
+
+This document is the central artifact of the project. Related artifacts include:
+- **Technical documentation** (API specifications, configurations) – placed in the appendices and separate repositories.
+- **Presentation materials** (Executive Summary, brief slides) – created based on sections 1 and 2.
+- **Change Management Plan** – based on section 11 (risks) and section 10 (roadmap).
+- **Training materials** (training guides) – developed based on sections 4, 8, 9, and appendix 12.5 (simple language).
+
+────────────────────────────────────────────────────────────────────────────────────
+**PROJECT CONCLUSIONS**
+- The document structure ensures a logical transition from the general context to detailed technical solutions and an implementation plan.
+- Each section has a clear purpose and target audience, making the document easier to use for different stakeholder groups.
+

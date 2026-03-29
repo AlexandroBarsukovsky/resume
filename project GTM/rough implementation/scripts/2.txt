@@ -1,0 +1,1 @@
+0 3 * * * /opt/sourcegraph-gtm/scripts/backup.sh >> /var/log/backup.log 2>&1

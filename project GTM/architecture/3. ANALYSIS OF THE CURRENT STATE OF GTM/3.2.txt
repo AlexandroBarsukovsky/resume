@@ -1,0 +1,92 @@
+═══════════════════════════════════════════════════════════════════════════════════
+ПРОТОКОЛ: 3.2. ТЕХНОЛОГИЧЕСКИЙ СТЕК И ЕГО ИСПОЛЬЗОВАНИЕ
+Проект: GTM-инфраструктура Sourcegraph
+═══════════════════════════════════════════════════════════════════════════════════
+
+**3.2. TECHNOLOGY STACK AND ITS USAGE**
+
+────────────────────────────────────────────────────────────────────────────────────
+3.2.1. LIST OF TOOLS AND THEIR PURPOSE
+────────────────────────────────────────────────────────────────────────────────────
+
+| Category               | Tool                | Purpose                                      |
+|------------------------|---------------------|----------------------------------------------|
+| CRM                    | Salesforce          | Single source of truth for customers, deals, |
+|                        |                     | activities                                   |
+| Data Warehouse         | Snowflake           | Storage for product events, intent data,     |
+|                        |                     | financial analytics                          |
+| Reverse ETL            | Hightouch           | Synchronization of data from Snowflake to    |
+|                        |                     | Salesforce                                   |
+| Intent Data            | 6sense              | Collection of intent signals (solution search,|
+|                        |                     | website visits, competitor activity)         |
+| Outreach               | SalesLoft           | Automation of email sequences, tracking of   |
+|                        |                     | opens/clicks                                 |
+| Customer Success       | Gainsight (being    | Health score management, playbooks,          |
+|                        | implemented)        | NPS surveys                                  |
+| BI / Analytics         | Tableau / Looker    | Dashboard visualization, reports for         |
+|                        |                     | management                                   |
+| Product Analytics      | Amplitude, Mixpanel | Analysis of product usage (DAU, features,    |
+|                        |                     | cohorts)                                     |
+| Data Enrichment        | Clearbit, ZoomInfo  | Account enrichment (industry, size,          |
+|                        |                     | technologies)                                |
+| Contract Management    | Ironclad / DocuSign | Contract management, electronic signatures   |
+| Help Desk / Support    | Zendesk / Intercom  | Support tickets (integrated with Gainsight)  |
+| Cloud Infrastructure   | AWS                 | Hosting of services, microservices,          |
+|                        |                     | event‑driven components                      |
+
+────────────────────────────────────────────────────────────────────────────────────
+3.2.2. CURRENT LEVEL OF INTEGRATION AND AUTOMATION
+────────────────────────────────────────────────────────────────────────────────────
+
+| Tool                 | Integration Status                           | Automation Status                           |
+|----------------------|----------------------------------------------|----------------------------------------------|
+| Salesforce           | Central hub, but product and intent data     | Partial: manual field updates, triggers      |
+|                      | are synchronized with delay (Hightouch       | not configured                               |
+|                      | operates in batch mode)                      |                                              |
+| Snowflake            | Data loaded via ETL (Fivetran) from product  | No automatic reverse synchronization to CRM  |
+|                      | sources                                      | without reverse ETL                          |
+| Hightouch            | Partially used (few objects)                 | Synchronization is triggered manually or     |
+|                      |                                              | on schedule, not event‑driven                |
+| 6sense               | Signals exported to CSV, manually imported   | No API integration for automatic update of   |
+|                      | into Salesforce                              | Account fields                               |
+| SalesLoft            | Integration with Salesforce via API, but     | Sequences created manually, no triggers      |
+|                      | event synchronization not configured         | from CRM                                     |
+| Gainsight            | Being implemented, integration with          | Health score is being configured, but         |
+|                      | Salesforce via standard connector            | automatic playbooks not yet launched         |
+| Tableau              | Connected to Snowflake and Salesforce,       | Dashboards updated on schedule, preparation  |
+|                      | but data not real‑time                       | requires manual adjustments                  |
+
+────────────────────────────────────────────────────────────────────────────────────
+3.2.3. TECHNICAL CONSTRAINTS AND BOTTLENECKS
+────────────────────────────────────────────────────────────────────────────────────
+
+1. **Lack of real‑time synchronization** – data from Snowflake to Salesforce
+   is updated with a delay of up to several hours (batch mode).
+2. **Manual export/import** – intent signals from 6sense are not automatically
+   integrated into CRM; Sales Strategists spend time processing Excel.
+3. **No event‑driven architecture** – changes in CRM do not trigger automatic
+   actions in other systems (e.g., when an Opportunity is created, a sequence
+   in SalesLoft is not launched).
+4. **API limits** – Salesforce API limits may be exceeded during mass updates,
+   requiring batch processing.
+5. **Fragmented data sources for CS** – Gainsight is not yet integrated with
+   the product and support in real time.
+
+────────────────────────────────────────────────────────────────────────────────────
+3.2.4. DEVELOPMENT POTENTIAL
+────────────────────────────────────────────────────────────────────────────────────
+
+- Salesforce Platform Events can be used for event‑driven integration.
+- Hightouch supports real‑time synchronization via webhooks.
+- 6sense has a REST API that can be used for automatic export of intent data.
+- Gainsight allows configuration of playbooks and automated tasks.
+
+────────────────────────────────────────────────────────────────────────────────────
+**PROJECT CONCLUSIONS**
+- The existing stack allows building an event‑driven architecture without replacing
+  tools, but requires configuring API integrations and implementing an orchestration
+  platform (AWS EventBridge, agent holding).
+- Key bottlenecks: lack of automatic intent data synchronization, manual data
+  exchange between Snowflake and Salesforce, and unautomated playbooks.
+
+═══════════════════════════════════════════════════════════════════════════════════

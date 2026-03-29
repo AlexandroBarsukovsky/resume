@@ -1,0 +1,1 @@
+sudo ./scripts/deploy.sh

@@ -1,0 +1,109 @@
+═══════════════════════════════════════════════════════════════════════════════════
+PROTOCOL: 3.6. CULTURAL CHARACTERISTICS (HIGH AGENCY, REMOTE-FIRST) AND THEIR IMPACT ON AUTOMATION
+Project: Sourcegraph GTM Infrastructure
+═══════════════════════════════════════════════════════════════════════════════════
+
+**3.6. CULTURAL CHARACTERISTICS (HIGH AGENCY, REMOTE-FIRST) AND THEIR IMPACT ON AUTOMATION**
+
+────────────────────────────────────────────────────────────────────────────────────
+3.6.1. KEY PRINCIPLES OF SOURCEGRAPH’S CULTURE (FROM THE HANDBOOK)
+────────────────────────────────────────────────────────────────────────────────────
+
+1. **High agency** – each employee acts as an owner, does not wait for instructions,
+   takes responsibility for solving problems. This means people are used to
+   finding their own ways, but may also feel discomfort with rigidly
+   regulated processes.
+
+2. **Direct communication** – honesty and directness, even when difficult.
+   No politics, escalation through arguments. In automation,
+   this requires transparency of rules and the ability to challenge
+   the system’s decisions.
+
+3. **Remote-first** – the company has been fully remote since 2019. All processes
+   are built on written communication, documentation, asynchronous discussions.
+   Automation must support written interfaces and enable working without
+   synchronous meetings.
+
+4. **Transparency** – salaries, levels, OKRs, plans, even financial information
+   are open to all employees. This means that data used in automation
+   (e.g., forecasts) must be accessible and understandable to all
+   stakeholders.
+
+5. **Love for developers** – deep understanding of developers’ pain points, respect
+   for their craft. GTM automation should not create a feeling of “bureaucracy”;
+   it should be a tool that makes life easier.
+
+────────────────────────────────────────────────────────────────────────────────────
+3.6.2. IMPACT ON THE AUTOMATION PROJECT
+────────────────────────────────────────────────────────────────────────────────────
+
+**Positive factors:**
+- The team is ready for change if it is justified and brings value.
+- Written culture facilitates the implementation of documented processes
+  and interfaces.
+- Transparency allows open discussion of metrics and models, accelerating
+  decision‑making.
+- High agency means people will not wait for instructions but will start
+  using new tools if they see value in them.
+
+**Challenges and constraints:**
+- Automation must not create an illusion of “top‑down control”; the system
+  should be an assistant, not an overseer.
+- Any constraints must be transparent and explained.
+- The ability for manual intervention and overriding agent decisions must be
+  provided (e.g., an “undo” button).
+- Interfaces must be intuitive and not require lengthy training (remote‑first).
+
+────────────────────────────────────────────────────────────────────────────────────
+3.6.3. DESIGN PRINCIPLES TAKING CULTURE INTO ACCOUNT
+────────────────────────────────────────────────────────────────────────────────────
+
+1. **Assistant, not replacement** – agents perform routine tasks, but humans
+   can always override decisions.
+2. **Transparency of logic** – all formulas (Account Score, Health Score)
+   must be documented and accessible for review.
+3. **Asynchronicity** – interfaces must be self‑contained, not requiring
+   synchronous meetings (dashboards, written reports).
+4. **Flexibility** – ability to adjust thresholds, weights, and playbooks
+   without involving developers (self‑service for RevOps).
+5. **Training and documentation** – materials explaining how the system works
+   must be prepared in simple language (simple language).
+
+────────────────────────────────────────────────────────────────────────────────────
+3.6.4. EXAMPLES OF INCORPORATING CULTURAL CHARACTERISTICS INTO THE ARCHITECTURE
+────────────────────────────────────────────────────────────────────────────────────
+
+- **Control panel** – a dashboard showing agent load, allowing operators
+  to see what is happening and intervene if necessary.
+- **Documented triggers** – a list of all automatic actions
+  (Account Score >0.7 → Strategist task) is available in the handbook.
+- **Ability to cancel** – any automatic action can be canceled by a human
+  within 5 minutes (grace period).
+- **Asynchronous reports** – weekly email digests with key metrics
+  and recommendations.
+- **Simple language sections** – for non‑technical audiences, explaining
+  what health score is, why forecasts are important, and how triggers help
+  sellers.
+
+────────────────────────────────────────────────────────────────────────────────────
+3.6.5. CULTURE‑RELATED RISKS AND MITIGATIONS
+────────────────────────────────────────────────────────────────────────────────────
+
+| Risk                                     | Mitigation                                      |
+|------------------------------------------|-------------------------------------------------|
+| Resistance due to loss of control        | Transparency, ability to override decisions     |
+| Misunderstanding of agent logic          | Training, documentation, simple language        |
+| Information overload                     | Phased rollout, pilots                          |
+| Rejection due to technical failures      | Reliability, automatic recovery                 |
+| Conflict between agents and humans       | Clear separation of responsibilities            |
+
+────────────────────────────────────────────────────────────────────────────────────
+**PROJECT CONCLUSIONS**
+- Sourcegraph’s culture creates a favorable environment for automation,
+  but requires special attention to transparency, flexibility, and simplicity.
+- The project must be built on the principles of “assistant, not replacement,”
+  “documentation,” and “asynchronicity.”
+- The success of implementation depends not only on technical execution
+  but also on communication, training, and team engagement.
+
+═══════════════════════════════════════════════════════════════════════════════════

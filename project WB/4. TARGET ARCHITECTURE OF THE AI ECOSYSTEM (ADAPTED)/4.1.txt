@@ -1,0 +1,204 @@
+╔══════════════════════════════════════════════════════════════════════════════════╗
+║  PROTOCOL 4.1. DESIGN PRINCIPLES (EXTENDED)                                      ║
+║  PROJECT: IRON KIT – 13,918 SALES                                                 ║
+║                                                                                  ║
+╚══════════════════════════════════════════════════════════════════════════════════╝
+
+═══════════════════════════════════════════════════════════════════════════════════
+**4.1.1. DATA ATOMICITY – EVERY EVENT IS RECORDED (ORDER, REVIEW, PRICE CHANGE)**
+───────────────────────────────────────────────────────────────────────────────────
+
+**Essence of the principle**
+Every significant change in the business environment is recorded as an indivisible unit (atom) with full context. Unlike the traditional approach where data is aggregated into reports or updated in batches, atomicity ensures maximum granularity, the ability to reproduce the sequence of events, and serves as the foundation for event‑driven automation.
+
+**Why this is critical for small business**
+- Without atomic data, it is impossible to build accurate forecasting models.
+- Manual processes (Excel, exports from WB) create gaps and information loss.
+- Historical simulations (4,000 years of trade) have shown that all successful management systems are based on recording every transaction (from clay tablets to modern CRMs).
+
+**Detailed atomic events in the project**
+
+| Event Type                | Fields (mandatory)                                                                                    | Data Source                        | Recording Frequency |
+|---------------------------|-------------------------------------------------------------------------------------------------------|-------------------------------------|---------------------|
+| **Wildberries order**     | `order_id` (UUID), `timestamp` (ISO 8601), `sku`, `quantity`, `price`, `customer_rating` (if any)   | WB API (FBS/FBO)                    | real‑time           |
+| **Competitor price change** | `competitor_sku`, `new_price`, `timestamp`, `old_price`, `source` (parsing / manual input)        | Product card parsing / 6sense       | every 30 min        |
+| **Review**                | `review_id`, `timestamp`, `rating` (1–5), `text`, `author`, `answered` (bool), `sentiment` (pos/neg/neu) | WB API / review processor         | real‑time           |
+| **Warehouse stock**       | `sku`, `quantity`, `warehouse` (production / WB warehouse), `timestamp`                               | WB API + Excel (manual backup)      | real‑time (WB) / daily (Excel) |
+| **Production task**       | `task_id`, `sku`, `quantity`, `deadline`, `assigned_to` (team), `status` (created/in_progress/done) | Production scheduler                | upon creation       |
+| **Raw material purchase** | `purchase_id`, `supplier`, `material` (steel, paint), `quantity`, `cost`, `timestamp`, `delivery_date` | “Inventory manager” agent           | when order is placed |
+| **Payment**               | `payment_id`, `amount`, `purpose` (tax, salary, raw materials), `timestamp`, `counterparty`         | Bank client (statement)             | daily               |
+| **Advertising campaign**  | `campaign_id`, `budget`, `start_date`, `end_date`, `ctr`, `conversion`, `spent`, `orders`            | WB API / “Ad optimiser” agent        | daily               |
+| **New product (idea)**    | `idea_id`, `sku_proposed`, `description`, `generated_by` (GENESIS / owner), `status` (test/reject/launch) | GENESIS / operator console          | as it occurs        |
+
+**Technical implementation**
+- All events are stored in **PostgreSQL** (primary storage) with unique identifiers and indexes on `sku`, `timestamp`, `account_id`.
+- A **correlation_id** is generated for each event, linking chains (e.g., order → shipment → payment).
+- Event schemas are validated via **Pydantic** (Python) to ensure consistency.
+- Data is stored in raw form and then aggregated for analytics data marts.
+
+**Benefits for the project**
+- **Full reproducibility** – the timeline for any SKU can be reconstructed for any period.
+- **Analytics flexibility** – aggregations can be rebuilt for new questions without losing detail (e.g., daily seasonality analysis instead of monthly).
+- **Foundation for machine learning** – demand forecasting and pricing models require labelled data at the individual event level.
+- **Audit and compliance** – every automated action can be traced back to a specific event.
+
+────────────────────────────────────────────────────────────────────────────────────
+**4.1.2. EVENT‑DRIVEN AUTOMATION – REAL‑TIME REACTION**
+───────────────────────────────────────────────────────────────────────────────────
+
+**Essence of the principle**
+Instead of periodic (batch) or manual actions, the system reacts to events in real time. Each state change (new order, review, stock drop) triggers a chain of automated operations. This reduces response time from days to minutes and eliminates manual work.
+
+**Why this is critical**
+- Current review response time is 48 hours, negatively affecting the rating.
+- Pricing lag (up to 7 days) leads to margin loss.
+- Historical simulation X16 showed that systems relying on manual information transfer inevitably fall behind.
+
+**Event‑driven system architecture**
+
+*1. Event sources*
+- WB API (webhooks / pull)
+- Competitor price parsing (periodic)
+- Excel (import via console)
+- Operator console (manual intervention)
+- Internal agents (computation results)
+
+*2. Event Bus (central node)*
+- **Redis Streams** (primary) – lightweight, reliable message queue with consumer group support.
+- **Dead Letter Queue (DLQ)** – events not processed after 3 attempts are moved to a separate topic for manual review.
+
+*3. Handlers (agents)*
+- Each agent subscribes to specific topics.
+- They execute logic (scoring, task creation, API calls).
+- Processing results may generate new events (chaining).
+
+**Typical scenarios**
+
+| Event                                            | Processing chain                                                                                     | Target response time |
+|--------------------------------------------------|------------------------------------------------------------------------------------------------------|----------------------|
+| New order (WB API)                               | → “Logistics dispatcher” agent creates shipping task → “Financial controller” agent records revenue | < 5 sec              |
+| New negative review (rating ≤3)                  | → “Review processor” classifies → “Customer service” agent generates reply (template + LLM) → if unresolved – escalate to owner | < 2 min              |
+| Warehouse stock below minimum threshold          | → “Inventory manager” agent creates raw material order → “Production scheduler” agent adjusts schedule | < 30 sec             |
+| Competitor price drop >5%                        | → “Competitive intelligence” agent publishes event → “Pricing strategist” agent recomputes optimal price → via Scriptor #3 update on WB | < 10 min             |
+| Start of seasonal peak (according to forecast)   | → “Seasonal forecaster” agent initiates event → “Ad optimiser” agent increases budget → “Production scheduler” agent ramps up volumes | automatically       |
+
+**Reliability guarantees**
+- **Idempotence** – processing the same event multiple times does not lead to duplicate actions (checked by `event_id`).
+- **Exponential backoff retry** – for temporary API failures (e.g., WB API).
+- **Circuit breaker** – when error threshold for an external service is exceeded – temporarily disable processing with operator notification.
+- **Monitoring** – all events are tracked in the operator console; alerts for delays >30 sec or error rate >2%.
+
+**Benefits for the project**
+- Review response time reduced from 48 hours to <2 minutes.
+- Prices adjusted within 10 minutes of competitor changes (instead of 7 days).
+- Shortages are prevented automatically, before orders start being lost.
+
+────────────────────────────────────────────────────────────────────────────────────
+**4.1.3. MULTI‑LEVEL ORCHESTRATION (4 LEVELS)**
+───────────────────────────────────────────────────────────────────────────────────
+
+**Essence of the principle**
+GTM functions (in this case, business processes) are divided into four hierarchical levels, each with its own specialisation, degree of abstraction, and scale. This allows each level to scale independently and adapt strategy to different segments (product groups, seasons).
+
+**Why this is critical for small business**
+- The current structure (owner performs all functions) does not scale.
+- Different product groups require different approaches (pickets – seasonal, angle brackets – constant demand).
+- Historical simulations (X16, X64) showed that the most resilient systems use hierarchical division of labour.
+
+**Level details**
+
+**Level 1 – Analytical agents (6)**
+- **Task:** processing large volumes of data, feature extraction, initial scoring.
+- **Input:** raw events (orders, reviews, competitor prices).
+- **Output:** structured data, forecasts, classifications.
+- **Technologies:** Python, Pandas, Snowpark (PostgreSQL), ruBERT.
+- **Scaling:** horizontal (auto‑scaling in Kubernetes as number of SKUs grows).
+
+**Level 2 – Strategic agents (6)**
+- **Task:** decision‑making based on analytics (pricing, assortment, risks).
+- **Input:** prioritised data from level 1, current OKRs (owner’s goals).
+- **Output:** recommendations on pricing, assortment, budget allocation.
+- **Technologies:** Python, logistic regression, rule engine, linear optimisation.
+
+**Level 3 – Tactical coordinators (8)**
+- **Task:** adapting strategy to product groups and coordinating execution.
+- **Input:** strategic recommendations + group specifics (seasonality, competitive environment).
+- **Output:** specific tasks for executive agents.
+- **Composition:**
+  - 4 product group coordinators (pickets, angle brackets, wind strips, flashings).
+  - 4 special coordinators (link, archivist, supervisor, production scheduler).
+
+**Level 4 – Executive agents (18)**
+- **Task:** performing concrete operations (API calls, accounting, shipping, creativity).
+- **Input:** tasks from level 3, event triggers.
+- **Output:** executed actions, updated data, reports.
+- **Technologies:** Python (FastAPI), AWS Lambda / Kubernetes (depending on task).
+
+**Inter‑level interaction**
+- **Data flow downward:** L1 → L2 → L3 → L4.
+- **Feedback upward:** execution results (success/error) are sent back via event bus to L1–L3 for adjustment.
+- **Checkpoints:** the owner can intervene at any level via the operator console.
+
+**Benefits for the project**
+- **Scalability** – when assortment grows, agents can be added at level 1 (analytics) without changing higher levels.
+- **Flexibility** – tactical coordinators can be added for new product groups (e.g., decorative items) without restructuring the entire system.
+- **Resilience** – failure at one level does not stop others (e.g., if L2 is temporarily unavailable, L4 continues executing previously received tasks).
+
+────────────────────────────────────────────────────────────────────────────────────
+**4.1.4. HYBRID GOVERNANCE – HUMAN APPROVES MAJOR DECISIONS**
+───────────────────────────────────────────────────────────────────────────────────
+
+**Essence of the principle**
+Agents perform routine, predictable operations, but critical decisions and exception handling remain with the human. This combines the efficiency of automation with the flexibility of human intelligence and aligns with the owner’s desire to maintain control.
+
+**Why this is critical**
+- Full automation may cause resistance from the owner, accustomed to personal control.
+- Enterprise‑scale decisions (large raw material purchases, launching a new product line) contain atypical situations requiring human judgment.
+- Owner’s culture – “I want to see what is happening and be able to intervene.”
+
+**Division of responsibilities (detailed)**
+
+| Area                     | Agents (AI)                                                                                     | Human (owner)                                                                 |
+|--------------------------|-------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------|
+| **Data collection**      | Automatic from WB API, parsing, Excel (import). Format verification, anomaly detection.       | Source setup, one‑time validation, conflict resolution (e.g., manual input during API failure). |
+| **Demand forecast**      | Daily ARIMA/Prophet calculation, accounting for seasonality, trends. Provide interval forecasts. | Adjustment for force majeure (lockdowns, sudden supplier price changes).      |
+| **Pricing**              | Dynamic adjustment based on competitors and elasticity. Automatic application for deviation <20%. | Approval of changes >20%, manual price setting for strategic positions.        |
+| **Raw material procurement** | Generate order when stock falls below threshold, calculate optimal batch (EOQ).              | Confirm amounts >200,000 RUB, supplier selection (if not defined in rules).    |
+| **Review management**    | Auto‑replies to positive reviews, classification of negative ones, response generation (templates + LLM). | Personal involvement in complex conflicts, replies to non‑standard complaints. |
+| **Advertising budgets**  | Bid optimisation, budget allocation across campaigns, ROMI calculation.                       | Approval of monthly total budget, start/stop campaigns when ineffective.       |
+| **New product generation** | Idea generation (GENESIS), A/B testing, calculation of potential margin.                     | Final decision on serial production, approval of names and design.             |
+| **Exception handling**   | Automatic retries, moving to DLQ on failures.                                                 | Review DLQ (once per day), manual execution of actions (e.g., price update during API failure). |
+| **Audit and configuration** | Collect agent performance metrics, logging.                                                 | Adjust model weights, trigger thresholds via console.                          |
+
+**Operator Console interface (game style)**
+- **Main screen:** product group map with colour coding (green – all good, yellow – attention needed, red – urgent intervention).
+- **Task list:** displays agent proposals requiring confirmation (e.g., “Change picket price from 6200 to 5900 RUB? Yes / No / Configure later”).
+- **“Intervene” button:** on each automated decision – ability to cancel or adjust.
+- **History:** log of all automated and manual actions with ability to view and rollback.
+
+**Escalation mechanism**
+1. Agent performs an action automatically (e.g., adjusts price).
+2. If the action leads to an anomaly (e.g., sharp sales drop or customer complaints), an event is generated and the task is placed in a verification queue.
+3. The owner receives a notification in the console and can cancel the action or adjust settings.
+4. Owner response time – up to 2 hours (SLA). If exceeded – repeat notification.
+
+**Training and adaptation**
+- The owner can “train” agents by marking incorrect decisions (“Error” button). This data accumulates and is used for model retraining.
+- Monthly review: which agent decisions were rejected, why, and rules are adjusted accordingly.
+
+**Benefits for the project**
+- **Speed** – routine is automated, owner focuses on strategy.
+- **Control** – critical decisions remain with the human, eliminating the risk of “automation disaster”.
+- **Acceptance** – the owner does not feel “replaced” but gains powerful tools.
+- **Continuous improvement** – agents learn from human decisions, increasing accuracy.
+
+═══════════════════════════════════════════════════════════════════════════════════
+**CONCLUSION ON DESIGN PRINCIPLES**
+
+The four principles – data atomicity, event‑driven automation, multi‑level orchestration, and hybrid governance – form a coherent architectural foundation that:
+- Addresses all identified pain points (Section 3.5).
+- Aligns with project goals and constraints (Sections 2.4–2.5).
+- Considers the owner’s cultural characteristics (control retention, simple interface).
+- Has proven its effectiveness in 32 simulation cycles (including NO_RULES and GENESIS modes).
+
+Subsequent subsections (4.2–4.5) detail the implementation of these principles in specific architecture components.

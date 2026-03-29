@@ -1,0 +1,232 @@
+╔══════════════════════════════════════════════════════════════════════════════════╗
+║  SECTION 6. DATA MODELS AND INTEGRATIONS (MASTER PROTOCOL)       ║
+║  PROJECT: IRON KIT – 13,918 SALES                                                 ║
+║                                                                                  ║
+╚══════════════════════════════════════════════════════════════════════════════════╝
+
+═══════════════════════════════════════════════════════════════════════════════════
+**6. DATA MODELS AND INTEGRATIONS**
+───────────────────────────────────────────────────────────────────────────────────
+
+Data models and integrations form the foundation that provides a unified
+information space for the work of all agents. This section describes the
+data objects (database schemas), external integrations (Wildberries API, 1С, bank),
+technical implementation of storage and APIs, as well as reliability and security
+mechanisms.
+
+────────────────────────────────────────────────────────────────────────────────────
+**6.1. DATA OBJECTS**
+───────────────────────────────────────────────────────────────────────────────────
+
+**6.1.1. Product (SKU)**
+The main object describing each assortment item.
+
+| Field                | Type          | Description                                                          |
+|----------------------|---------------|----------------------------------------------------------------------|
+| `sku`                | VARCHAR(50)   | SKU (unique identifier)                                              |
+| `name`               | VARCHAR(200)  | Product name                                                         |
+| `category`           | VARCHAR(50)   | Category: pickets, angle brackets, strips, flashings                 |
+| `cost`               | NUMERIC(10,2) | Cost (RUB)                                                           |
+| `current_price`      | NUMERIC(10,2) | Current price on Wildberries                                         |
+| `min_margin`         | NUMERIC(5,2)  | Minimum allowable margin (%)                                         |
+| `target_margin`      | NUMERIC(5,2)  | Target margin (%)                                                    |
+| `stock_production`   | INTEGER       | Stock at production warehouse (units)                                |
+| `stock_wb`           | INTEGER       | Stock at Wildberries warehouse (units)                               |
+| `rating`             | NUMERIC(3,2)  | Average rating (1–5)                                                 |
+| `is_active`          | BOOLEAN       | Whether the product is active (listed on WB)                         |
+| `created_at`         | TIMESTAMP     | Creation date                                                        |
+| `updated_at`         | TIMESTAMP     | Last update date                                                     |
+
+**6.1.2. Order**
+Records each sale via Wildberries.
+
+| Field                | Type          | Description                                                          |
+|----------------------|---------------|----------------------------------------------------------------------|
+| `order_id`           | VARCHAR(50)   | Wildberries order ID                                                 |
+| `sku`                | VARCHAR(50)   | Product SKU (FK to SKU)                                              |
+| `quantity`           | INTEGER       | Number of units                                                      |
+| `price`              | NUMERIC(10,2) | Price per unit (RUB)                                                 |
+| `total_amount`       | NUMERIC(10,2) | Order total (quantity * price)                                       |
+| `status`             | VARCHAR(20)   | Status: created, shipped, completed, cancelled                       |
+| `order_date`         | TIMESTAMP     | Order date                                                           |
+| `shipped_date`       | TIMESTAMP     | Shipment date                                                        |
+| `customer_rating`    | INTEGER       | Customer rating (if left)                                            |
+
+**6.1.3. Review**
+Contains text and metadata of customer reviews.
+
+| Field                | Type          | Description                                                          |
+|----------------------|---------------|----------------------------------------------------------------------|
+| `review_id`          | VARCHAR(50)   | Wildberries review ID                                                |
+| `sku`                | VARCHAR(50)   | Product SKU (FK)                                                     |
+| `author`             | VARCHAR(100)  | Review author                                                        |
+| `rating`             | INTEGER       | Rating (1–5)                                                         |
+| `text`               | TEXT          | Review text                                                          |
+| `sentiment`          | VARCHAR(10)   | Sentiment: positive / neutral / negative (determined by agent)       |
+| `topics`             | TEXT[]        | Extracted topics (e.g., ['quality', 'delivery'])                     |
+| `defect_type`        | VARCHAR(50)   | Defect type (if detected)                                            |
+| `embedding`          | VECTOR(768)   | Vector representation (for pgvector)                                 |
+| `answered`           | BOOLEAN       | Whether a reply was given                                            |
+| `answer_text`        | TEXT          | Reply text (if any)                                                  |
+| `created_at`         | TIMESTAMP     | Review date                                                          |
+
+**6.1.4. Competitor**
+Data about competitors for price monitoring.
+
+| Field                | Type          | Description                                                          |
+|----------------------|---------------|----------------------------------------------------------------------|
+| `competitor_sku`     | VARCHAR(50)   | Competitor’s SKU                                                     |
+| `sku`                | VARCHAR(50)   | Our SKU that the competitor relates to                               |
+| `price`              | NUMERIC(10,2) | Competitor’s price                                                   |
+| `promotion`          | VARCHAR(100)  | Promotion description (if any)                                       |
+| `in_stock`           | BOOLEAN       | Availability in stock                                                |
+| `rating`             | NUMERIC(3,2)  | Competitor’s rating                                                  |
+| `updated_at`         | TIMESTAMP     | Last update date                                                     |
+
+**6.1.5. Advertising Campaign**
+Data about advertising activities on Wildberries.
+
+| Field                | Type          | Description                                                          |
+|----------------------|---------------|----------------------------------------------------------------------|
+| `campaign_id`        | VARCHAR(50)   | Campaign identifier                                                  |
+| `sku`                | VARCHAR(50)   | Product SKU (FK)                                                     |
+| `budget`             | NUMERIC(10,2) | Allocated budget                                                     |
+| `spent`              | NUMERIC(10,2) | Amount spent                                                         |
+| `impressions`        | INTEGER       | Impressions                                                          |
+| `clicks`             | INTEGER       | Clicks                                                               |
+| `orders`             | INTEGER       | Orders attributed to the campaign                                    |
+| `ctr`                | NUMERIC(5,2)  | CTR (%)                                                              |
+| `conversion`         | NUMERIC(5,2)  | Conversion (%)                                                       |
+| `romi`               | NUMERIC(5,2)  | ROMI (%)                                                             |
+| `start_date`         | TIMESTAMP     | Start date                                                           |
+| `end_date`           | TIMESTAMP     | End date                                                             |
+
+**6.1.6. Production Task**
+Planned and completed production batches.
+
+| Field                | Type          | Description                                                          |
+|----------------------|---------------|----------------------------------------------------------------------|
+| `task_id`            | VARCHAR(50)   | Unique identifier                                                    |
+| `sku`                | VARCHAR(50)   | Product SKU (FK)                                                     |
+| `quantity`           | INTEGER       | Planned quantity                                                     |
+| `deadline`           | TIMESTAMP     | Deadline                                                             |
+| `status`             | VARCHAR(20)   | Status: pending, in_progress, completed, cancelled                   |
+| `assigned_to`        | VARCHAR(100)  | Executor (team)                                                      |
+| `completed_at`       | TIMESTAMP     | Actual completion date                                               |
+
+**6.1.7. Budget**
+Current limits and actual expenditures.
+
+| Field                | Type          | Description                                                          |
+|----------------------|---------------|----------------------------------------------------------------------|
+| `article`            | VARCHAR(50)   | Expenditure category (raw material purchase, advertising, taxes, reserve) |
+| `limit_amount`       | NUMERIC(10,2) | Monthly limit (RUB)                                                  |
+| `spent`              | NUMERIC(10,2) | Spent in the current month (RUB)                                     |
+| `updated_at`         | TIMESTAMP     | Last update date                                                     |
+
+**6.1.8. Health Score History**
+History of the integral business health indicator.
+
+| Field                | Type          | Description                                                          |
+|----------------------|---------------|----------------------------------------------------------------------|
+| `date`               | DATE          | Calculation date                                                     |
+| `health_score`       | NUMERIC(5,2)  | Health Score value (0–1)                                             |
+| `deficit_norm`       | NUMERIC(5,2)  | Normalised shortage                                                  |
+| `turnover_norm`      | NUMERIC(5,2)  | Normalised turnover                                                  |
+| `margin_norm`        | NUMERIC(5,2)  | Normalised margin                                                    |
+| `status`             | VARCHAR(10)   | Green / yellow / red                                                 |
+
+────────────────────────────────────────────────────────────────────────────────────
+**6.2. EXTERNAL INTEGRATIONS**
+───────────────────────────────────────────────────────────────────────────────────
+
+**6.2.1. Wildberries API**
+
+| Endpoint                         | Purpose                                 | Request Frequency   |
+|----------------------------------|-----------------------------------------|---------------------|
+| `GET /api/v2/orders`             | Retrieve order list                     | 5 min (pull)        |
+| `GET /api/v2/stocks`             | Get WB warehouse stock                  | 30 min              |
+| `GET /api/v2/reviews`            | Get reviews                             | 15 min / webhook    |
+| `GET /api/v2/sales`              | Get sales statistics                    | once per day        |
+| `PUT /api/v2/price`              | Update product price                    | on demand           |
+| `POST /api/v2/upload`            | Create shipment request                 | on trigger          |
+| `POST /api/v2/feedback/answer`   | Reply to a review                       | real‑time           |
+
+**6.2.2. 1С (cost import)**
+- **Format:** CSV file with fields: `sku`, `cost`, `effective_date`.
+- **Method:** once a month (or on request) via upload through the operator console,
+  or automatic parsing of a shared folder.
+- **Processing:** agent D5 “Financial controller” updates the `sku_cost_history` table
+  and recalculates margin.
+
+**6.2.3. Bank (statement)**
+- **Format:** CSV/Excel export from the bank client (fields: date, amount, purpose,
+  counterparty).
+- **Method:** weekly upload via console; in the future – direct API.
+- **Processing:** agent D5 reconciles the statement with payments, records WB commissions.
+
+**6.2.4. Weather data (OpenWeatherMap)**
+- **API:** `https://api.openweathermap.org/data/2.5/onecall`
+- **Parameters:** region coordinates (e.g., Moscow region), historical data for the
+  last 7 days, 5‑day forecast.
+- **Frequency:** daily (agent A6 “Seasonal forecaster”).
+
+────────────────────────────────────────────────────────────────────────────────────
+**6.3. TECHNICAL IMPLEMENTATION**
+───────────────────────────────────────────────────────────────────────────────────
+
+**6.3.1. Data storage (PostgreSQL)**
+- **Version:** PostgreSQL 15+
+- **Extensions:** pgvector (for review embeddings)
+- **Backup:** daily dump to S3, retention 30 days.
+- **Indexes:** on `sku`, `order_date`, `review_id`, `competitor_sku` for faster queries.
+
+**6.3.2. Cache and queues (Redis)**
+- **Version:** Redis 7.0
+- **Purpose:**
+  – cache for competitor parsing results (TTL 5 min),
+  – task queues (Redis Streams) for event‑driven architecture,
+  – session storage for the operator console.
+
+**6.3.3. API layer (FastAPI)**
+- **Version:** Python 3.11, FastAPI 0.100+
+- **Endpoints:**
+  - `/api/v1/tasks` – receive tasks from agents (Scriptor #1)
+  - `/api/v2/budget` – budget management (Scriptor #2)
+  - `/api/v3/wb/*` – external API calls (Scriptor #3)
+  - `/api/v4/dashboard` – data for the operator console
+- **Authentication:** JWT (for internal agents and console)
+
+**6.3.4. Operator console (React)**
+- **Framework:** React 18, TypeScript, Redux Toolkit
+- **WebSocket:** Socket.IO for real‑time updates (tasks, alerts, metrics)
+- **Build:** Vite
+- **Deployment:** static server (Nginx) or containerised
+
+────────────────────────────────────────────────────────────────────────────────────
+**6.4. RELIABILITY AND SECURITY**
+───────────────────────────────────────────────────────────────────────────────────
+
+**6.4.1. Idempotence and transactions**
+- Each event has a unique `event_id`. Agents check for duplicates via Redis.
+- For updating multiple tables, a PostgreSQL transaction wrapper is used.
+
+**6.4.2. Dead Letter Queue (DLQ)**
+- Events not processed after 3 attempts are placed into a Redis Stream named `dlq`.
+- The operator can view the DLQ via the console and resend events or manually fix data.
+
+**6.4.3. Fallback channels**
+- In case of WB API failure, agents switch to manual input mode: the operator uploads
+  a CSV file with the necessary changes (prices, orders).
+- If Redis is unavailable, PostgreSQL is used as a buffer (table `pending_events`).
+
+**6.4.4. Security**
+- **Data at rest:** PostgreSQL encryption (AES-256), Redis (optional).
+- **Data in transit:** TLS 1.3 for all external and internal APIs.
+- **API keys:** stored in environment variables or AWS Secrets Manager (if deployed in the cloud).
+- **Access:** role‑based model (owner, observer) + two‑factor authentication for the console.
+
+═══════════════════════════════════════════════════════════════════════════════════
+**NOTE:** This section is the foundation for the implementation of all functional
+components. The following protocols (6.1–6.4) will detail data schemas, integration
+configurations, analytics SQL queries, and configuration files.

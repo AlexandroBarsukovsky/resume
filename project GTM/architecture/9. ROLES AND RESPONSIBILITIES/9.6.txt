@@ -1,0 +1,127 @@
+═══════════════════════════════════════════════════════════════════════════════════
+PROTOCOL: 9.6. CONTROL PANEL OPERATORS (MONITORING, EXCEPTION HANDLING)
+Project: Sourcegraph GTM Infrastructure
+═══════════════════════════════════════════════════════════════════════════════════
+
+**9.6. CONTROL PANEL OPERATORS (MONITORING, EXCEPTION HANDLING)**
+
+────────────────────────────────────────────────────────────────────────────────────
+9.6.1. PURPOSE AND PLACE IN THE ORGANISATIONAL STRUCTURE
+────────────────────────────────────────────────────────────────────────────────────
+
+Control Panel Operators are a specialised role that provides “human in the loop”
+for the automated GTM system. They are responsible for real-time monitoring of the
+agent holding’s operation, handling situations that cannot be automated
+(Dead Letter Queue, anomalies, exceptions), and manual intervention when necessary.
+Operators are part of the RevOps team, but their focus is operational control,
+not strategic planning. They work in shifts (24/7 or during peak load hours) and
+serve as the “first line” of incident response.
+
+**Key value:** ensuring automation continuity, minimising downtime, and preventing
+escalation of critical incidents.
+
+────────────────────────────────────────────────────────────────────────────────────
+9.6.2. MAIN RESPONSIBILITIES AND AREAS OF ACCOUNTABILITY
+────────────────────────────────────────────────────────────────────────────────────
+
+| Area                         | Details                                                                  |
+|------------------------------|--------------------------------------------------------------------------|
+| **Control panel monitoring** | Continuous observation of control panel dashboards: agent status, queue load, error rate, latency. |
+| **Dead Letter Queue (DLQ) processing** | Review the queue of unprocessed events, analyse failure causes, manually execute actions (create tasks, update data) or resend events. |
+| **Manual intervention**      | Override agent decisions upon user request or when obvious anomalies are detected (e.g., manually assign AE for a strategic account, change ideology). |
+| **Incident escalation**      | For critical failures (e.g., mass agent failure, Salesforce API unavailability) – promptly notify RevOps and the technical team, create an incident in PagerDuty. |
+| **Data validation**          | Periodically check key fields in Salesforce (Account Score, Health Score, forecasts) for outliers or errors; if found, correct or trigger a recalculation. |
+| **Logging and reporting**    | Record all manual interventions in a log (comments, reasons). Participate in post-incident reviews. |
+| **Model feedback**           | Flag cases where agents made mistakes (false positives, missed signals) for model retraining. |
+
+────────────────────────────────────────────────────────────────────────────────────
+9.6.3. COMPETENCIES AND REQUIREMENTS
+────────────────────────────────────────────────────────────────────────────────────
+
+| Competency                 | Requirements                                                             |
+|----------------------------|--------------------------------------------------------------------------|
+| **Attentiveness**          | Ability to monitor dashboards over long periods, spot anomalies.         |
+| **Analytical thinking**    | Quickly understand the cause of a failure (API error, incorrect data, overload). |
+| **Technical literacy**     | Knowledge of Salesforce (objects, fields), basic understanding of APIs, ability to read logs. Experience with a control panel. |
+| **Stress tolerance**       | Ability to remain calm during incidents, follow procedures.              |
+| **Communication**          | Clearly document actions, describe the problem for handover to the technical team. |
+| **Experience**             | 1–3 years in technical support, Sales Operations, IT monitoring. Knowledge of GTM processes is an advantage. |
+
+────────────────────────────────────────────────────────────────────────────────────
+9.6.4. TYPICAL WORKDAY (SHIFT)
+────────────────────────────────────────────────────────────────────────────────────
+
+| Time        | Action                                                                   |
+|-------------|--------------------------------------------------------------------------|
+| 8:00–8:30   | Shift handover: review logs from previous operator, open incidents, DLQ status. |
+| 8:30–10:00  | Control panel monitoring: check key dashboards, track error rate, queue load. |
+| 10:00–12:00 | DLQ processing: work through accumulated events, manually execute actions, resend. |
+| 12:00–13:00 | Lunch.                                                                   |
+| 13:00–15:00 | Active monitoring during peak load hours (if the shift coincides). Manual intervention upon requests from teams (Slack, tasks) as needed. |
+| 15:00–16:00 | Data validation: sample check of fields in Salesforce, compare with expected values. |
+| 16:00–17:00 | End of shift: document incidents, hand over to next operator.            |
+
+**Note:** Shift schedule (e.g., 8×5 or 24/7) depends on the criticality and volume of automation.
+
+────────────────────────────────────────────────────────────────────────────────────
+9.6.5. KEY PERFORMANCE INDICATORS (KPIs)
+────────────────────────────────────────────────────────────────────────────────────
+
+| KPI                                  | Formula / Measurement Method                       | Target Value                |
+|--------------------------------------|----------------------------------------------------|-----------------------------|
+| **DLQ processing time**              | Average time from event appearance in DLQ to resolution | <1 hour                     |
+| **Share of manual interventions**    | Number of manual actions / total number of automated operations | Decreasing over time (<5%) |
+| **MTTR (Mean Time to Resolve)**      | Average time from incident detection to closure    | <30 minutes                 |
+| **Accuracy of manual corrections**   | Percentage of manual interventions deemed correct (without repeated errors) | >95%                        |
+| **User satisfaction**                | Rating from Sales, CS, AM teams (survey)           | >90%                        |
+
+All KPIs are tracked in the control panel and analysed by RevOps monthly.
+
+────────────────────────────────────────────────────────────────────────────────────
+9.6.6. INTERACTION WITH AUTOMATION AND AGENTS
+────────────────────────────────────────────────────────────────────────────────────
+
+| Automated component      | Role in operator’s work                                                 |
+|--------------------------|--------------------------------------------------------------------------|
+| **Control panel**        | Primary tool: dashboards, DLQ interface, manual intervention buttons.   |
+| **Analyst / Action Agents** | Operator restarts failed agents, adjusts their parameters.             |
+| **Event‑driven system**  | Operator sees all events in the DLQ, can manually publish events or modify them. |
+| **Slack / PagerDuty**    | Receive alerts about critical failures, communicate with teams.         |
+
+**Human actions not replaceable by automation:**
+- Decision-making in non‑standard situations (e.g., territory conflicts).
+- In‑depth root cause analysis requiring context.
+- Escalation and coordination with the technical team.
+
+────────────────────────────────────────────────────────────────────────────────────
+9.6.7. INTERACTION WITH OTHER ROLES
+────────────────────────────────────────────────────────────────────────────────────
+
+| Role            | Interaction                                                              |
+|-----------------|--------------------------------------------------------------------------|
+| **RevOps**      | Operators report systemic issues that require development. RevOps trains operators and defines procedures. |
+| **Technical team (IT)** | For integration failures, operators create tickets and provide details. |
+| **Sales, CS, AM** | Operators handle requests for manual intervention (e.g., reassigning AE). |
+| **Leadership**  | For critical incidents, operators participate in communication.          |
+
+────────────────────────────────────────────────────────────────────────────────────
+9.6.8. TRAINING AND ONBOARDING
+────────────────────────────────────────────────────────────────────────────────────
+
+- **Onboarding:** 2 weeks: familiarisation with the control panel, DLQ processing procedures, typical incidents, escalation policies.
+- **Mentoring:** First 2 shifts with an experienced operator.
+- **Documentation:** Detailed runbook describing each error type and the actions to take.
+- **Training:** Monthly incident reviews, training on new control panel features.
+
+────────────────────────────────────────────────────────────────────────────────────
+**CONCLUSIONS ON THE CONTROL PANEL OPERATOR ROLE**
+
+- Control Panel Operators ensure the reliability of automation by acting as “human
+  in the loop” for exception handling and manual oversight.
+- The role requires high attentiveness, technical literacy, and the ability to
+  make quick decisions.
+- The control panel and automated alerts provide operators with tools for effective
+  monitoring, but key decisions remain with the human.
+- KPIs are focused on response speed and the quality of exception handling.
+
+═══════════════════════════════════════════════════════════════════════════════════

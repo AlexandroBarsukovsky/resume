@@ -1,0 +1,224 @@
+═══════════════════════════════════════════════════════════════════════════════════
+PROTOCOL: 2.2. CURRENT GTM TRANSFORMATION (PLG → ENTERPRISE)
+Project: Sourcegraph GTM Infrastructure
+═══════════════════════════════════════════════════════════════════════════════════
+
+**2.2. CURRENT GTM TRANSFORMATION (PLG → ENTERPRISE)**
+
+────────────────────────────────────────────────────────────────────────────────────
+2.2.1. REASONS FOR THE SHIFT FROM PLG TO ENTERPRISE
+────────────────────────────────────────────────────────────────────────────────────
+
+**Limitations of product‑led growth (PLG)**
+- PLG is effective for attracting individual developers and small teams,
+  but does not scale to large corporations.
+- Self‑service (online payment, trial versions) does not account for complex
+  procurement cycles, security requirements, legal approvals, or SLAs.
+- PLG revenue is volatile; long‑term contracts are absent, making forecasting
+  and investment planning difficult.
+- Viral and self‑registration channels do not provide the necessary level
+  of control over customer experience and retention.
+
+**Strategic reasons**
+1. **Achieving scale** – to grow ARR above $100M, large enterprise contracts
+   with predictable cycles and a high share of recurring revenue are required.
+2. **Competitive pressure** – GitHub, GitLab, Atlassian already have
+   enterprise sales; Sourcegraph must compete in this arena to avoid losing
+   market share.
+3. **Retention and expansion** – enterprise customers require a structured
+   approach to customer success; otherwise churn remains high and expansion
+   opportunities are missed.
+4. **Product complexity** – the Code Intelligence Platform requires skilled
+   implementation, training, and integration; this cannot be achieved through
+   self‑service alone.
+5. **Investor expectations** – investors (a16z, Sequoia, Redpoint) expect
+   growth in the enterprise segment as a key driver of the company’s value.
+
+────────────────────────────────────────────────────────────────────────────────────
+2.2.2. CHANGES IN GTM ORGANIZATION
+────────────────────────────────────────────────────────────────────────────────────
+
+**Evolution of roles and functions**
+| Function          | PLG Model (until 2023)                | Current State (2025–2026)                     | Target State (Project)                       |
+|-------------------|---------------------------------------|-----------------------------------------------|----------------------------------------------|
+| Acquisition       | Virality, content marketing,          | ABM, intent data (6sense), analytical        | Automated analysis, scoring,                 |
+|                   | self‑registration                     | approach (Sales Strategist)                   | data‑driven routing                          |
+| Qualification     | Automatic (subscription)              | Semi‑automatic: strategists export            | Fully event‑driven,                          |
+|                   |                                       | data to Excel, assign scores                  | triggers → tasks                             |
+| Sales             | Online, cards, free trial             | Hybrid: self‑service + direct                 | Enterprise sales via AE, MEDDPICC,           |
+|                   |                                       | sales through AEs                             | structured contracts                         |
+| Retention         | None (customers leave on their own)   | Early‑stage CSM, health score                 | Automated health score,                      |
+|                   |                                       | not automated                                 | playbooks, proactive retention               |
+| Expansion         | Viral (users bring others)            | Account Managers work from lists,             | Automatic expansion signals,                 |
+|                   |                                       | signals not identified                        | tasks for upsell/cross‑sell                  |
+| Technologies      | Developer tools,                      | Salesforce, Snowflake, Hightouch, 6sense,     | Unified event‑driven stack,                  |
+|                   | Amplitude, Mixpanel                    | Gainsight (being implemented)                 | AI agents, automation                        |
+
+**Current organizational structure**
+- **Sales Strategist** (formerly SDR) – a team of 8–12 people, analytical role.
+  They use 6sense for intent signals, Snowflake for product data,
+  and Excel for prioritization. They manually create account lists and hand them off to AEs.
+  Problem: 40% of time is spent on data collection and processing.
+- **Account Executive (AE)** – 15–20 people, manage enterprise and mid‑market deals.
+  They use MEDDPICC, but forecasts are updated manually, accuracy is low.
+- **Customer Success (CSM)** – 8–10 people, handle onboarding, training, retention.
+  Health score is not automated; risk signals are identified intuitively or through support tickets.
+- **Account Manager (AM)** – 4–5 people, work with top‑100 clients.
+  Expansion opportunities are discovered by chance.
+- **RevOps** – 4–6 people, manage Salesforce, reporting, prepare QBRs and board packs.
+  Time spent is dozens of hours per month.
+
+**Current technology stack usage**
+| Component        | Tool               | Level of Integration and Automation              |
+|------------------|--------------------|--------------------------------------------------|
+| CRM              | Salesforce         | Single source of truth, but product and intent   |
+|                  |                    | data are synchronized with delay; fields are     |
+|                  |                    | not always filled                                |
+| Data Warehouse   | Snowflake          | Product data is stored, but access is through    |
+|                  |                    | SQL; no real‑time reverse ETL                    |
+| Reverse ETL      | Hightouch          | Partially used; synchronization is configured    |
+|                  |                    | only for some objects                            |
+| Intent Data      | 6sense             | Signals are collected but exported manually      |
+| Outreach         | SalesLoft          | Manual creation of sequences;                    |
+|                  |                    | no automatic triggering                          |
+| Customer Success | Gainsight (being   | Health score not configured; playbooks           |
+|                  | implemented)       | are absent                                       |
+| BI               | Tableau / Looker   | Dashboards are built manually, updated weekly    |
+
+────────────────────────────────────────────────────────────────────────────────────
+2.2.3. PROCESSES: FROM INTENT SIGNAL TO DEAL
+────────────────────────────────────────────────────────────────────────────────────
+
+**Current customer lifecycle**
+1. **Intent signal** (6sense) → Sales Strategist receives a notification, exports
+   data to Excel, checks ICP fit (Clearbit/ZoomInfo), evaluates product activity
+   (query to Snowflake).
+2. **Qualification** → Strategist contacts the prospect (email, LinkedIn),
+   explores needs. If interest is confirmed, hands off to AE.
+3. **Demo and negotiation** → AE conducts a demo, uses MEDDPICC for
+   qualification, updates the Opportunity in Salesforce.
+4. **Contract** → Lawyers prepare the agreement (manual work).
+5. **Onboarding** → CSM gets involved after the deal is closed, conducts training,
+   helps set up integrations.
+6. **Retention and expansion** → CSM/AM communicate with the customer periodically,
+   monitor product activity (visually, without automation).
+
+**Time estimates**
+| Stage                              | Average Duration | Notes                                      |
+|------------------------------------|------------------|--------------------------------------------|
+| Intent → first contact             | 2 days           | Due to manual export and prioritization    |
+| Qualification → demo               | 7–10 days        | Depends on contact availability            |
+| Demo → proposal                    | 14–21 days       | May be delayed due to approvals            |
+| Negotiation → close                | 30–60 days       | Long enterprise cycles                     |
+| Onboarding (time to first value)   | 30–45 days       | Due to manual processes                    |
+| Total deal cycle                   | 90–120 days      | Higher than target (≤96 days)              |
+
+────────────────────────────────────────────────────────────────────────────────────
+2.2.4. KEY METRICS AND THEIR RELIABILITY (CURRENT)
+────────────────────────────────────────────────────────────────────────────────────
+
+| Metric                     | Current Value            | Collection Method / Issues                 |
+|-----------------------------|--------------------------|--------------------------------------------|
+| ARR                         | $50–100M (estimate)      | Post‑factum; no forecasting model          |
+| Net retention (NRR)         | 100–110%                 | Calculated quarterly, delayed              |
+| Win rate (enterprise)       | ~20%                     | Based on historical data, not segmented    |
+| Deal cycle                  | 90–120 days              | Manual collection from Salesforce,         |
+|                             |                          | no automatic tracking                      |
+| Pipeline coverage           | <2×                      | Calculated manually before QBR             |
+| Forecast accuracy (MAPE)    | 20–30%                   | Based on subjective AE estimates,          |
+|                             |                          | macro factors not considered               |
+| Health score                | Not measured             | Absent                                     |
+| Churn rate                  | 5–10%                    | Post‑factum; causes not analyzed           |
+| CAC Payback                 | >24 months               | Not calculated regularly                   |
+
+**Issues with metric reliability**
+- Data is fragmented and often out of sync.
+- Forecasts are based on AE intuition rather than a model.
+- No automatic alerts for deviations.
+- Quarterly reports are prepared manually and contain errors.
+
+────────────────────────────────────────────────────────────────────────────────────
+2.2.5. IDENTIFIED PAIN POINTS (BASED ON DIAGNOSTICS)
+────────────────────────────────────────────────────────────────────────────────────
+
+1. **Data fragmentation**  
+   Intent signals, product events, and CRM are not synchronized in real time.
+   Sales Strategists spend up to 40% of their time collecting and processing data.
+
+2. **Manual routing and qualification**  
+   Account prioritization is done manually (Excel), reaction time to intent signals
+   is up to 2 days. This is critical because competitors react faster.
+
+3. **No health score or expansion signals**  
+   CSMs and AMs work intuitively, leading to unexpected churn and missed opportunities.
+   No automatic detection of clients ready for expansion.
+
+4. **Inaccurate forecasts**  
+   A simple weighted pipeline is used without considering macroeconomic factors,
+   seasonality, or win rates by segment. MAPE = 20–30%, making budget and headcount
+   planning difficult.
+
+5. **Manual reporting**  
+   Preparing QBRs and board packs takes 10–20 hours of analyst work per quarter.
+   This distracts RevOps from strategic tasks.
+
+6. **Weak scalability**  
+   Current processes cannot handle growth in the number of clients and deals.
+   Increasing the number of AEs would require a proportional increase in manual labor.
+
+────────────────────────────────────────────────────────────────────────────────────
+2.2.6. CULTURAL CHARACTERISTICS AND THEIR IMPACT ON AUTOMATION
+────────────────────────────────────────────────────────────────────────────────────
+
+**Sourcegraph culture (from the handbook)**
+- **High agency** – each employee acts as an owner, does not wait for instructions,
+  takes responsibility for solving problems.
+- **Direct communication** – honesty and directness, even when difficult.
+  No politicking; escalation through arguments.
+- **Remote‑first** – fully remote since 2019. All processes are built on written
+  communication, documentation, asynchronous discussions.
+- **Transparency** – salaries, levels, OKRs, plans, even financial information
+  are open to all employees (through the handbook).
+- **Love for developers** – deep understanding of developer pain points, respect
+  for their craft.
+
+**Impact on the automation project**
+- **Pros**: the team is ready for change if it is justified and brings value;
+  the written culture facilitates the implementation of documented processes.
+- **Challenges**: automation must not create a “police” feeling; it should provide
+  tools for independent work. Any restrictions must be transparent.
+
+────────────────────────────────────────────────────────────────────────────────────
+2.2.7. INTERMEDIATE RESULTS OF THE TRANSFORMATION (AT PROJECT START)
+────────────────────────────────────────────────────────────────────────────────────
+
+**What has already been done**
+- A Sales Strategist team (analytical approach replacing SDR) has been formed.
+- 6sense has been implemented for collecting intent data.
+- Snowflake has been set up as a data warehouse for product events.
+- Gainsight implementation has begun (health score is being configured).
+- Initial ABM pilots have been conducted.
+
+**What has not yet been achieved without automation**
+- Automatic account routing.
+- A unified, synchronized data model.
+- Accurate revenue forecasts.
+- An automated health score and playbooks.
+- Process scalability as the customer base grows.
+
+**Readiness for further changes**
+- Leadership (CRO, CPO) supports the automation project.
+- The RevOps team is ready to participate in development.
+- The technology stack allows integration enhancements via APIs and event‑driven approaches.
+
+────────────────────────────────────────────────────────────────────────────────────
+**PROJECT CONCLUSIONS**
+- Sourcegraph’s current GTM infrastructure is in a transitional state
+  that requires systematic automation.
+- Without automation, further growth of the enterprise segment will be limited
+  by manual processes.
+- The company’s culture (high agency, remote‑first) creates a favorable environment
+  for implementing automated, documented processes.
+- The key pain points (data fragmentation, manual routing, inaccurate forecasts)
+  must be addressed first.
+

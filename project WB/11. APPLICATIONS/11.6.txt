@@ -1,0 +1,280 @@
+╔══════════════════════════════════════════════════════════════════════════════════╗
+║   PROTOCOL 11.6. GLOSSARY OF TERMS                                ║
+║  PROJECT: IRON KIT – 13,918 SALES                                                ║
+║                      
+╚══════════════════════════════════════════════════════════════════════════════════╝
+
+═══════════════════════════════════════════════════════════════════════════════════
+**11.6. GLOSSARY OF TERMS**
+───────────────────────────────────────────────────────────────────────────────────
+
+The glossary contains definitions of key terms used in the architectural document
+and during the operation of the AI ecosystem. Terms are listed in alphabetical order.
+For each term, a brief definition is provided along with a reference to the section
+of the document where the term is explained in detail.
+
+────────────────────────────────────────────────────────────────────────────────────
+**Account Score**
+Priority score for tasks displayed in the operator console. Formula: S = 0.5·urgency
++ 0.3·revenue_impact + 0.2·available_resources. Tasks with S ≥ 0.7 are shown in
+red and require priority attention. *See Section 5.1.5.*
+
+**Ad Optimiser (D2)**
+Executive agent that manages bids and budgets for advertising campaigns on
+Wildberries, calculates ROMI. *See Section 4.2.4.*
+
+**Agents**
+Software components that perform automated actions within the AI ecosystem. Agents
+are divided into 4 levels: analytical (data collection and processing), strategic
+(decision‑making), tactical (coordination and adaptation), executive (execution of
+operations). There are 38 agents in the system. *See Section 4.2.*
+
+**Assortment Strategist (B2)**
+Level 2 agent responsible for analysing the assortment matrix, generating ideas for
+new products (together with GENESIS), and eliminating unprofitable items.
+*See Section 4.2.2.*
+
+**Atomicity of Data (Data Atomicity)**
+The principle according to which every significant event (order, review, price
+change) is recorded as an indivisible unit with full context. This is the foundation
+for event‑driven architecture and accurate analysis. *See Section 4.1.1.*
+
+**Audience Segmentation**
+Division of buyers into groups (B2C, construction teams, small business) to adapt
+marketing and pricing policies. *See Section 5.4.3.*
+
+**Bass Model**
+Diffusion of innovations model describing the spread of a new product in the market
+as the interaction of innovators and imitators. Used by the assortment strategist
+to forecast sales of new products. *See Section 5.4.1.*
+
+**Bridge (Scriptor #1)**
+Link between the core (levels 1–3) and the executive coalition (level 4), ensuring
+reliable task transfer via Redis Streams. *See Section 4.3.1.*
+
+**Budget**
+The set of limits by expense category (raw material purchase, advertising, taxes,
+reserve), managed by Scriptor #2. *See Sections 4.3.2, 6.1.7.*
+
+**Competitive Intelligence (A1)**
+Level 1 agent that monitors competitor prices, promotions, assortment, and ratings
+on Wildberries. *See Section 4.2.1.*
+
+**Control Panel Operator**
+The business owner, who interacts with the system through the operator console,
+approves critical decisions, and handles exceptions. *See Section 4.4.*
+
+**Creative Agents**
+A group of 8 emergent agents (E1–E8) responsible for idea generation, design,
+marketing, A/B testing, and channel expansion. Activated in Phase 4.
+*See Section 4.2.4.*
+
+**Creative Designer (E1)**
+Creative agent that generates 3D models and drawings of new products based on trends.
+*See Section 4.2.4.*
+
+**Creative Marketer (E3)**
+Creative agent that creates names, descriptions, and creatives for new products.
+*See Section 4.2.4.*
+
+**Customer Service (D7)**
+Executive agent that automatically replies to reviews (via LLM) and escalates
+complex cases to the operator. *See Section 4.2.4.*
+
+**Dead Letter Queue (DLQ)**
+Queue of unprocessed events that could not be processed after 3 attempts. The operator
+can view and reprocess them via the console. *See Sections 4.3.1, 7.1.2.*
+
+**Deadline**
+The due date for a production task set by the production scheduler.
+*See Section 6.1.6.*
+
+**Demand Analyst (A3)**
+Level 1 agent that builds sales forecasts based on historical data, seasonality,
+weather, and holidays using an ensemble of models (Prophet, ARIMA, Holt‑Winters).
+*See Sections 4.2.1, 5.1.1.*
+
+**Demand Forecast**
+Expected sales quantity over a horizon of 7, 30, or 90 days, calculated by an
+ensemble of models (Prophet, ARIMA, Holt‑Winters) taking into account seasonality,
+weather, and holidays. *See Section 5.1.1.*
+
+**Document Flow (D8)**
+Executive agent that generates invoices, waybills, certificates in PDF/Excel format.
+*See Section 4.2.4.*
+
+**Event‑driven Architecture**
+An architecture where actions are triggered by events (data changes, time signals,
+parsing results). Implemented via Redis Streams. *See Section 4.1.2.*
+
+**Executive Agents (Level 4)**
+The lowest level of the hierarchy, performing concrete operations: tax calculations,
+advertising optimisation, inventory management, logistics, financial accounting, etc.
+*See Section 4.2.4.*
+
+**Expansion Analyst (B6)**
+Strategic agent that analyses new sales channels (Ozon, Yandex.Market) and niches
+for assortment expansion. *See Section 4.2.2.*
+
+**Financial Controller (D5)**
+Executive agent that records revenue, commissions, cost, generates P&L and cash flow,
+and controls the budget. *See Section 4.2.4.*
+
+**GENESIS (E1)**
+Creative agent that generates new product ideas based on trends, reviews, and
+competitor data. *See Section 4.2.4.*
+
+**Glossary**
+Reference section containing definitions of all key terms. *See Section 11.6.*
+
+**Health Score (Business Health Score)**
+Composite indicator calculated as H = 0.4·turnover_norm + 0.3·shortage_norm +
+0.3·margin_norm. Used to monitor business health and launch the “Retention” playbook
+when H < 0.5. *See Sections 5.1.4, 5.4.*
+
+**Hybrid Governance**
+The principle whereby agents perform routine, predictable operations, while the
+human (business owner) approves critical decisions and handles exceptions.
+*See Section 4.1.4.*
+
+**Inventory Manager (D3)**
+Executive agent that creates production or raw material purchase orders when stock
+falls below threshold s, and tracks deliveries. *See Section 4.2.4.*
+
+**Inventory Optimisation**
+(s, S) model for inventory management that minimises holding and shortage costs.
+Parameters s (reorder point) and S (target replenishment level) are calculated based
+on demand forecast and lead time. *See Section 5.1.3.*
+
+**Legal Assistant (D6)**
+Executive agent that checks contracts, generates claims, and monitors legal risks.
+*See Section 4.2.4.*
+
+**Level 1 – Analytical Agents**
+The first hierarchical level, responsible for collecting, enriching, and structuring
+data from all available sources, and for initial scoring. There are 6 agents in this
+level. *See Section 4.2.1.*
+
+**Level 2 – Strategic Agents**
+The second hierarchical level, making decisions based on analytics: pricing,
+assortment, risks, marketing, quality, expansion. There are 6 agents in this level.
+*See Section 4.2.2.*
+
+**Level 3 – Tactical Coordinators**
+The third hierarchical level, adapting strategy to product groups and coordinating
+execution. Includes 4 product‑group coordinators and 4 special coordinators
+(Scriptor #1, Archivist, Supervisor, Production Scheduler). *See Section 4.2.3.*
+
+**Logistics Dispatcher (D4)**
+Executive agent that creates shipment requests on Wildberries, prints labels, and
+tracks shipments. *See Section 4.2.4.*
+
+**Logit Model**
+Price elasticity model describing purchase probability as a function of price,
+competitor price, and rating: P = 1 / (1 + exp(-(β₀ + β₁·price + β₂·competitor_price + β₃·rating))).
+*See Section 5.1.2.*
+
+**Marketing Analyst (B4)**
+Strategic agent that optimises the allocation of advertising budget across products
+and channels to maximise ROMI. *See Section 4.2.2.*
+
+**Multi‑level Orchestration**
+The principle of dividing functions into 4 hierarchical levels (analytical,
+strategic, tactical coordinators, executive), which ensures scalability and
+flexibility. *See Section 4.1.3.*
+
+**News Monitor (A5)**
+Level 1 agent that collects news about Wildberries, metal products, competitors,
+and legislation from RSS, Telegram, and official notifications. *See Section 4.2.1.*
+
+**Operator Console**
+Web interface in the style of a strategy game, through which the business owner
+manages agents, views metrics, approves decisions, and handles exceptions.
+*See Section 4.4.*
+
+**Partner Integrator (E7)**
+Creative agent that searches for and automatically connects new suppliers and
+marketplaces. *See Section 4.2.4.*
+
+**Playbook**
+A predefined sequence of automated actions triggered by a specific event. Key
+playbooks: “Retention”, “Price War”, “Assortment Expansion”, “Shortage”.
+*See Section 7.2.*
+
+**Pricing Strategist (B1)**
+Strategic agent that determines the optimal price based on cost, competitor prices,
+demand forecast, and elasticity, using a logit model. *See Sections 4.2.2, 5.1.2.*
+
+**Process Engineer (E2)**
+Creative agent that checks the manufacturability of new products, calculates cost,
+and selects materials. *See Section 4.2.4.*
+
+**Production Scheduler (L3)**
+Tactical coordinator that creates production tasks based on forecasts, stock, and
+orders, and distributes them among teams. *See Section 4.2.3.*
+
+**Quality Control (B5)**
+Strategic agent that analyses defects from reviews and provides feedback to
+production. *See Section 4.2.2.*
+
+**Quantum Synthesizer (E8)**
+Creative agent that creates hybrid products (e.g., pickets with solar panels).
+*See Section 4.2.4.*
+
+**Review Processor (A4)**
+Level 1 agent that performs NLP analysis of reviews (ruBERT): sentiment classification,
+topic extraction, defect identification, and embedding generation. *See Section 4.2.1.*
+
+**Risk Manager (B3)**
+Strategic agent that calculates Health Score, identifies risks of shortage,
+overstocking, and margin decline, and launches the “Retention” playbook.
+*See Section 4.2.2.*
+
+**Scriptor #1 (Bridge)**
+Link between the core (levels 1–3) and the executive coalition (level 4), ensuring
+reliable task transfer via Redis Streams. *See Section 4.3.1.*
+
+**Scriptor #2 (Treasury)**
+Budget management: checks limits, blocks spending when limits are exceeded, notifies
+the operator. *See Section 4.3.2.*
+
+**Scriptor #3 (Execution)**
+Unified layer for calling external APIs (Wildberries, 1С, bank), with caching,
+retry, and fallback to manual input. *See Section 4.3.3.*
+
+**Seasonal Forecaster (A6)**
+Level 1 agent that computes seasonal coefficients for each SKU based on historical
+sales, weather data, and holiday calendars. *See Section 4.2.1.*
+
+**Supervisor (L3)**
+Tactical coordinator that monitors agent load, restarts failed components, and
+balances load. *See Section 4.2.3.*
+
+**System Architect (E6)**
+Creative agent that optimises agent hierarchy and performs self‑learning.
+*See Section 4.2.4.*
+
+**Tax Calculator (D1)**
+Executive agent that calculates taxes (simplified tax system), generates payment
+orders, and reminds of deadlines. *See Section 4.2.4.*
+
+**Test Analyst (E4)**
+Creative agent that runs A/B tests for new products, analyses conversion and reviews,
+and assesses potential. *See Section 4.2.4.*
+
+**Trend Scout (E5)**
+Creative agent that analyses social media and search queries to detect emerging
+trends. *See Section 4.2.4.*
+
+**Trigger**
+An event (data change, timer signal, parsing result) that initiates an automated
+action or playbook. There are 16 triggers defined in the system (T01–T16).
+*See Section 7.1.*
+
+**WB API Monitor (A2)**
+Level 1 agent that collects operational data from the Wildberries personal account
+via the official API (orders, stock, reviews, statistics). *See Section 4.2.1.*
+
+═══════════════════════════════════════════════════════════════════════════════════
+**NOTE:** The glossary covers all key terms used in the project. The list may be
+expanded as new features are added.

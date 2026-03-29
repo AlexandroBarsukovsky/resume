@@ -1,0 +1,268 @@
+═══════════════════════════════════════════════════════════════════════════════════
+PROTOCOL: 8.2. DESCRIPTION OF KEY PLAYBOOKS
+Project: Sourcegraph GTM Infrastructure
+═══════════════════════════════════════════════════════════════════════════════════
+
+**8.2. DESCRIPTION OF KEY PLAYBOOKS**
+
+This protocol details four key playbooks that automate critical GTM processes:
+customer retention, expansion, qualification, and proactive risk response.
+Each playbook is a sequence of automated actions triggered by a corresponding
+trigger (see 8.1). The playbooks are implemented using agents (Levels 1–4),
+external APIs (Salesforce, Gainsight, SalesLoft), and internal services
+(financial calculations). All actions are logged, with retry mechanisms and escalation.
+
+────────────────────────────────────────────────────────────────────────────────────
+8.2.1. PLAYBOOK “RETENTION” (HEALTH SCORE < 0.5)
+────────────────────────────────────────────────────────────────────────────────────
+
+**8.2.1.1. Purpose**
+Prevent customer churn when a client shows a critical drop in activity or other
+signs of dissatisfaction. The playbook ensures immediate intervention by the CSM
+and automated communication with the customer.
+
+**8.2.1.2. Trigger**
+- Health_Score__c < 0.5 (field update in Salesforce by analyst agents).
+- Or an event from Gainsight (if the playbook is initiated from Gainsight).
+
+**8.2.1.3. Execution Steps**
+
+1. **Create a high‑priority task for the CSM**
+   - **Executor:** Action Agent (Level 4, CS function).
+   - **Action:** Salesforce API – create a Task with:
+     * Subject: “Retention: [Account Name] (Health Score < 0.5)”
+     * Priority: High
+     * OwnerId: CSM assigned to the account (field `CSM_Owner__c`)
+     * Due Date: current date + 24 hours
+     * Description: link to the playbook in Gainsight, current Health Score values,
+       latest customer activities.
+   - **Check:** If no CSM is assigned, the task is created for the CSM manager.
+
+2. **Send an automatic email to the customer**
+   - **Executor:** Gainsight (via API) or an Action Agent.
+   - **Template:** “How can we help?” – a personalised email containing:
+     * Link to documentation for advanced features.
+     * Offer of training (webinar, one‑on‑one session).
+     * Technical support contacts.
+   - **Sender:** On behalf of the CSM (via Gainsight).
+
+3. **Log the event in Gainsight**
+   - **Executor:** Action Agent (or Gainsight automatically).
+   - **Action:** Create a record of the playbook launch in the customer’s history,
+     capturing the time and trigger.
+
+4. **Monitoring and escalation**
+   - **Timer:** The Action Agent checks the task status after 3 days.
+   - **If the task is not closed (Status != Completed):**
+     * Create a task for the CSM manager (VP of CS) with escalation.
+     * Send a notification to the `#escalations` Slack channel.
+     * Resend the email to the customer (with a firmer tone).
+
+5. **Playbook completion**
+   - The playbook is considered successful if:
+     * Health Score increases to ≥0.5 within 30 days.
+     * Or the CSM confirms that the risk has been resolved (comment in the task).
+   - If the Health Score remains <0.5 after 30 days, the playbook is marked
+     “unsuccessful” and additional analysis is triggered (task for RevOps).
+
+**8.2.1.4. Technical Implementation**
+
+| Component               | Description                                                                 |
+|-------------------------|-----------------------------------------------------------------------------|
+| Initiating trigger      | T03 (see 8.1) – upon update of Health_Score < 0.5.                          |
+| Handler                 | Action Agent (Lambda / Kubernetes) subscribed to Kafka topic `playbook_retention`. |
+| API calls               | Salesforce REST API (create task), Gainsight API (launch playbook, send email). |
+| Monitoring              | CloudWatch timer (daily check of task status).                              |
+| Error handling          | If Gainsight fails – the task is created, email is sent via backup channel (SalesLoft). |
+
+**8.2.1.5. Success Metrics**
+- CSM response time (from trigger to task closure) – target < 24 hours.
+- Percentage of customers whose Health Score returns to green/yellow zone within 30 days – >60%.
+- Reduction in churn among customers that went through the playbook by 30% relative to a control group.
+
+────────────────────────────────────────────────────────────────────────────────────
+8.2.2. PLAYBOOK “EXPANSION” (EXPANSION SIGNAL)
+────────────────────────────────────────────────────────────────────────────────────
+
+**8.2.2.1. Purpose**
+Identify and realise upsell/cross‑sell opportunities for customers showing high
+activity, growth, or clear interest in additional products.
+
+**8.2.2.2. Trigger**
+- Expansion_Signal__c = true (field update by analyst agents).
+- Or an event from Gainsight (if the playbook is initiated from Gainsight).
+
+**8.2.2.3. Execution Steps**
+
+1. **Create a task for the AM (Account Manager)**
+   - **Executor:** Action Agent (Level 4, CS/AM function).
+   - **Action:** Salesforce API – create a Task with:
+     * Subject: “Expansion opportunity: [Account Name]”
+     * Priority: High
+     * OwnerId: AM assigned to the account (field `AM_Owner__c`)
+     * Due Date: current date + 2 business days.
+     * Description: reason for triggering (which condition was met),
+       current metrics (Usage, user growth, feature requests).
+
+2. **Prepare a commercial proposal (financial agents)**
+   - **Executor:** Financial Agents (Level 4, Finance function).
+   - **Action:** Based on:
+     * Current consumption (number of users, repositories, API calls).
+     * Historical expansion data for similar customers (model).
+     * Standard pricing and possible discounts (depending on the philosophy).
+   - A JSON proposal is generated and saved in the fields
+     `Proposed_Expansion_Amount__c` and `Proposed_Products__c` on the Account object.
+
+3. **Notify the AM**
+   - **Executor:** Action Agent.
+   - **Action:** Send a notification to the Slack channel `#expansion-opportunities`
+     with a summary: customer, proposed amount, link to the task.
+
+4. **Await AM response**
+   - **Timer:** The Action Agent checks the task after 5 business days.
+   - If the task is not closed (not moved to `Completed`):
+     * Send a reminder in Slack (tagging @AM).
+     * Create an escalation task for the AM manager.
+   - If the AM creates a new Opportunity for expansion – the task is automatically
+     closed (via the link to the Opportunity).
+
+5. **Playbook completion**
+   - The playbook is considered successful if:
+     * An expansion Opportunity is created (any amount).
+     * Or the AM confirms that the customer is not ready (comment in the task).
+   - If there is no response after 30 days, the playbook is marked “overdue”
+     and an audit is initiated.
+
+**8.2.2.4. Technical Implementation**
+
+| Component               | Description                                                                 |
+|-------------------------|-----------------------------------------------------------------------------|
+| Initiating trigger      | T04 or T10 (see 8.1).                                                       |
+| Handler                 | Action Agent (Kubernetes) subscribed to Kafka topic `playbook_expansion`.   |
+| API calls               | Salesforce REST API (create task), financial agents (internal service).     |
+| Monitoring              | CloudWatch timer (daily check of task status).                              |
+| Error handling          | If financial agents fail – the task is created with a note “manual calculation required”. |
+
+**8.2.2.5. Success Metrics**
+- Percentage of tasks closed by creating an Opportunity – >30% (of total triggers).
+- Average time from signal to Opportunity creation – <5 business days.
+- Increase in expansion ARR by 20% over the year.
+
+────────────────────────────────────────────────────────────────────────────────────
+8.2.3. PLAYBOOK “QUALIFICATION” (ACCOUNT SCORE > 0.7)
+────────────────────────────────────────────────────────────────────────────────────
+
+**8.2.3.1. Purpose**
+Ensure immediate response to accounts with high potential (Account Score >0.7),
+handing them over to a Sales Strategist for qualification and subsequent handoff to an AE.
+
+**8.2.3.2. Trigger**
+- Account_Score__c > 0.7 (field update by analyst agents).
+- Or creation of a new account with a high ICP_Fit (rule check).
+
+**8.2.3.3. Execution Steps**
+
+1. **Create a task for the Sales Strategist**
+   - **Executor:** Action Agent (Level 4, intent/funnel function).
+   - **Action:** Salesforce API – create a Task with:
+     * Subject: “Qualification: [Account Name] (Score = [value])”
+     * Priority: High
+     * OwnerId: assigned Strategist (or a shared queue)
+     * Due Date: current date + 24 hours.
+     * Description: breakdown of Account Score components (Intent, Usage, ICP_Fit),
+       outreach recommendations.
+
+2. **Add the account to a SalesLoft queue**
+   - **Executor:** Action Agent.
+   - **Action:** Call SalesLoft API to add the account to the cadence
+     (sequence) “New Qualifications”. Use a template personalised by industry
+     (from Level 3 – tactical groups).
+
+3. **Logging and analytics**
+   - **Executor:** Analyst Agent (Level 1).
+   - **Action:** Record the playbook trigger fact in Snowflake
+     to later analyse conversion.
+
+**8.2.3.4. Technical Implementation**
+
+| Component               | Description                                                                 |
+|-------------------------|-----------------------------------------------------------------------------|
+| Initiating trigger      | T01 (see 8.1).                                                              |
+| Handler                 | Action Agent (Lambda) subscribed to Kafka topic `playbook_qualification`.   |
+| API calls               | Salesforce REST API (create task), SalesLoft API (add to cadence).          |
+| Error handling          | If SalesLoft is unavailable – the task is created, Strategist performs outreach manually. |
+
+**8.2.3.5. Success Metrics**
+- Time from Account Score >0.7 to task creation – <2 seconds.
+- Percentage of accounts passed to AE (qualified) – >20%.
+- Reduction in response time to intent signals from 2 days to 2 hours.
+
+────────────────────────────────────────────────────────────────────────────────────
+8.2.4. PLAYBOOK “PROACTIVE PIPELINE ALERT” (PIPELINE COVERAGE < 3×)
+────────────────────────────────────────────────────────────────────────────────────
+
+**8.2.4.1. Purpose**
+Alert leadership about insufficient pipeline to meet quarterly targets,
+and initiate measures to increase coverage.
+
+**8.2.4.2. Trigger**
+- Weekly calculation of Pipeline Coverage (total pipeline / quarterly quota) < 3.
+- Calculation is performed by financial agents (Level 4) every Monday.
+
+**8.2.4.3. Execution Steps**
+
+1. **Notify leadership**
+   - **Executor:** Financial Agent (Level 4).
+   - **Action:** Send an email to the CRO, VP of Sales, and RevOps Director with:
+     * Current pipeline coverage (numeric value).
+     * Trend over the last 4 weeks.
+     * List of the largest opportunities that could close in the current quarter.
+     * Recommendation to increase marketing budget or activate ABM campaigns.
+
+2. **Create a task for RevOps**
+   - **Executor:** Financial Agent.
+   - **Action:** Salesforce API – create a Task with:
+     * Subject: “Pipeline coverage analysis (value <3)”
+     * Priority: Medium
+     * OwnerId: RevOps Lead
+     * Due Date: current date + 3 business days.
+     * Description: indicate possible reasons for the decrease, propose measures
+       (e.g., launch additional campaigns, revise quotas).
+
+3. **Escalate in case of critical drop**
+   - **If Pipeline Coverage < 2×:**
+     * In addition to the email, send a notification to the `#exec-alerts` Slack channel.
+     * Initiate an emergency meeting (create a calendar event via Google Calendar API) with the CRO, VP Sales, RevOps.
+     * Raise the priority of the RevOps task to High.
+
+4. **Monitoring and closure**
+   - The playbook is considered successful if:
+     * Within two weeks, Pipeline Coverage returns to ≥3 (either by increasing pipeline or adjusting quotas).
+   - If coverage remains <3 for the entire quarter, a post‑analysis is initiated
+     (task for RevOps to prepare a report on the causes).
+
+**8.2.4.4. Technical Implementation**
+
+| Component               | Description                                                                 |
+|-------------------------|-----------------------------------------------------------------------------|
+| Initiating trigger      | T08 (see 8.1).                                                              |
+| Handler                 | Financial Agent (Kubernetes) scheduled to run every Monday.                 |
+| API calls               | Salesforce REST API (create task), Slack API (notifications), Google Calendar API (create event). |
+| Error handling          | If email sending fails – duplicate to Slack; the RevOps task is always created. |
+
+**8.2.4.5. Success Metrics**
+- Leadership response time (until action is taken) – <24 hours after notification.
+- Percentage of quarters where pipeline coverage is ≥3 by the end of the quarter – >80%.
+- Reduction in number of quarters where the plan is missed due to insufficient pipeline.
+
+────────────────────────────────────────────────────────────────────────────────────
+**CONCLUSIONS ON KEY PLAYBOOKS**
+
+- The four playbooks cover the most critical points in the GTM process:
+  retention, expansion, qualification, and proactive pipeline management.
+- Each playbook has clear steps, roles, technical implementation,
+  and success metrics.
+- Automating these processes reduces response time, increases predictability,
+  and allows teams to focus on strategic tasks.
+
+═══════════════════════════════════════════════════════════════════════════════════

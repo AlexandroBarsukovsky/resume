@@ -1,0 +1,186 @@
+═══════════════════════════════════════════════════════════════════════════════════
+PROTOCOL: 5.4. REPORTS AND DASHBOARDS (EXECUTIVE DASHBOARD, SALES DASHBOARD, CS DASHBOARD)
+Project: Sourcegraph GTM Infrastructure
+═══════════════════════════════════════════════════════════════════════════════════
+
+**5.4. REPORTS AND DASHBOARDS (EXECUTIVE DASHBOARD, SALES DASHBOARD, CS DASHBOARD)**
+
+In the target architecture, reporting and visualization of key metrics are implemented
+at two levels:
+- **Tableau** – the primary tool for Executive Dashboard, Sales Dashboard,
+  and CS Dashboard, with live connections to Snowflake and Salesforce.
+- **Salesforce Dashboards** – simplified versions for quick access within the CRM
+  (using standard reports and dashboards).
+
+All dashboards are built on data that updates in real time (via reverse ETL and Platform Events),
+enabling leadership and teams to make decisions based on current information.
+Each dashboard is tailored to a specific audience: C‑level, sales management,
+and customer success managers.
+
+────────────────────────────────────────────────────────────────────────────────────
+5.4.1. EXECUTIVE DASHBOARD (FOR CRO, CPO, INVESTORS)
+────────────────────────────────────────────────────────────────────────────────────
+
+**Objective:** Provide senior leadership with an instant snapshot of business status,
+trends, and critical risks. The dashboard should be concise but contain all key metrics
+defined in Section 2.3.
+
+**Data sources:** Salesforce (Account, Opportunity, Closed Won), Snowflake
+(aggregated metrics, forecasts).
+
+**Refresh:** real‑time (live connection in Tableau); extracts update every 15 minutes.
+
+**Dashboard structure (tableau)**
+
+| Block                     | Content                                                                 | Visualization               |
+|---------------------------|-------------------------------------------------------------------------|-----------------------------|
+| **ARR and Growth**        | Current ARR ($M), YoY growth (%), QoQ growth (%), quarter‑end forecast  | Large numbers, spline chart |
+| **Net Retention (NRR)**   | NRR in %, trend over last 4 quarters, breakdown by segment (Enterprise, Mid‑Market, SMB) | Line chart, bars            |
+| **Pipeline Coverage**     | Ratio of open pipeline value to quarterly quota (target >3×). Color coding: green (>3), yellow (2–3), red (<2) | Indicator, column with threshold |
+| **Forecast Accuracy**     | MAPE for current and previous quarter, comparison of forecast vs. actual by month | Line chart, bars            |
+| **Win Rate (Enterprise)** | Win rate by segment, region, stage. Trend over last 4 quarters          | Table, sparklines           |
+| **Health Score**          | Customer distribution by zones (green/yellow/red) in % and absolute numbers. Trend over last 3 months | Donut chart, bars           |
+| **Top 10 Opportunities**  | List of the 10 largest deals in pipeline with close probability, amount, expected close date, responsible AE | Sortable table              |
+| **Alerts**                | Critical alerts: Pipeline Coverage <2×, Forecast Accuracy <80%, Churn Spike >10%, Health Score red zone >20% | Panel with color coding     |
+
+**Metric details**
+
+*ARR and Growth*
+- Formula: sum of annual contract values of all active customers.
+- Source: `Amount` field on Opportunity with status `Closed Won` and active `Contract_Status__c`.
+- Forecast: based on weighted pipeline (see Section 6.4).
+
+*Net Retention (NRR)*
+- Formula: `(ARR_start + Expansion – Churn) / ARR_start`
+- Calculated monthly by financial agents, result stored in Snowflake and displayed in the dashboard.
+
+*Forecast Accuracy*
+- MAPE = `(1/n) * Σ |(actual – forecast) / actual|`
+- Forecast taken from the model (Win_Probability), actual from closed deals.
+
+*Health Score*
+- Green zone: H ≥ 0.8; yellow: 0.5 ≤ H < 0.8; red: H < 0.5.
+- Source: `Health_Score__c` field on Account (updated by agents).
+
+────────────────────────────────────────────────────────────────────────────────────
+5.4.2. SALES DASHBOARD (FOR VP SALES, AE, SALES STRATEGIST)
+────────────────────────────────────────────────────────────────────────────────────
+
+**Objective:** Provide sales leadership and individual contributors with a transparent view of
+plan attainment, activity, pipeline quality, and problem areas.
+
+**Data sources:** Salesforce (Opportunity, Account, Task), Snowflake
+(aggregated metrics by AE).
+
+**Refresh:** real‑time (live connection) for metrics dependent on deal status;
+historical data every 15 minutes.
+
+**Dashboard structure**
+
+| Block                         | Content                                                                 | Visualization               |
+|-------------------------------|-------------------------------------------------------------------------|-----------------------------|
+| **Quota and attainment (YTD)** | For each AE: quota, actual closed revenue, attainment %. Sorted descending. | Table, bars                 |
+| **Pipeline by AE**            | For each AE: total pipeline (Active Opportunities), coverage ratio (Pipeline / Quota), quarter‑end forecast | Table, indicators           |
+| **Activity**                  | Number of meetings, demos, emails sent per week; comparison with norm (target for AE). | Sparklines, bars            |
+| **MEDDPICC completeness**     | Percentage of deals with filled MEDDPICC fields (MEDDPICC_Completeness__c >0.7) by AE. Impact on win rate. | Table, scatter plot         |
+| **Intent signals (for Strategist)** | List of accounts with Account Score >0.7, sorted descending. Fields: ICP_Fit, Intent_Strength, Last_Activity_Date. | Filterable table            |
+| **Deal cycle**                | Average deal duration by stage (days). Identify stalled deals (Days_In_Stage > stage average). | Bars, list of stalled       |
+| **Won / Lost**                | Loss analysis: reasons (competitors, price, timing) based on comments from MEDDPICC_Fields__c. | Word cloud, table           |
+
+**Metric details**
+
+*Quota and attainment*
+- Quota loaded from planning system (Excel/API) and stored in custom object `Sales_Quota__c`.
+- Attainment calculated as sum of Amount of closed deals (Closed Won) for the period.
+
+*Pipeline by AE*
+- Active deals: Opportunity with Stage not Closed Won/Lost.
+- Quarter‑end forecast: sum of (Amount × Win_Probability) for deals with expected close date in current quarter.
+
+*Activity*
+- Activity norm set by manager (e.g., 10 meetings per week).
+- Data from Task/Event objects where `Type` = `Meeting`, `Demo`, `Call`.
+
+*MEDDPICC completeness*
+- Automatically computed from JSON in `MEDDPICC_Fields__c` (analytic agents).
+- Impact on win rate: compare win rates for deals with filled vs. unfilled fields.
+
+────────────────────────────────────────────────────────────────────────────────────
+5.4.3. CS DASHBOARD (FOR VP CS, CSM, AM)
+────────────────────────────────────────────────────────────────────────────────────
+
+**Objective:** Provide customer success managers with current information on
+customer health, churn risk, expansion opportunities, and playbook effectiveness.
+
+**Data sources:** Salesforce (Account, Task, Activity), Gainsight
+(health score history, playbook execution), Snowflake (aggregated metrics by CSM).
+
+**Refresh:** real‑time (live connection) for Health Score and Expansion Signals;
+historical data every 15 minutes.
+
+**Dashboard structure**
+
+| Block                           | Content                                                                 | Visualization               |
+|---------------------------------|-------------------------------------------------------------------------|-----------------------------|
+| **Health Score (red zone)**     | List of customers with Health_Score__c < 0.5, sorted by priority (lower score = higher priority). Fields: Account Name, Health_Score, Last_Activity_Date, Risk_Flag. | Table, color coding         |
+| **Health Score (yellow zone)**  | List of customers with 0.5 ≤ Health_Score__c < 0.8. Fields: Account Name, Health_Score, Last_Activity_Date. | Table                       |
+| **Expansion Signals**           | List of customers with Expansion_Signal__c = true, sorted by expansion likelihood (Score). Fields: Account Name, Usage, New_Users_Growth, Feature_Request. | Table                       |
+| **Churn Risk**                  | High‑risk customers (Health_Score <0.5 or activity drop >30% in a month) without open tasks for CSM. Button “Create task”. | Table with action           |
+| **Onboarding (Time to First Value)** | Average time from deal close to first active use (TTFV) by month. Breakdown by CSM. | Line chart, bars            |
+| **Playbook effectiveness**      | Number of playbooks launched (retention, expansion), success rate (led to Health Score improvement or upsell close). | Bars, pie chart             |
+| **CSM activity**                | Number of customer meetings, tasks created, playbooks executed per week. Comparison with norm. | Table, sparklines           |
+| **NPS and feedback**            | Average NPS by segment, latest comments from surveys. | Chart, word cloud           |
+
+**Metric details**
+
+*Health Score (red/yellow zone)*
+- Color zones correspond to thresholds defined in Section 6.2.
+- For customers in red zone, a CSM task is automatically created (retention playbook).
+- Dashboard allows drilling into customer card to view Health Score history.
+
+*Expansion Signals*
+- Trigger conditions: Usage >0.7 and user growth >30% over 30 days, or feature request.
+- Source: `Expansion_Signal__c` field on Account (updated by analytic agents).
+
+*Onboarding (TTFV)*
+- Definition: date of first product login after deal close minus close date.
+- Analytic agents compute TTFV and store in `Opportunity.Onboarding_Time__c` (custom field).
+
+*Playbook effectiveness*
+- Playbook success: if Health Score improves within 30 days after a retention playbook, it is considered successful.
+- For expansion playbook – if an upsell deal closes.
+
+────────────────────────────────────────────────────────────────────────────────────
+5.4.4. IMPLEMENTATION IN TABLEAU AND SALESFORCE
+────────────────────────────────────────────────────────────────────────────────────
+
+**5.4.4.1. Tableau**
+
+- **Connection:** Live connection to Snowflake (for large volumes) and Salesforce
+  (for operational data). Extracts are used for historical dashboards (refresh every 15 minutes).
+- **Access rights:** Row‑level security based on user profile:
+  - C‑level – see all data.
+  - VP Sales – see data for their regions.
+  - AE – see only their own deals and accounts.
+  - CSM – see only their own customers.
+- **Publishing:** Dashboards published to Tableau Server, accessible via corporate portal.
+  Embedded in the control panel (iframe) for operators.
+
+**5.4.4.2. Salesforce Dashboards**
+
+- Standard reports and dashboards used for quick access within CRM.
+- Reports built on custom fields created in Section 5.1.
+- Automatic distribution: subscribed users receive weekly digests (PDF) by email,
+  generated by reporting agents (Level 4).
+
+────────────────────────────────────────────────────────────────────────────────────
+**CONCLUSIONS ON REPORTS AND DASHBOARDS**
+
+- Dashboards cover all management levels: strategic (Executive), operational (Sales),
+  and customer (CS).
+- Tableau with live connection ensures data is current in real time.
+- Built‑in row‑level security ensures each user sees only the data they are permitted to see.
+- Automated report preparation (via reporting agents) reduces manual RevOps effort
+  and accelerates decision‑making.
+
+═══════════════════════════════════════════════════════════════════════════════════

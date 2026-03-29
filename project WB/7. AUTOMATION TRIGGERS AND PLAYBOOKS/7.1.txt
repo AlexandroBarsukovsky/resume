@@ -1,0 +1,145 @@
+╔══════════════════════════════════════════════════════════════════════════════════╗
+║ PROTOCOL 7.1. COMPLETE LIST OF TRIGGERS (EVENT → ACTION)                         ║
+║  PROJECT: IRON KIT – 13,918 SALES                                                 ║
+║                                                                                  ║
+╚══════════════════════════════════════════════════════════════════════════════════╝
+
+═══════════════════════════════════════════════════════════════════════════════════
+**7.1. COMPLETE LIST OF TRIGGERS (EVENT → ACTION)**
+───────────────────────────────────────────────────────────────────────────────────
+
+Triggers are the foundation of event‑driven automation. Each trigger defines which
+event (data change, timer signal, parsing result) initiates which action (or chain
+of actions). All triggers are implemented via Redis Streams (or equivalent) and are
+processed by the respective agents. Below is a detailed list of all 16 triggers,
+their conditions, actions, priorities, retry mechanisms, and error handling.
+
+────────────────────────────────────────────────────────────────────────────────────
+**7.1.1. DETAILED DESCRIPTION OF TRIGGERS (TABLE)**
+───────────────────────────────────────────────────────────────────────────────────
+
+| ID  | Event / Condition                                                              | Action                                                                                                 | Priority | Retry         | Error Handling                                            | Implementation / Subscribers               |
+|-----|-------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------|----------|---------------|-----------------------------------------------------------|--------------------------------------------|
+| T01 | Stock (production + WB) < minimum threshold s (calculated per SKU)            | “Inventory manager” agent (D3) creates a production order (in `production_tasks` table) or raw material purchase. Publishes `stock_low` event. | High     | 3 attempts, backoff 10/30/60 sec | If task creation fails (DB error) – place in DLQ, notify operator. | WB API Monitor (A2) → Redis Stream `stock_events` → D3. |
+| T02 | Competitor price drop >5% within 24 hours (from A1 data)                      | “Pricing strategist” agent (B1) recalculates optimal price. If deviation from current ≤5% – updates price on WB via Scriptor #3. If >5% – creates operator task in console. | High     | 3 attempts, backoff 30/60/120 sec | On WB API error – record in DLQ, manual handling.           | Competitive Intelligence (A1) → Redis Stream `price_events` → B1. |
+| T03 | New negative review (rating ≤3)                                               | “Review processor” agent (A4) classifies review, extracts topics. “Customer service” agent (D7) generates reply (LLM) and sends via WB API. If reply does not resolve issue – escalate to operator. | High     | 2 attempts, backoff 5/30 sec    | On LLM failure – save draft, notify operator.               | WB API Monitor (A2) → Redis Stream `review_events` → A4 → D7. |
+| T04 | New order received (WB API)                                                   | “Logistics dispatcher” agent (D4) creates shipment request. “Financial controller” agent (D5) records revenue, updates budget. | High     | 3 attempts, backoff 10/30/60 sec | If shipment request fails (WB error) – record in DLQ, notify. | WB API Monitor (A2) → Redis Stream `order_events` → D4, D5. |
+| T05 | 30‑day demand forecast updated and shows shortage in 2 weeks (stock < forecast × 14) | “Production scheduler” agent (L3) creates production task based on forecast. “Inventory manager” agent (D3) adjusts raw material purchases. | Medium   | 2 attempts, backoff 30/120 sec  | If forecast unavailable – use last known.                  | Demand Analyst (A3) → Redis Stream `forecast_events` → L3, D3. |
+| T06 | Health Score < 0.5 (red zone)                                                  | Launch “Retention” playbook: notify operator (push, email), pause automatic purchases, root‑cause analysis (agent B3). | Critical | 1 attempt (immediate)          | On notification failure – retry after 10 min.               | Risk Manager (B3) → Redis Stream `health_events` → console, playbook. |
+| T07 | New idea from GENESIS (E1)                                                     | “Test analyst” agent (E4) starts A/B test (pilot batch 10–20 units) on WB, “Creative marketer” agent (E3) generates description, “Ad optimiser” agent (D2) allocates budget. | Medium   | 2 attempts, backoff 60/300 sec | If budget insufficient – postpone until replenished.       | Assortment Strategist (B2) → Redis Stream `idea_events` → E4, E3, D2. |
+| T08 | Budget category exceeded: spent > limit × 0.8 (warning) or spent > limit (block) | Warn operator in console (push). If 100% exceeded – block new spending in that category until manual confirmation. | High     | 1 attempt (periodic check)     | On console failure – duplicate by email.                   | Scriptor #2 (Treasury) – check every 5 min → console. |
+| T09 | New product listed on WB (first time)                                          | “Creative marketer” agent (E3) creates description, creatives. “Ad optimiser” agent (D2) starts test campaign (budget 5–10 thousand RUB). | Low      | 2 attempts, backoff 30/120 sec | If budget insufficient – postpone, notify.                 | Assortment Strategist (B2) → Redis Stream `new_product_events` → E3, D2. |
+| T10 | Tax payment deadline approaching (5 days left)                                 | “Tax calculator” agent (D1) creates payment order, notifies operator (console, email). | Medium   | 1 attempt                     | On creation failure – create task in console.              | Financial Controller (D5) – weekly check → D1. |
+| T11 | Product inactive / low margin (<25% for 2 weeks)                               | “Risk manager” agent (B3) initiates root‑cause analysis (price, cost, competitors), suggests adjustments (price reduction, pause advertising). | Medium   | 1 attempt                     | On missing data – request manual input.                    | Risk Manager (B3) – weekly analysis → console, B1. |
+| T12 | Start of seasonal peak (per A6 forecast)                                        | “Ad optimiser” agent (D2) increases budget by 30–50% for relevant SKUs. “Production scheduler” agent (L3) ramps up production volumes. | Medium   | 1 attempt                     | On budget shortage – notify.                                | Seasonal Forecaster (A6) → Redis Stream `seasonal_events` → D2, L3. |
+| T13 | New bank statement received (manual upload or API)                              | “Financial controller” agent (D5) reconciles statement with expected payments, updates budget, records WB commissions. | Low      | 1 attempt                     | On discrepancies – create operator task.                   | Console / API → Redis Stream `bank_events` → D5. |
+| T14 | Wildberries API failure: error >3 times in 5 minutes                           | “Supervisor” agent (L3) switches system to fallback channel (manual CSV input), notifies operator (console, email). | Critical | 1 attempt                     | On console unavailable – email and SMS.                    | Scriptor #3 – error monitoring → L3. |
+| T15 | New competitor in category: product with monthly sales > 10,000 RUB appears     | “Competitive intelligence” agent (A1) publishes signal, “Pricing strategist” agent (B1) reviews prices, “Assortment strategist” agent (B2) assesses threat. | Medium   | 1 attempt                     | On missing data – retry after 30 min.                      | Competitive Intelligence (A1) → Redis Stream `competitor_events` → B1, B2. |
+| T16 | Weekly timer (Sunday, 23:00)                                                  | Recalculate forecasts (A3), update Health Score (B3), analyse agent performance (Archivist), rotate API keys (Scriptor #3). | Low      | 1 attempt                     | On error – retry after 1 hour, notify.                     | Celery Beat → task execution.              |
+
+────────────────────────────────────────────────────────────────────────────────────
+**7.1.2. TECHNICAL IMPLEMENTATION OF TRIGGERS**
+───────────────────────────────────────────────────────────────────────────────────
+
+All triggers are built on publishing events to Redis Streams. Each source (agent
+or external service) publishes messages to a specific topic. Subscriber agents read
+these topics and perform actions. For guaranteed delivery, consumer groups are used
+with automatic acknowledgment (ack) after successful processing.
+
+**Example Redis Streams configuration (Python):**
+```python
+import redis
+import json
+
+redis_client = redis.Redis(host='redis', port=6379, decode_responses=True)
+
+# Publish event (e.g., from WB API monitor)
+event = {
+    "event_id": "uuid",
+    "timestamp": "2026-03-28T10:00:00",
+    "type": "stock_updated",
+    "payload": {"sku": "PICKET-001", "stock": 120}
+}
+redis_client.xadd("stock_events", {"data": json.dumps(event)})
+
+# Subscription by agent D3
+def process_stock_events():
+    last_id = "0"
+    while True:
+        events = redis_client.xread({"stock_events": last_id}, block=5000, count=10)
+        for stream, messages in events:
+            for message_id, fields in messages:
+                event = json.loads(fields['data'])
+                # process event
+                process_stock_event(event)
+                # acknowledge (if using consumer group)
+                redis_client.xack("stock_events", "d3_group", message_id)
+            last_id = message_id
+
+            For fault tolerance, a Dead Letter Queue (DLQ) is used. If an event is not processed
+after 3 attempts, it is moved to a separate topic dlq. The operator can view the
+DLQ through the console and manually trigger reprocessing.
+
+Retry parameters in code (tenacity):
+python
+
+from tenacity import retry, stop_after_attempt, wait_exponential
+
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
+def update_wb_price(sku, price):
+    # API call
+    ...
+
+────────────────────────────────────────────────────────────────────────────────────
+7.1.3. TRIGGER MONITORING AND CONFIGURATION
+───────────────────────────────────────────────────────────────────────────────────
+
+    Dashboard in console: displays the number of events per topic over the last
+    24 hours, processing delays, DLQ size.
+
+    Alerts: triggered when DLQ size exceeds 100 messages or processing delay
+    exceeds 5 minutes.
+
+    Threshold configuration: the operator can adjust thresholds for T01 (s‑level),
+    T02 (automatic application threshold), T08 (budget limits), and others through the
+    console interface. Changes are saved in the database and read by agents on next run.
+
+────────────────────────────────────────────────────────────────────────────────────
+7.1.4. EXAMPLE OF A FULL TRIGGER CYCLE (T01)
+───────────────────────────────────────────────────────────────────────────────────
+
+    WB API Monitor (A2) fetches stock from WB warehouse every 30 minutes and updates
+    the sku table.
+
+    After updating, it publishes a stock_updated event to the stock_events topic.
+
+    “Inventory manager” agent (D3) is subscribed to stock_events. On receiving the event:
+
+        For each SKU, checks: stock_total = stock_production + stock_wb.
+
+        Compares against threshold s (calculated by the (s,S) model for each SKU,
+        stored in a separate table).
+
+        If stock_total < s, creates a record in production_tasks and publishes a
+        stock_low event to the alert_events topic.
+
+    “Production scheduler” agent (L3) is subscribed to alert_events and, upon receiving
+    stock_low, adds the task to the production schedule with high priority.
+
+    If the task is not completed (status in_progress) within 2 hours, L3 creates a
+    notification for the operator in the console.
+
+────────────────────────────────────────────────────────────────────────────────────
+7.1.5. SECURITY GUARANTEES
+───────────────────────────────────────────────────────────────────────────────────
+
+    All Redis topics are password‑protected.
+
+    Redis access is restricted to the internal network (VPC).
+
+    All publications and processing are logged for audit.
+
+═══════════════════════════════════════════════════════════════════════════════════
+NOTE: Protocol 7.1 details all 16 triggers, their conditions, actions,
+and technical implementation. The following protocols (7.2 and 7.3) will describe
+playbooks and the customer lifecycle.

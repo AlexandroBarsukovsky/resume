@@ -1,0 +1,116 @@
+╔══════════════════════════════════════════════════════════════════════════════════╗
+║   PROTOCOL 5.1. MATHEMATICAL MODELS                                               ║
+║  PROJECT: IRON KIT – 13,918 SALES                                                 ║
+║                                                                                  ║
+╚══════════════════════════════════════════════════════════════════════════════════╝
+
+═══════════════════════════════════════════════════════════════════════════════════
+**5.1.1. DEMAND FORECASTING**
+───────────────────────────────────────────────────────────────────────────────────
+
+**Model:** combination of ARIMA(p,d,q) with parameter optimisation and Prophet for incorporating external factors.
+
+- **ARIMA(p,d,q) with parameter optimisation**  
+  For each SKU, the orders (p,d,q) and seasonal (P,D,Q) are automatically selected by minimising AIC (auto_arima). Forecasts are built for 7, 30, 90 days.
+
+- **Accounting for seasonality**  
+  **Monthly coefficients** are used, calculated from historical data over 2 years.  
+  Peak season: **March – October** (coefficients 1.1–1.4), off‑peak: November – February (0.6–0.9).
+
+- **Impact of external factors (Prophet)**  
+  Regressors are added to the Prophet model:
+  – average temperature (data from OpenWeatherMap),
+  – holidays (calendar: New Year, May holidays, March 8, February 23, etc.).
+  This allows the forecast to be adjusted for anomalous weather or holiday periods.
+
+- **Accuracy assessment**  
+  Key metric – **MAPE (Mean Absolute Percentage Error)**.  
+  Target: **MAPE < 15%** for the 30‑day forecast.  
+  If the threshold of 20% is exceeded, model retraining and input data quality checks are triggered.
+
+────────────────────────────────────────────────────────────────────────────────────
+**5.1.2. PRICE ELASTICITY (LOGIT MODEL)**
+───────────────────────────────────────────────────────────────────────────────────
+
+The probability that at least one purchase of a product will occur on a given day is described by logistic regression:
+
+\[
+P(\text{purchase}=1) = \frac{1}{1 + e^{-(\beta_0 + \beta_1 \cdot \text{price} + \beta_2 \cdot \text{competitor\_price} + \beta_3 \cdot \text{rating})}}
+\]
+
+- **price** – current product price,
+- **competitor_price** – average price of a similar product from major competitors (data from the “Competitive intelligence” agent),
+- **rating** – average product rating (1–5) from reviews.
+
+**Coefficient estimation:**  
+Coefficients \(\beta_0, \beta_1, \beta_2, \beta_3\) are estimated by maximum likelihood on **historical Wildberries data** (sales, prices, competitor prices, ratings) for the last 6 months. The model is recalculated monthly. Expected signs: \(\beta_1 < 0\) (price increase reduces probability), \(\beta_2 > 0\) (increase in competitor prices raises our attractiveness), \(\beta_3 > 0\) (high rating increases probability).
+
+────────────────────────────────────────────────────────────────────────────────────
+**5.1.3. INVENTORY OPTIMISATION**
+───────────────────────────────────────────────────────────────────────────────────
+
+For inventory management, the **(s, S) model** is applied, accounting for demand and lead time.
+
+- **Parameters:**
+  - \(s\) – reorder point (lower stock level),
+  - \(S\) – target replenishment level (upper stock level).
+
+- **Parameter calculation:**
+  \[
+  s = \mu_L + z \cdot \sigma_L
+  \]
+  \[
+  S = s + Q_{\text{opt}}
+  \]
+  where \(\mu_L\) – average demand during lead time \(L\), \(\sigma_L\) – standard deviation of demand over \(L\), \(z\) – service level factor (95%, \(z=1.645\)), \(Q_{\text{opt}}\) – economic order quantity (Wilson formula, accounts for ordering and holding costs).
+
+- **Objective function:**  
+  Minimisation of total costs:
+  \[
+  \min \left( \text{holding cost} + \text{shortage cost} \right)
+  \]
+  Shortage cost is estimated as lost marginal profit when the product is out of stock.
+
+The model is recalculated daily based on the demand forecast (Section 5.1.1) and actual stock levels.
+
+────────────────────────────────────────────────────────────────────────────────────
+**5.1.4. BUSINESS HEALTH SCORE**
+───────────────────────────────────────────────────────────────────────────────────
+
+Integral business “health” indicator:
+
+\[
+H = 0.4 \cdot \text{turnover}_\text{norm} + 0.3 \cdot \text{shortage}_\text{norm} + 0.3 \cdot \text{margin}_\text{norm}
+\]
+
+- **Turnover_norm** – normalised inventory turnover (target 30 days, normalised to interval 0–1, where 1 is ideal).
+- **Shortage_norm** – inverse share of days with shortage for fast‑moving SKUs (1 – share of days with shortage).
+- **Margin_norm** – ratio of current margin to target (35%), capped at 0–1.
+
+**Colour zones and automatic playbook:**
+| H              | Zone     | Action                                                       |
+|----------------|----------|--------------------------------------------------------------|
+| ≥ 0.7          | Green    | Monitoring, investments in expansion permitted               |
+| 0.5 ≤ H < 0.7  | Yellow   | Daily analysis, price/procurement adjustments                |
+| < 0.5          | Red      | **Automatic “Retention” playbook** – pause auto‑procurement, root cause analysis, owner manual intervention |
+
+Health Score is recalculated daily and displayed in the console.
+
+────────────────────────────────────────────────────────────────────────────────────
+**5.1.5. ACCOUNT SCORE FOR TASKS**
+───────────────────────────────────────────────────────────────────────────────────
+
+Ranking of tasks requiring operator attention (confirmation queue in the console):
+
+\[
+S = 0.5 \cdot \text{urgency} + 0.3 \cdot \text{revenue\_impact} + 0.2 \cdot \text{available\_resources}
+\]
+
+- **Urgency** – inverse time until deadline (normalised 0–1, where 1 is urgent).
+- **Revenue_impact** – expert assessment (0–1) from agents, accounting for potential loss or gain.
+- **Available_resources** – readiness of resources to perform the task (1 = all resources available, 0 = missing).
+
+Tasks with \(S \ge 0.7\) are displayed in red in the console queue and require priority consideration. Thresholds and weights can be adjusted by the operator via settings.
+
+═══════════════════════════════════════════════════════════════════════════════════
+**NOTE:** All models are calibrated on historical Wildberries data and updated automatically. Parameters (weights, thresholds, target values) are adjustable via the operator console.

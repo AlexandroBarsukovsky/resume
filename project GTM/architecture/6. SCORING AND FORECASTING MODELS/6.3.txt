@@ -1,0 +1,127 @@
+═══════════════════════════════════════════════════════════════════════════════════
+PROTOCOL: 6.3. EXPANSION SIGNALS (SIGNALS FOR UPSELL/CROSS‑SELL)
+Project: Sourcegraph GTM Infrastructure
+═══════════════════════════════════════════════════════════════════════════════════
+
+**6.3. EXPANSION SIGNALS (SIGNALS FOR UPSELL/CROSS‑SELL)**
+
+Expansion Signals are automatically detected indicators of a customer’s readiness to
+expand an existing contract (upsell – increasing volume, cross‑sell – purchasing
+additional products, such as Deep Search or MCP). These signals enable the Account
+Manager (AM) to proactively offer new opportunities, increasing net retention and
+reducing the risk of losing the customer to competitors.
+
+────────────────────────────────────────────────────────────────────────────────────
+6.3.1. TRIGGER CONDITIONS
+────────────────────────────────────────────────────────────────────────────────────
+
+The Expansion Signal is activated (the flag `Expansion_Signal__c = true`) when **at least
+one** of the following conditions is met.
+
+**Condition 1 – High activity and user growth**
+- **Activity:** `U > 0.7` (product usage above average).
+- **User growth:** `(new_users_last_30d / users_previous_30d) – 1 > 0.3`.
+- **Interpretation:** The customer actively uses the product and is growing their team,
+  creating natural demand for additional licenses or features.
+
+**Condition 2 – Request for additional functionality**
+- The customer explicitly expresses interest in a new feature or product. Sources:
+  * Demo request (`Demo_Request__c` in Salesforce, created via web form or by CSM).
+  * Feature request (`Feature_Request__c` on Account, filled by engineering team or CSM).
+  * Mention in a support ticket (Zendesk) of keywords: “upsell”, “additional license”,
+    “Deep Search”, “MCP”, “increase limit”.
+- **Interpretation:** The customer initiates a discussion about expansion, giving the
+  highest readiness signal.
+
+**Condition 3 – Contract renewal with increased volume**
+- An Opportunity of type `Renewal` is created, and its amount > 110% of the previous
+  contract amount (stored in `Previous_Contract_Amount__c`).
+- **Interpretation:** The customer themselves proposes a budget increase at renewal.
+
+**Condition 4 – Use of pilot features**
+- The customer activates features that typically lead to expansion (e.g.,
+  `Deep_Search_Active__c = true` and usage > 50% of the free tier limit). This condition
+  is defined by product‑specific rules.
+
+**Additional (configurable) conditions**
+- RevOps operators can add additional rules via the control panel, for example:
+  participation in an early‑adopter program, positive NPS > 9, request to increase the
+  number of repositories, etc.
+
+────────────────────────────────────────────────────────────────────────────────────
+6.3.2. AUTOMATIC ACTIONS
+────────────────────────────────────────────────────────────────────────────────────
+
+When the `Expansion_Signal__c` flag is set to `true`, the following automatic actions are
+executed. All are asynchronous and managed by agents (Level 4).
+
+**1. Create a task for the Account Manager**
+- **Type:** Task (Salesforce object)
+- **Subject:** `Expansion opportunity for [Account Name]`
+- **Priority:** High
+- **Owner:** Account Manager assigned to the account (field `AM_Owner__c`)
+- **Description:** Specifies the trigger reason (which condition was met) and recommended
+  actions (e.g., “offer Deep Search”, “conduct a demo”).
+- **Due Date:** within 2 business days.
+
+**2. Prepare a commercial proposal (financial agents)**
+- Financial agents (Level 4) calculate the potential expansion volume based on:
+  * Current consumption (if metrics are available: number of users, queries, repositories).
+  * Historical data on expansion for similar customers (logistic regression).
+  * Standard prices and possible discounts (depending on the ideology – conservative or aggressive).
+- A JSON proposal template is generated and stored in Salesforce fields
+  `Proposed_Expansion_Amount__c` and `Proposed_Products__c`.
+
+**3. Update dashboards and notifications**
+- An “Expansion Opportunities” widget appears in the AM dashboard, showing customer cards.
+- A notification is sent to the Slack channel `#expansion-opportunities` with a brief
+  summary: customer, amount, reason.
+- If the AM does not close the task within 5 business days, an escalation task is created
+  for the manager (VP of CS) and a reminder notification is sent.
+
+**4. Launch a Gainsight playbook (optional)**
+- Gainsight may launch the “Expansion” playbook, which sends a personalized message to
+  the customer, containing links to additional materials and an offer for a consultation.
+
+**5. Logging and analytics**
+- All actions (task creation, proposal, notifications) are logged in Snowflake.
+- Analytic agents collect statistics on signal activation and conversion to closed deals,
+  which are used to retrain the model (adjust condition weights).
+
+────────────────────────────────────────────────────────────────────────────────────
+6.3.3. ALGORITHMIC IMPLEMENTATION
+────────────────────────────────────────────────────────────────────────────────────
+
+**Monitoring and signal computation**
+- **Analytic agents (Level 1)** recalculate conditions 1, 2, and 4 weekly (on Sundays)
+  for all accounts with `Health_Score__c > 0.7` or with expansion history. Results are
+  stored in Snowflake.
+- **Event‑based check for condition 2:** when a `Demo_Request__c` or `Feature_Request__c`
+  is created, a Platform Event is published, which immediately triggers an agent to
+  update the flag.
+- **Condition 3** is checked when an Opportunity of type `Renewal` is created, via a
+  Salesforce trigger (Apex) that publishes an event.
+
+**Flag management**
+- The `Expansion_Signal__c` flag is updated via Hightouch (reverse ETL) when the
+  corresponding data changes in Snowflake.
+- If a signal was active but did not lead to a deal within 30 days, the flag is
+  automatically cleared (provided the conditions are no longer met).
+
+**Threshold configuration via the control panel**
+- RevOps operators can change the threshold for condition 1 (`U` and user growth),
+  add/remove keywords for condition 2, and adjust the coefficient for condition 3.
+
+────────────────────────────────────────────────────────────────────────────────────
+**CONCLUSIONS ON EXPANSION SIGNALS**
+
+- Expansion Signals enable proactive identification of revenue growth opportunities
+  from existing customers.
+- The four types of conditions cover both behavioral signals (activity, growth) and
+  explicit signals (requests, renewals).
+- Automatic actions (tasks, proposals, notifications) reduce AM response time from
+  weeks to hours.
+- Flexible configuration via the control panel allows signals to be adapted to
+  changing business priorities.
+
+═══════════════════════════════════════════════════════════════════════════════════

@@ -1,0 +1,120 @@
+═══════════════════════════════════════════════════════════════════════════════════
+PROTOCOL: 10.1. PHASE 1 (1–2 MONTHS): PILOT – ANALYST AGENT + 200 EXECUTORS
+Project: Sourcegraph GTM Infrastructure
+═══════════════════════════════════════════════════════════════════════════════════
+
+**10.1. PHASE 1 (1–2 MONTHS): PILOT – ANALYST AGENT + 200 EXECUTORS**
+
+────────────────────────────────────────────────────────────────────────────────────
+10.1.1. ACTIONS, RESOURCES, RISKS
+────────────────────────────────────────────────────────────────────────────────────
+
+**10.1.1.1. Actions**
+
+| Week | Action                                                                  | Responsible                 |
+|------|-------------------------------------------------------------------------|-----------------------------|
+| 1    | **Infrastructure setup** – deploy basic components on AWS (Kafka, Lambda, S3). Configure network policies, IAM. | Engineers (2)               |
+| 2    | **Develop analyst agent** – implement collection of intent signals from 6sense (pull), calculate Account Score, save to Snowflake. | Engineers (2)               |
+| 3    | **Configure reverse ETL (Hightouch)** – synchronise Account Score from Snowflake to Salesforce (field Account_Score__c). | RevOps (1)                  |
+| 4    | **Develop executor agents (200)** – create functions (Lambda) for: creating tasks in Salesforce, updating fields, calling SalesLoft API. | Engineers (2)               |
+| 5    | **Configure event‑driven chain** – integrate Salesforce Platform Events with EventBridge, subscribe agents to topics. | Engineers (2)               |
+| 6    | **Test in sandbox** – run through 100 accounts, verify correctness of task creation, field updates. | Engineers (2), RevOps (1)   |
+| 7    | **Pilot launch on a limited group** – select 50–100 accounts (enterprise, high ICP). Monitor for one week. | RevOps (1), Strategists (2) |
+| 8    | **Adjust and optimise** – fix errors, configure Account Score thresholds (currently 0.7). | Engineers (1), RevOps (1)   |
+
+**Action Details:**
+
+- **Analyst agent:** implemented in Python (FastAPI), deployed on Kubernetes. Performs:
+  * Queries to 6sense API every 30 minutes for a list of accounts (from Salesforce via Snowflake).
+  * Calculates Intent_Strength (exponential decay over 7 days).
+  * Reads Usage from Snowflake (product events), ICP_Fit from Salesforce.
+  * Computes Account Score = 0.4*I + 0.3*U + 0.3*F.
+  * Saves result to Snowflake (table `account_scores`).
+
+- **Executor agents (200):** serverless functions (Lambda) in Python, triggered by Kafka. Support:
+  * `create_salesforce_task` – create task in Salesforce (REST API).
+  * `update_salesforce_field` – update Account fields (Intent_Strength, Health_Score).
+  * `add_to_salesloft_cadence` – add account to cadence (SalesLoft REST API).
+
+- **Event‑driven chain:**
+  * Salesforce Apex triggers publish Platform Events when key fields change (Account_Score__c, Intent_Strength__c).
+  * EventBridge routes events to Kafka (topic `account_events`).
+  * Executor agents subscribe to the topic and perform actions.
+
+- **Control panel (basic version):** simple React dashboard displaying:
+  * Number of active agents.
+  * Agent errors over the last hour.
+  * Dead Letter Queue (DLQ) – events not processed after 3 attempts, with ability to manually retry.
+
+**10.1.1.2. Resources**
+
+| Resource Type              | Composition                                                             | Allocation              |
+|----------------------------|-------------------------------------------------------------------------|-------------------------|
+| **Engineers (development)**| 2 engineers (Python, AWS, Salesforce API)                               | Full time, 8 weeks      |
+| **RevOps**                 | 1 specialist (Salesforce, Hightouch, 6sense, Gainsight)                 | 50% time, 8 weeks       |
+| **Technical Lead**         | 1 lead (architecture, coordination)                                     | 20% time, 8 weeks       |
+| **Sales Strategists (testing)** | 2 strategists (participate in pilot launch)                        | 20% time, 2 weeks       |
+| **Infrastructure**         | AWS (Lambda, Kafka, S3, RDS), Salesforce (sandbox), licenses            | Pre‑allocated           |
+
+**Budget (CAPEX):** $200K (development, licenses, cloud resources)
+
+**10.1.1.3. Risks and Mitigations**
+
+| Risk                                     | Likelihood | Impact | Mitigation                                                             |
+|------------------------------------------|------------|--------|------------------------------------------------------------------------|
+| Delays in 6sense API integration         | Medium     | Medium | Use caching (Redis), fallback – manual CSV export during setup period. |
+| Errors in Account Score calculation      | Medium     | High   | Validate on test sample (100 accounts) before pilot; manual override via control panel. |
+| Lambda instability under peak load       | Low        | Medium | Use reserved concurrency, configure CloudWatch monitoring, increase memory/timeouts. |
+| Team resistance (Strategists)            | Medium     | High   | Demonstrate quick wins (response time reduction), involve strategists in testing. |
+| Salesforce API limit breaches            | Low        | Medium | Use batch processing (Bulk API) for mass updates, monitor limits.      |
+
+────────────────────────────────────────────────────────────────────────────────────
+10.1.2. EXPECTED KPIs
+────────────────────────────────────────────────────────────────────────────────────
+
+**10.1.2.1. Operational KPIs**
+
+| KPI                                  | Formula / Measurement Method                     | Target Value                |
+|--------------------------------------|--------------------------------------------------|-----------------------------|
+| **Response time to intent signal**   | Time from signal appearance in 6sense to first contact (Strategist task) | <2 hours (down from 2 days) |
+| **Win rate (pilot group)**           | (Closed Won) / (Closed Won + Closed Lost) in pilot group | +15% vs control group        |
+| **Forecast accuracy**                | 1 – MAPE (for pilot accounts)                    | >85% (error <15%)           |
+| **Number of automatically created tasks** | Total tasks created by agents per day       | >100 per day                |
+| **Percentage of successful automated actions** | (successful API calls) / (all calls)  | >95%                        |
+
+**10.1.2.2. Technical KPIs**
+
+| KPI                                  | Formula / Measurement Method                     | Target Value                |
+|--------------------------------------|--------------------------------------------------|-----------------------------|
+| **Agent throughput**                 | Events processed by agents per second            | up to 100 events/second     |
+| **Event processing time**            | Average time from Platform Event publication to action execution | <2 seconds                    |
+| **Infrastructure availability**      | Percentage of time all agents operate without failures | >99%                        |
+| **DLQ size**                         | Number of unprocessed events in the queue        | <50 per shift               |
+
+**10.1.2.3. Business Outcomes**
+
+- **Strategist time savings:** at least 10 hours per week previously spent on manual data export/import.
+- **Intent → Opportunity conversion increase:** by 10–15% due to faster response.
+- **Operational cost reduction:** automation enables handling 3× more accounts without increasing headcount.
+
+────────────────────────────────────────────────────────────────────────────────────
+**CRITERIA FOR TRANSITION TO PHASE 2**
+
+Transition to Phase 2 (expansion) occurs when the following conditions are met:
+
+1. All key KPIs (response time, win rate, forecast accuracy) achieved or exceeded.
+2. System runs stably for 2 weeks without critical failures.
+3. The Sales Strategist team confirms that automation does not create additional burden and is beneficial.
+4. Technical documentation for Phase 1 updated, code documented.
+
+────────────────────────────────────────────────────────────────────────────────────
+**CONCLUSIONS ON PHASE 1**
+
+- Phase 1 lays the foundation for all automation: intent data collection,
+  scoring, basic executor actions.
+- The success of the pilot depends on integration quality and Strategist team
+  engagement.
+- Achieving target KPIs proves the value of the approach and enables
+  scaling.
+
+═══════════════════════════════════════════════════════════════════════════════════

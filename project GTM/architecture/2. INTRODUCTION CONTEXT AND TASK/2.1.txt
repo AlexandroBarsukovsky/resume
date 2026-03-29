@@ -1,0 +1,171 @@
+═══════════════════════════════════════════════════════════════════════════════════
+PROTOCOL: 2.1. ABOUT SOURCEGRAPH (PRODUCT, MARKET, CUSTOMERS)
+ | Project: Sourcegraph GTM Infrastructure
+═══════════════════════════════════════════════════════════════════════════════════
+
+**2.1. ABOUT SOURCEGRAPH (PRODUCT, MARKET, CUSTOMERS)**
+
+────────────────────────────────────────────────────────────────────────────────────
+2.1.1. PRODUCT: CODE INTELLIGENCE PLATFORM
+────────────────────────────────────────────────────────────────────────────────────
+
+**Product evolution**
+Sourcegraph started in 2013 as an open‑source tool for semantic code search.
+The idea: a developer can find function calls, strings, and patterns across
+an entire codebase in seconds, even if the repository contains billions of lines.
+In 2018, the company introduced a cloud version (SaaS), enabling wider adoption.
+In 2021–2023, investment rounds followed (Series D of $125 million, valuation >$2.6 billion),
+accelerating the development of enterprise features.
+
+Today, Sourcegraph offers three main components:
+
+**Code Search**
+- Semantic search with support for regular expressions, navigation through dependency
+  graphs, and understanding of programming languages (Java, Go, Python, Rust,
+  JavaScript, TypeScript, C++, C#, Ruby, PHP, Swift, Kotlin, Scala, and others).
+- Ability to search across all repositories in an organization, including private ones.
+- Integration with GitHub, GitLab, Bitbucket, Gerrit.
+- Search through commit history, branches, tags.
+- Advanced filters: language, path, author, time of change.
+
+**Deep Search**
+- Static code analysis: data flows, execution path tracking, identification of hidden dependencies.
+- Impact assessment: before changing a function, you can see where it is used
+  and predict potential breakage.
+- Vulnerability detection: identification of unsafe calls, secrets, hardcoded credentials.
+- Technical debt analysis: identification of deprecated APIs, unused code.
+
+**Model Context Protocol (MCP)**
+- Protocol for integrating AI agents (e.g., language models) with the codebase.
+- Enables AI assistants to perform complex tasks: automated refactoring,
+  documentation writing, vulnerability detection, test generation.
+- Supports secure code execution, isolation, audit.
+
+**Key technical characteristics**
+| Characteristic               | Value / Description                                        |
+|------------------------------|------------------------------------------------------------|
+| Maximum repository size      | Over 100 GB (tested on Google’s monorepo)                  |
+| Number of supported languages| >30                                                        |
+| Typical search latency       | <1 second (for queries across the entire codebase)         |
+| API                          | GraphQL, REST, CLI                                         |
+| Deployment                   | Cloud (SaaS), self‑managed (on‑premises), hybrid           |
+| Security                     | SOC2 Type II, GDPR, data encryption, audit                 |
+
+────────────────────────────────────────────────────────────────────────────────────
+2.1.2. MARKET AND COMPETITIVE LANDSCAPE
+────────────────────────────────────────────────────────────────────────────────────
+
+**Code intelligence market**
+The market for code analysis tools is in a phase of active growth.
+According to industry reports (Gartner, Forrester), the global DevSecOps
+and development tools market is estimated at $15–20 billion, with the “code
+analytics” segment growing at 20–25% annually. Growth drivers:
+- Increasing complexity of architectures (microservices, monoliths with billions of lines).
+- Growth in the number of developers (estimated at over 30 million).
+- Security requirements (vulnerabilities, regulatory compliance).
+- Adoption of AI agents that require deep code understanding.
+
+**Competitors and their positioning**
+| Company / Product            | Strengths                                   | Weaknesses / Sourcegraph’s niche           |
+|------------------------------|---------------------------------------------|--------------------------------------------|
+| GitHub Copilot Workspace     | AI integration, ease of use                 | Limited depth of analysis,                 |
+|                              |                                             | does not work with monoliths               |
+| GitLab Code Search           | Built into DevSecOps platform               | Less advanced than specialized search      |
+| Atlassian (Bitbucket)        | Broad Jira/Confluence ecosystem             | Basic search, no deep analysis             |
+| In‑house solutions           | Full control                                | High development and maintenance costs     |
+| (Google Kythe, Facebook Nuclide)|                                           |                                            |
+| Specialized tools (SonarQube, Snyk)| Deep analytics, vulnerabilities          | Usually focused on security,               |
+|                              |                                             | not on search and code understanding       |
+
+**Sourcegraph’s positioning**
+Sourcegraph occupies the niche of “code platform for engineering organizations
+working with complex, large‑scale codebases.” Key differentiators:
+- Support for repositories of any size (from small to monoliths with hundreds
+  of millions of lines).
+- Deep semantic analysis at the language level, not just text search.
+- Open architecture that allows integration with any development tools
+  (CI/CD, AI, security).
+- Ability for self‑managed deployment (on‑premises) for companies with strict
+  security requirements.
+
+**Market dynamics and challenges**
+1. **Intensifying competition** – GitHub and GitLab are actively investing in AI features,
+   creating pressure on Sourcegraph in the small and mid‑market segments.
+2. **AI integration demands** – the market expects the platform to be not just
+   a search tool but a foundation for AI agents (autonomous development).
+3. **Security and compliance** – enterprise customers require SOC2, GDPR,
+   auditing, which Sourcegraph already provides, but must maintain.
+4. **Globalization** – expanding presence in EMEA, APAC, where local
+   competitors may have advantages.
+
+────────────────────────────────────────────────────────────────────────────────────
+2.1.3. CUSTOMER BASE AND PROFILES
+────────────────────────────────────────────────────────────────────────────────────
+
+**General statistics**
+- Over 2 million developers use Sourcegraph (including open‑source
+  and free accounts).
+- Paid enterprise customers: more than 500 companies (as of 2025).
+- Customers include industry leaders: Stripe, Uber, Palo Alto Networks,
+  Atlassian, Figma, Dropbox, Shopify, Datadog, GitLab, Slack, Reddit,
+  Yelp, Lyft, Netflix.
+
+**Customer profiles by size and industry**
+| Category               | Engineering team size   | Industries                        | Characteristics                         |
+|------------------------|-------------------------|-----------------------------------|------------------------------------------|
+| Giants (Fortune 500)   | >5000 developers        | Finance, technology, retail       | Monolithic repositories, strict          |
+|                        |                         |                                   | security requirements, long              |
+|                        |                         |                                   | procurement cycles                       |
+| Growing technology     | 500–5000 developers     | SaaS, FinTech, e‑commerce         | Fast‑growing, microservices              |
+| companies              |                         |                                   | architectures, active engineering teams  |
+| Mid‑market             | 50–500 developers       | Software development, IT services | Often use cloud version, value simplicity|
+| Small business and     | <50 developers          | Various                           | Mostly free tier, potential growth channel|
+| startups               |                         |                                   |                                          |
+
+**Product usage patterns**
+1. **Code search and understanding** – developers spend up to 40% of their time searching
+   for information in the codebase. Code Search reduces this time to seconds.
+2. **Change impact analysis** – before refactoring or deleting code,
+   engineers check where a function is used to avoid breaking things.
+3. **Security and compliance** – security teams search for vulnerabilities,
+   secrets, unsafe calls; Deep Search automates these checks.
+4. **AI agents** – advanced customers use MCP to build their own
+   AI assistants that perform complex tasks based on code analysis.
+
+**Key customer needs (from interviews and the handbook)**
+- “We need to understand how our code is structured, even if it’s written in
+  different languages and stored in hundreds of repositories.”
+- “We can’t afford to break production because someone changed a function
+  nobody knew about.”
+- “We’re looking for vulnerabilities, and we need a tool that finds them faster
+  than attackers do.”
+- “We want our AI agents to be able to safely analyze code and suggest changes,
+  not just generate text.”
+
+**Economic indicators (estimates)**
+| Indicator                    | Value (approximate)                         |
+|------------------------------|---------------------------------------------|
+| ARR (2025)                   | $50–100M (estimate based on industry data)  |
+| Average contract value (ACV) | $50–200K (enterprise), $5–20K (mid‑market) |
+| Net retention (NRR)          | ~100–110% (needs improvement)               |
+| Win rate                     | ~20% (enterprise)                           |
+| Churn rate                   | 5–10% (enterprise)                          |
+
+**Trends in the customer base**
+- Increasing share of enterprise (currently >50% of ARR, growing).
+- Shift from self‑service to managed sales.
+- Growing adoption of Deep Search and MCP among large clients.
+- Increased requirements for integration with existing tools (Jira,
+  Slack, CI/CD).
+
+────────────────────────────────────────────────────────────────────────────────────
+**Implications for the GTM architecture project**
+- Sourcegraph’s customers are complex engineering organizations that require
+  deep understanding of their infrastructure, processes, and pain points.
+- The product has unique technical advantages, but they must be communicated
+  to buyers through qualified sales.
+- The GTM infrastructure must support a diverse range of customers: from
+  fast‑growing startups to global corporations, with different engagement
+  models (self‑service, assisted sales, enterprise account management).
+- The existing customer base can serve as a source of expansion revenue
+  if signals are automatically detected.

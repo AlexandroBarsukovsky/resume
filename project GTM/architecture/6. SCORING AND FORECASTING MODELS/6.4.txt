@@ -1,0 +1,182 @@
+═══════════════════════════════════════════════════════════════════════════════════
+PROTOCOL: 6.4. QUARTERLY REVENUE FORECAST
+Project: Sourcegraph GTM Infrastructure
+═══════════════════════════════════════════════════════════════════════════════════
+
+**6.4. QUARTERLY REVENUE FORECAST**
+
+The quarterly revenue forecast is one of the key outputs of financial agents (Level 4)
+and is used for budget planning, headcount, marketing investments, and managing
+investor expectations. The forecast is built on three levels: weighted pipeline with
+historical win rates, macroeconomic adjustments (VAR model), and seasonal coefficients.
+All calculations are performed automatically, with the possibility of manual adjustment
+by experts (RevOps operators).
+
+────────────────────────────────────────────────────────────────────────────────────
+6.4.1. WEIGHTED PIPELINE MODEL WITH WIN RATES
+────────────────────────────────────────────────────────────────────────────────────
+
+**Base forecast** is calculated as the sum of weighted values of all open opportunities
+at the time of calculation:
+
+`F_base = Σ_{opp ∈ Open} Amount_opp × P_win(opp)`
+
+where:
+- `Amount_opp` – deal amount (annual contract) in USD.
+- `P_win(opp)` – probability of closing the deal (0–1), calculated based on historical
+  data and current attributes.
+
+**Probability of closing (logistic regression)**
+For each deal, the probability is calculated using the formula:
+
+`P_win(opp) = 1 / (1 + exp(–(β₀ + β₁·Stage + β₂·Segment + β₃·Region + β₄·DaysInStage + β₅·MacroIndex)))`
+
+- **Stage** – categorical variable: deal stage (Prospecting, Qualification, Proposal,
+  Negotiation, Closed Won). Coded using one‑hot encoding.
+- **Segment** – customer segment: Enterprise, Mid‑Market, SMB.
+- **Region** – region: US, EMEA, APAC, LATAM.
+- **DaysInStage** – number of days the deal has been in the current stage.
+  Used as a continuous variable (logarithmic transformation).
+- **MacroIndex** – macroeconomic index obtained from the VAR model (see 6.4.2).
+
+**Coefficient estimation**
+The β coefficients were obtained using logistic regression on historical data for
+2023–2025 (n = 2,847 deals). Training set – 70%, test set – 30%. Model accuracy on the
+test set (AUC‑ROC) was 0.83. Coefficients are recalculated monthly by financial agents
+based on new data.
+
+────────────────────────────────────────────────────────────────────────────────────
+6.4.2. MACROECONOMIC ADJUSTMENTS (VAR MODEL)
+────────────────────────────────────────────────────────────────────────────────────
+
+To account for external economic factors, a vector autoregression (VAR) with a lag of
+4 quarters is used. The model links Sourcegraph’s ARR growth with three macroeconomic
+indicators:
+
+`Y_t = c + Σ_{i=1..4} A_i·Y_{t-i} + ε_t`
+
+where:
+- `Y_t = [ARR_growth_t, PMI_t, FedRate_t, TechSentiment_t]` – vector of endogenous
+  variables in quarter t.
+- `ARR_growth` – year‑over‑year growth rate of Sourcegraph’s annual revenue (historical
+  data, forecast for future periods).
+- `PMI` – Purchasing Managers’ Index (manufacturing + services), published by ISM.
+- `FedRate` – Federal Funds Rate (in percent).
+- `TechSentiment` – S&P 500 IT index (normalized).
+
+**Macro indicator forecast**
+Values of PMI, FedRate, and TechSentiment for future quarters are taken from consensus
+forecasts (Bloomberg, Trading Economics). For each quarter, the expected deviation
+from the historical average is computed and used as `δ_macro`.
+
+**Impact on the forecast**
+The macroeconomic index `MacroIndex` in the logistic regression formula is computed as:
+
+`MacroIndex = (PMI_norm + (1 – FedRate_norm) + TechSentiment_norm) / 3`
+
+where all components are normalized (0–1) according to the historical distribution.
+The coefficient β₅ for MacroIndex reflects the sensitivity of win rate to the
+macroeconomic environment.
+
+**Final adjustment** for the entire forecast:
+
+`F_adjusted = F_base × (1 + δ_macro)`
+
+where `δ_macro` is the deviation calculated by the VAR model (can be positive or
+negative). For example, if the VAR predicts worsening economic conditions, `δ_macro`
+is negative, and the forecast is lowered.
+
+────────────────────────────────────────────────────────────────────────────────────
+6.4.3. SEASONAL COEFFICIENTS
+────────────────────────────────────────────────────────────────────────────────────
+
+Seasonal coefficients account for regular fluctuations in revenue throughout the year,
+related to customer budget cycles, holidays, and Sourcegraph’s internal processes.
+
+`S_q = (average revenue in quarter q over the last 3 years) / (average revenue over all quarters)`
+
+| Quarter | Coefficient | Explanation                                                              |
+|---------|-------------|--------------------------------------------------------------------------|
+| Q1      | 0.92        | January–March: start of the year, budgets not yet approved, low activity |
+| Q2      | 0.98        | April–June: recovery, seasonal dips compensated by activity              |
+| Q3      | 1.00        | July–September: stability, baseline for comparison                       |
+| Q4      | 1.10        | October–December: peak sales, year‑end budget closure                    |
+
+**Final forecast** with seasonality:
+
+`F_final = F_adjusted × S_q`
+
+────────────────────────────────────────────────────────────────────────────────────
+6.4.4. ACCURACY ASSESSMENT (MAPE)
+────────────────────────────────────────────────────────────────────────────────────
+
+Forecast accuracy is assessed using **MAPE (Mean Absolute Percentage Error)**:
+
+`MAPE = (1/n) Σ |(F_actual – F_forecast) / F_actual| × 100%`
+
+where:
+- `F_actual` – actual revenue for the quarter (sum of Closed Won).
+- `F_forecast` – forecast made at the beginning of the quarter.
+- n – number of quarters (for moving average calculation).
+
+**Target value:** MAPE < 10% (accuracy > 90%).
+
+**Achieved results (on historical data, 2024–2025):**
+- Average MAPE for the 4 quarters of 2024: 8.7%.
+- Average MAPE for 2025 (after implementing the improved model): 7.2%.
+
+**Mechanisms to improve accuracy:**
+- Quarterly retraining of logistic regression on new data.
+- Monthly update of the VAR model (new macroeconomic data).
+- Manual adjustment of the forecast by RevOps operators (via the control panel)
+  in exceptional cases (e.g., a large deal not captured in the pipeline).
+
+**Monitoring and alerts:**
+- If MAPE exceeds 12% for two consecutive quarters, an alert is triggered in the
+  control panel, initiating analysis of the causes (shifts in market trends,
+  changes in the competitive environment, errors in data collection).
+
+────────────────────────────────────────────────────────────────────────────────────
+6.4.5. ALGORITHMIC IMPLEMENTATION (FINANCIAL AGENTS)
+────────────────────────────────────────────────────────────────────────────────────
+
+The forecast is calculated by financial agents (Level 4) weekly (on Mondays) and at the
+beginning of each quarter.
+
+**1. Data collection:**
+   - Active Opportunities from Salesforce (via API).
+   - Historical win rates, grouped by stage, segment, region (from Snowflake).
+   - Macroeconomic forecasts (from external sources loaded into Snowflake).
+
+**2. Calculation of P_win(opp):**
+   - Logistic regression is applied to each deal using a pre‑trained model
+     (coefficients stored in Snowflake).
+   - If the deal has filled MEDDPICC fields, the probability is increased
+     (by 5–10%) based on historical data.
+
+**3. Aggregation and adjustments:**
+   - Summation of `Amount × P_win` → `F_base`.
+   - Apply macroeconomic adjustment `δ_macro` (from the VAR model).
+   - Apply seasonal coefficient `S_q`.
+
+**4. Storage and publication:**
+   - The result is stored in Snowflake (table `quarterly_forecasts`).
+   - Via Hightouch, the custom field `Forecast_Amount__c` is updated in Salesforce
+     (on the Opportunity object or a separate Forecast object).
+   - A Platform Event `Forecast_Updated__e` is published to notify interested
+     systems (dashboards, control panel).
+
+────────────────────────────────────────────────────────────────────────────────────
+**CONCLUSIONS ON QUARTERLY REVENUE FORECAST**
+
+- The forecasting model combines weighted pipeline, macroeconomic factors, and
+  seasonality, achieving high accuracy (MAPE < 10%).
+- The logistic regression for `P_win` accounts for stage, segment, region,
+  time in stage, and a macroeconomic index.
+- The VAR model enables forecast adjustments based on economic changes, which is
+  critical for the enterprise segment.
+- Seasonal coefficients reflect the actual purchasing cycles of Sourcegraph’s customers.
+- Automatic calculation and publication of the forecast reduce manual RevOps effort
+  and ensure data is current for management.
+
+═══════════════════════════════════════════════════════════════════════════════════

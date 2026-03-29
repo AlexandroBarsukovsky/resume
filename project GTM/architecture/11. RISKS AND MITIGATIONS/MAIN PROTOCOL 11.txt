@@ -1,0 +1,159 @@
+═══════════════════════════════════════════════════════════════════════════════════
+SECTION 11. RISKS AND MITIGATIONS
+Project: Sourcegraph GTM Infrastructure
+═══════════════════════════════════════════════════════════════════════════════════
+
+**11. RISKS AND MITIGATIONS**
+
+Successful implementation of the target GTM architecture requires systematic risk
+management for risks that may arise during implementation phases and during operation.
+This section classifies risks into four categories (organisational, technical,
+financial, security and compliance), assesses their likelihood and potential impact,
+and proposes specific mitigation, monitoring, and response measures. At the end of the
+section, a response plan and fallback measures are presented to ensure operational
+continuity.
+
+────────────────────────────────────────────────────────────────────────────────────
+11.1. ORGANISATIONAL RISKS (RESISTANCE TO CHANGE)
+────────────────────────────────────────────────────────────────────────────────────
+
+**11.1.1. Description**
+The introduction of automation and new processes may encounter resistance from
+Sales, CS, and AM teams who are accustomed to existing manual processes.
+Roles whose work might seem “replaceable” by agents (e.g., Sales Strategist)
+are particularly vulnerable. Sourcegraph’s high‑agency culture requires that
+automation be perceived as assistance, not control.
+
+**11.1.2. Risks and Mitigation Measures**
+
+| Risk                                     | Likelihood | Impact | Mitigation                                                                 |
+|------------------------------------------|------------|--------|----------------------------------------------------------------------------|
+| **Strategist resistance** – refusal to use automated priority account lists | Medium | High | • Demonstrate quick wins (response time reduction).<br>• Involve Strategists in pilot testing.<br>• Train and explain that automation frees them from routine. |
+| **AE distrust of automated account distribution** | Medium | High | • Transparency of rules (Account Score, ICP) – document in handbook.<br>• Manual override capability via control panel.<br>• Show metrics: pipeline coverage improved after implementation. |
+| **CSM/AM misunderstanding of Health Score role** | Low | Medium | • Train on Gainsight usage, interpretation of colour zones.<br>• Show successful retention/expansion cases.<br>• Regular Q&A sessions. |
+| **Loss of engagement due to “black box”** | Medium | Medium | • Full transparency of agent logic (formulas, triggers).<br>• Control panel with decision history viewing.<br>• Regular automation effectiveness reviews. |
+
+────────────────────────────────────────────────────────────────────────────────────
+11.2. TECHNICAL RISKS (INTEGRATION, RELIABILITY)
+────────────────────────────────────────────────────────────────────────────────────
+
+**11.2.1. Description**
+The complexity of integrating Salesforce, 6sense, Gainsight, SalesLoft, Hightouch,
+Snowflake, and the agent holding creates risks of failures, delays, data loss,
+and unavailability of critical functions.
+
+**11.2.2. Risks and Mitigation Measures**
+
+| Risk                                     | Likelihood | Impact | Mitigation                                                                 |
+|------------------------------------------|------------|--------|----------------------------------------------------------------------------|
+| **External system API failures (6sense, Gainsight)** | Medium | High | • Exponential backoff retries (3 attempts).<br>• Dead Letter Queue (DLQ) for events not processed after attempts.<br>• Fallback mechanisms (manual CSV export if API is unavailable for a long time). |
+| **Salesforce API limit breaches**         | Low        | High   | • Use Bulk API for mass operations.<br>• Batch processing, real‑time limit monitoring (CloudWatch).<br>• When approaching limits, automatically reduce request frequency. |
+| **Reverse ETL (Hightouch) delays**        | Medium     | Medium | • Configure real‑time synchronisation via webhooks.<br>• Monitor latency, alert on delays >10 sec.<br>• Backup channel: agents can update Salesforce directly via API if Hightouch fails. |
+| **Data loss during migration**            | Low        | High   | • Full backup of all data in Snowflake.<br>• Pilot run on a copy of data.<br>• Rollback plan to previous CRM version. |
+| **Insufficient agent performance when scaling** | Medium | High | • Load testing up to 10⁵ events/second.<br>• Auto‑scaling (HPA in Kubernetes, Lambda concurrency).<br>• Code profiling, optimisation of bottlenecks. |
+| **Complexity of debugging distributed system** | Medium | Medium | • Centralised logging (CloudWatch, ELK).<br>• End‑to‑end tracing with correlation ID.<br>• Detailed metrics per agent type. |
+
+────────────────────────────────────────────────────────────────────────────────────
+11.3. FINANCIAL RISKS (BUDGET OVERRUN, UNREALISTIC EXPECTATIONS)
+────────────────────────────────────────────────────────────────────────────────────
+
+**11.3.1. Description**
+The project requires investments (CAPEX $2.0M, OPEX $1.7M/year). Incorrect cost
+estimation, delays, or failure to achieve expected returns may lead to budget
+overruns and reduced ROI.
+
+**11.3.2. Risks and Mitigation Measures**
+
+| Risk                                     | Likelihood | Impact | Mitigation                                                                 |
+|------------------------------------------|------------|--------|----------------------------------------------------------------------------|
+| **CAPEX overrun** (development, integrations) | Medium | High | • Phased budget allocation (by phases).<br>• Contingency fund of 10%.<br>• Regular cost review (monthly). |
+| **OPEX growth** (cloud resources, licenses) | Medium | Medium | • Use spot instances for non‑critical workloads.<br>• Optimise Snowflake queries (reduce scanned volume).<br>• Monitor costs in AWS Cost Explorer. |
+| **Failure to achieve expected ARR growth** | Low | High | • Quarterly review of actual KPIs vs forecast.<br>• Adjust forecasting model on deviations.<br>• Additional marketing activities if pipeline insufficient. |
+| **Increased payback period**              | Low        | High   | • Accelerate implementation by working on phases in parallel.<br>• Reduce scope of Phases 1–2 if necessary.<br>• Engage additional resources for critical paths. |
+| **Unforeseen integration rework costs**   | Medium     | Medium | • Allocate 15% of CAPEX for unforeseen work.<br>• Use standard connectors where possible.<br>• Close collaboration with vendors (Salesforce, Gainsight). |
+
+────────────────────────────────────────────────────────────────────────────────────
+11.4. SECURITY AND COMPLIANCE RISKS
+────────────────────────────────────────────────────────────────────────────────────
+
+**11.4.1. Description**
+The system processes sensitive customer data (contracts, product metrics,
+negotiation data). Security breaches could lead to data leaks, legal consequences,
+and reputational damage. Non‑compliance with SOC2, GDPR, and other standards
+may affect the ability to work with enterprise customers.
+
+**11.4.2. Risks and Mitigation Measures**
+
+| Risk                                     | Likelihood | Impact | Mitigation                                                                 |
+|------------------------------------------|------------|--------|----------------------------------------------------------------------------|
+| **Data leak through agents**             | Low        | Critical | • All agents run in isolated environments (containers, Lambda).<br>• API access via IAM and secrets (AWS Secrets Manager).<br>• Encryption at rest (AES‑256) and in transit (TLS 1.3).<br>• Audit of all agent actions (CloudTrail). |
+| **Unauthorised access to control panel** | Low        | High   | • Multi‑factor authentication (SSO + MFA).<br>• Role‑based model (admin, operator, viewer).<br>• Log all control panel actions. |
+| **SOC2 / GDPR violation**                | Low        | High   | • Regular compliance audits.<br>• Automatic PII masking in logs.<br>• Data storage in compliant regions (US/EU). |
+| **Quantum encryption pilot failure**     | Low        | Medium | • Use hybrid mode (quantum + classical).<br>• Fallback channel with classical encryption.<br>• Thorough sandbox testing. |
+| **Unauthorised data modification**       | Low        | High   | • Integrity control via hashing of critical records.<br>• Change audit in Salesforce (Field History).<br>• Backup in Snowflake with 7‑year retention. |
+
+────────────────────────────────────────────────────────────────────────────────────
+11.5. RESPONSE PLAN AND FALLBACK MEASURES
+────────────────────────────────────────────────────────────────────────────────────
+
+**11.5.1. General Approach**
+For each risk category, escalation levels and response procedures are defined.
+The plan includes:
+- **Monitoring** – automatic alerts based on metrics (error rate, latency,
+  API limits, DLQ size).
+- **Escalation** – clear chain: control panel operator → RevOps → technical team
+  → management (depending on criticality).
+- **Fallback procedures** – manual actions allowing work to continue when
+  automation fails.
+
+**11.5.2. Response Matrix**
+
+| Criticality Level | Example Incident                              | Action                                                                 | Response Time |
+|-------------------|-----------------------------------------------|------------------------------------------------------------------------|---------------|
+| **Critical**      | Complete unavailability of Salesforce API, data loss | • Immediate PagerDuty escalation.<br>• Activate fallback plan: manual task processing via control panel.<br>• Notify leadership. | 15 minutes    |
+| **High**          | Gainsight integration failure, mass agent errors | • Control panel operator analysis.<br>• Restart failed agents.<br>• If unresolved in 1 hour – escalate to RevOps. | 1 hour        |
+| **Medium**        | Isolated errors, processing delays            | • Control panel operator processes DLQ.<br>• Regular RevOps report.<br>• Configuration adjustment. | 2 hours       |
+| **Low**           | Stale data, minor errors                      | • Planned fix during retraining cycle.<br>• Log for analysis.           | 24 hours      |
+
+**11.5.3. Fallback Procedures (Manual Mode Playbook)**
+
+| Scenario                                     | Manual Action                                                                 |
+|----------------------------------------------|---------------------------------------------------------------------------------|
+| **6sense API unavailable**                   | Strategist manually downloads intent signals from 6sense reports (CSV) and imports into Salesforce. |
+| **Gainsight unavailable**                    | CSM manually creates tasks in Salesforce, tracks Health Score via Snowflake reports. |
+| **Hightouch unavailable**                    | RevOps runs batch data export from Snowflake to Salesforce using Data Loader. |
+| **Executor agent failure**                   | Control panel operators manually perform critical actions (task creation, field updates) via Salesforce UI. |
+| **Data loss in Salesforce**                  | Restore from Snowflake backup (daily dump).                                     |
+
+**11.5.4. Contingency Fund and Resources**
+- **Financial reserve:** 10% of CAPEX ($200K) allocated for unforeseen expenses.
+- **Technical reserve:** additional 20% of AWS capacity (EC2, Lambda) to handle peak loads.
+- **Staff reserve:** engagement of external contractors (2–3 specialists) in case of development delays.
+
+**11.5.5. Drills and Testing**
+- **Scheduled recovery drills** (quarterly) with RevOps and control panel operators.
+- **Chaos engineering** – simulate API failures, component failures in sandbox to verify resilience.
+- **Incident analysis** – post‑mortem with root cause identification and improvements.
+
+────────────────────────────────────────────────────────────────────────────────────
+**CONCLUSIONS ON RISKS AND MITIGATIONS**
+
+- A systematic approach to risk management minimises the impact of
+  organisational, technical, financial, and compliance threats.
+- Specific mitigation measures, monitoring, and response plans are defined for each risk.
+- Fallback procedures and a financial reserve ensure operational continuity
+  even during critical failures.
+- Regular drills and incident analysis contribute to continuous improvement
+  of system reliability.
+
+────────────────────────────────────────────────────────────────────────────────────
+**NOTE:** Separate detailed protocols will follow for each subsection (11.1 – 11.5), containing:
+- Detailed incident scenarios with step‑by‑step instructions.
+- Contact details and escalation chains.
+- Sample alerts and notification procedures.
+- Drill results and plans for conducting them.
+
+These protocols will be used by control panel operators and RevOps for
+rapid response and will be included in the operational handbook.
+
+═══════════════════════════════════════════════════════════════════════════════════

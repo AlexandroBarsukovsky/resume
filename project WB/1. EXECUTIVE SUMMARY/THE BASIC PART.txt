@@ -1,0 +1,97 @@
+╔══════════════════════════════════════════════════════════════════════════════════╗
+║  SECTION 1. EXECUTIVE SUMMARY                                      ║
+║  PROJECT: AI ECOSYSTEM FOR A METAL PRODUCTS MANUFACTURER (IRON KIT)               ║
+║                                                                                  ║
+╚══════════════════════════════════════════════════════════════════════════════════╝
+
+═══════════════════════════════════════════════════════════════════════════════════
+**1.1. BRIEF DESCRIPTION OF THE BUSINESS AND THE PROBLEM**
+───────────────────────────────────────────────────────────────────────────────────
+
+**Company** – a manufacturer of metal products (metal picket fences, angle brackets, wind strips, flashings). Operations are conducted on the Russian market through the Wildberries marketplace. Over 1 year and 3 months, 13,918 units were sold, 2,876 ratings were received, with an average rating of **4.9 out of 5**. The average product price is 5,548 ₽, and monthly revenue is approximately 6.1 million ₽.
+
+**Business model** – made‑to‑order production with warehouse stock maintained for fast‑moving items. All key processes are performed manually:
+- Inventory management (Excel, visual inspection).
+- Pricing (cost plus fixed markup, ignoring competitors).
+- Handling reviews (reading manually, occasional replies).
+- Advertising campaigns (participating in Wildberries promotions, configuring without analytics).
+- Financial accounting (Excel, manual tax calculation).
+- Production planning (by intuition).
+
+**Problem** – the business has reached the “ceiling of manual management”: further growth is constrained by limited human resources, revenue loss due to stockouts, missed opportunities for assortment expansion, and an inability to respond quickly to market changes. Key pain points:
+1. **Data fragmentation** – information about sales, inventory, competitor prices, reviews, and advertising budgets is scattered across different sources (Excel, Wildberries personal account, bank), with no synchronisation.
+2. **Manual prioritisation** – the owner spends 10–15 hours per week gathering and processing data instead of focusing on strategic development.
+3. **Inaccurate forecasts** – raw material procurement and production planning are done “blindly”, leading to shortages during peak season (up to 15% lost revenue) and overstocking during off‑season (inventory turnover 45 days vs target 30).
+4. **Lack of automatic control** – negative reviews go unanswered for up to 2 days, lowering ratings and conversion; competitor price attacks go unnoticed.
+
+────────────────────────────────────────────────────────────────────────────────────
+**1.2. PROPOSED SOLUTION: AN AI ECOSYSTEM OF 38 SPECIALISED AGENTS**
+───────────────────────────────────────────────────────────────────────────────────
+
+We propose building a **scalable agent platform** that automates all key business processes, leaving only strategic decisions and exception handling to humans. The architecture is based on multi‑level orchestration.
+
+**Ecosystem composition (38 agents):**
+- **6 analytical agents** (competitive intelligence, Wildberries API monitor, demand analyst, review processor, news monitor, seasonal forecaster) – data collection and initial processing.
+- **6 strategic agents** (pricing strategist, assortment strategist, risk manager, marketing analyst, quality control, expansion analyst) – decision‑making based on analytics.
+- **8 tactical coordinators** (4 product‑group coordinators + scriptor #1, archivist, supervisor, production scheduler) – adapting strategy to specific product groups and coordinating execution.
+- **18 executive agents** (tax calculator, ad optimiser, inventory manager, logistics dispatcher, financial controller, legal assistant, customer service, document flow manager, scriptors #2–3, and 8 creative agents: designer, process engineer, creative marketer, test analyst, trend scout, system architect, partner integrator, quantum synthesizer).
+
+**Technical implementation:**
+- Event‑driven architecture – real‑time reaction to events (new review, competitor price drop, inventory change).
+- Scriptor chain (#1 – core‑coalition connection, #2 – budget management, #3 – execution via Wildberries API, 1C, bank).
+- Operator console – interface in the style of a strategy game (dashboards, manual override, threshold configuration).
+
+────────────────────────────────────────────────────────────────────────────────────
+**1.3. KEY RESULTS (FROM SIMULATIONS)**
+───────────────────────────────────────────────────────────────────────────────────
+
+Based on simulations, the following forecast indicators were obtained:
+
+| Indicator                               | Current Value | Target (6 months) | Target (12 months) |
+|-----------------------------------------|---------------|-------------------|--------------------|
+| **Revenue (monthly, million ₽)**        | 6.1           | 9.5 (+55%)        | 13.4 (+120%)       |
+| **Gross margin**                        | 27%           | 32% (+5 p.p.)     | 36% (+9 p.p.)      |
+| **Inventory turnover (days)**           | 45            | 30                | 22                 |
+| **Automation of routine operations**    | 5%            | 70%               | 85%                |
+| **Review response time (hours)**        | 48            | 12                | 2                  |
+| **Demand forecast accuracy (MAPE)**     | –             | 20%               | 12%                |
+| **Number of SKUs**                      | 40            | 120               | 380                |
+| **Share of manual interventions**       | 100%          | 30%               | 15%                |
+
+**Additional effects:**
+- Reduction of peak‑season stockouts from 15% to <5%.
+- Increase in Wildberries rating from 4.9 to 4.95 (through automated replies and elimination of root causes of negativity).
+- Emergence of new sales channels (Ozon, Yandex.Market) – automatic integration via integrator agents.
+- Generation and launch of 5–10 new products per month (vs 1–2 manually).
+
+────────────────────────────────────────────────────────────────────────────────────
+**1.4. EXPECTED PAYBACK**
+───────────────────────────────────────────────────────────────────────────────────
+
+**Investment (CAPEX):** (agent development, Wildberries API integration, operator console, training).  
+**Operating costs (OPEX):** (cloud resources, licenses, support).
+
+**Financial results (conservative scenario):**
+- Net profit increase in the first year: **+5.2 million ₽**.
+- Payback period: **6–8 months**.
+- Net Present Value (NPV) over 3 years: **12.8 million ₽** (at 15% discount rate).
+- Internal Rate of Return (IRR): **>180%**.
+- Return on Investment (ROI) over 3 years: **>800%**.
+
+**Optimistic scenario (including creative agents and assortment expansion):**
+- Net profit increase in the first year: **+8.5 million ₽**.
+- Payback period: **4–6 months**.
+- ROI over 3 years: **>1500%**.
+
+────────────────────────────────────────────────────────────────────────────────────
+**1.5. INTENDED AUDIENCE FOR THIS DOCUMENT**
+───────────────────────────────────────────────────────────────────────────────────
+
+- **Business owner** – to understand the strategy, expected outcomes, and investment size.
+- **Management and leadership team** – to plan implementation, allocate roles, and monitor KPIs.
+- **Investors / financial partners** – to assess economic efficiency and risks.
+- **Technical specialists (developers, analysts)** – to implement the architecture described in subsequent sections.
+
+═══════════════════════════════════════════════════════════════════════════════════
+
+

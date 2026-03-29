@@ -1,0 +1,190 @@
+╔══════════════════════════════════════════════════════════════════════════════════╗
+║  SECTION 3. ANALYSIS OF THE CURRENT STATE (DIAGNOSIS)                            ║
+║  PROJECT: AI ECOSYSTEM FOR A METAL PRODUCTS MANUFACTURER (IRON KIT)              ║
+║                                                                                  ║
+╚══════════════════════════════════════════════════════════════════════════════════╝
+
+═══════════════════════════════════════════════════════════════════════════════════
+**3.1. ORGANISATIONAL STRUCTURE**
+───────────────────────────────────────────────────────────────────────────────────
+
+**3.1.1. Overall management structure**
+The organisation is a classic small manufacturing enterprise with centralised management. Key roles:
+
+| Role                 | Number | Functions                                                                 | Load (hours/week) |
+|----------------------|--------|--------------------------------------------------------------------------|-------------------|
+| **Owner**            | 1      | Strategic planning, production management, sales control,                 | 50–60             |
+|                      |        | marketplace management, finance, taxes, raw material procurement, advertising |                   |
+| **Production team**  | 8      | Manufacturing (bending, welding, painting), packaging, shipment           | 40 (each)         |
+| **Accountant (outsourced)** | 1  | Quarterly tax calculation, return preparation                            | 2 (per month)     |
+| **Logistics (outsourced)** | 1   | Raw material delivery, shipping finished goods to Wildberries warehouse  | 5 (per month)     |
+
+**3.1.2. Distribution of authority characteristics**
+- The owner simultaneously performs **operational, managerial, and strategic** functions, leading to overload and reduced decision quality.
+- The production team works a fixed schedule (5/2) and has no access to demand data, making production planning “blind”.
+- No dedicated marketplace and advertising manager – all Wildberries tasks fall on the owner.
+- The accountant receives data once a quarter, so operational margin control is absent.
+
+**3.1.3. Communication flows**
+- Owner → production: verbal instructions, occasionally notes in Excel.
+- Wildberries → owner: manual export of reports from the personal account.
+- Accountant → owner: quarterly transfer of Excel files with calculations.
+
+**Key problem:** lack of a unified information environment; all decisions are made based on incomplete and outdated data.
+
+────────────────────────────────────────────────────────────────────────────────────
+**3.2. TECHNOLOGY STACK AND ITS USAGE**
+───────────────────────────────────────────────────────────────────────────────────
+
+**3.2.1. List of tools used**
+
+| Tool                  | Purpose                                     | Degree of Automation                | Frequency of Use |
+|-----------------------|---------------------------------------------|-------------------------------------|------------------|
+| **Excel**             | Inventory accounting, orders, cost,         | Manual entry, formulas, pivot tables| Daily            |
+|                       | procurement planning, tax reporting         |                                     |                  |
+| **Wildberries personal account** | Order monitoring, WB warehouse stock, | Manual report export, visual         | Daily            |
+|                       | price management, review responses,         | monitoring                          |                  |
+|                       | participation in promotions                 |                                     |                  |
+| **1С: Accounting (basic)** | Raw material purchase accounting, cost,  | Manual entry of primary documents   | Monthly (procurement) |
+|                       | export for accountant                       |                                     |                  |
+| **WhatsApp / Telegram** | Communication with production,               | –                                   | Daily            |
+|                       | suppliers, logistics                        |                                     |                  |
+| **Online banking**    | Payments, monitoring WB commissions         | Manual payment generation           | Weekly           |
+
+**3.2.2. Integration analysis**
+- **No automatic synchronisation** between WB, Excel, and 1С. All data is transferred manually, resulting in:
+  – accounting delays (up to 2–3 days),
+  – transfer errors (up to 5% discrepancies in inventory),
+  – inability to perform operational analysis.
+- **Excel is used as a “database”**, but lacks integrity controls, versioning, or access rights management.
+- **No analytics tools** – no dashboards, forecasting models, or automatic alerts.
+
+**3.2.3. Technical constraints**
+- No API integration with Wildberries (the owner does not use the official API, working through the web interface).
+- No dedicated server or cloud infrastructure.
+- All data is stored locally on the owner’s PC – high risk of loss in case of hardware failure.
+
+────────────────────────────────────────────────────────────────────────────────────
+**3.3. PROCESSES: DETAILED DESCRIPTION**
+───────────────────────────────────────────────────────────────────────────────────
+
+**3.3.1. Inventory management**
+| Step                     | Action                                                                 | Time  | Problems                               |
+|--------------------------|------------------------------------------------------------------------|-------|----------------------------------------|
+| 1. Stock monitoring      | Owner opens Excel, compares actual stock (visual) with data from      | 30 min| No up‑to‑date WB warehouse data        |
+|                          | WB personal account.                                                   |       |                                        |
+| 2. Identify shortage     | When stock visually drops below a “sensitive” level – production       | 1 hr  | Intuitive threshold, no seasonality    |
+|                          | order is placed.                                                       |       |                                        |
+| 3. Raw material procurement | Assess raw material stock (visual, sometimes Excel). If low –         | 2 hrs | 2–3 week lead time, excess stock       |
+|                          | contact supplier (phone/WhatsApp), place order.                       |       | in off‑season                          |
+| 4. Production            | Assign task to team verbally or via messenger.                        | –     | No prioritisation, possible idle time  |
+| 5. Ship to WB            | After production – manually create shipment request in WB personal     | 30 min| Not always on time, late delivery fees |
+|                          | account.                                                               |       |                                        |
+
+**3.3.2. Pricing**
+- **Source data:** cost (Excel), WB commissions (fixed), competitor prices (once a week review of 10–20 product cards).
+- **Formula:** `Price = (Cost + Delivery) × (1 + Markup)`, where markup is fixed (35–50%).
+- **Adjustment:** once a week, when competitor prices are lower – manual reduction by 5–10%. If competitors raise prices, price stays the same.
+- **Problems:** delayed reaction (up to 7 days), lack of elasticity consideration, suboptimal margin.
+
+**3.3.3. Handling reviews**
+- **Detection:** owner checks the “Reviews” section on WB daily, filters new ones.
+- **Analysis:** reads text, assesses sentiment visually.
+- **Response:** for negative ones – apology, solution offer (refund, discount). For positive – rarely.
+- **Response time:** average 48 hours (sometimes up to 5 days).
+- **Systematisation:** none; causes of negativity are not recorded.
+
+**3.3.4. Advertising and promotion**
+- **Participation in promotions:** owner monitors WB promotion calendar (once a month), selects items for participation, sets discounts.
+- **Advertising campaigns:** every 1–2 weeks launches campaigns with fixed budget (10–30 thousand ₽) without prior analysis.
+- **Analytics:** reviews WB reports on spending and sales, but does not calculate ROMI.
+
+**3.3.5. Finance and taxes**
+- **Daily accounting:** revenue recorded in Excel (summation of orders from WB).
+- **Cost:** entered into Excel monthly based on purchases.
+- **Taxes:** quarterly, data is sent to accountant (Excel), who prepares the return. Owner pays tax upon notification.
+- **Problems:** lack of plan‑vs‑actual analysis, data transfer errors, risk of late tax payments.
+
+────────────────────────────────────────────────────────────────────────────────────
+**3.4. KEY METRICS AND THEIR RELIABILITY**
+───────────────────────────────────────────────────────────────────────────────────
+
+| Metric                     | Value                  | Collection Method / Frequency          | Reliability / Issues                     |
+|----------------------------|------------------------|----------------------------------------|------------------------------------------|
+| **Revenue (monthly)**      | 6.1 million ₽          | WB data (order reports)                | Accurate (source – official)             |
+| **Gross margin**           | 27% (estimate)         | Excel: (revenue – cost – commissions)  | Approximate, no WB commissions, hidden   |
+|                            |                        | / revenue                              | costs (defects, packaging) accounted     |
+| **Inventory turnover**     | 45 days                | Excel: average stock / COGS × 365      | Manual calculation, inflated due to      |
+|                            |                        |                                        | incomplete stock data                    |
+| **Review response time**   | 48 hours               | Not measured, owner’s estimate         | Subjective, can be up to 5 days          |
+| **Conversion**             | 3.2% (estimate)        | WB – views/sales                       | Moderately accurate, no segmentation     |
+| **Average price**          | 5,548 ₽                | WB reports                             | Accurate                                 |
+| **Number of SKUs**         | 40                     | Excel / WB                             | Accurate                                 |
+| **Peak‑season shortage**   | 15% (estimate)         | Not measured                           | Expert estimate, actual loss higher      |
+
+**3.4.1. Identified reliability issues**
+1. **Margin understated** due to unaccounted hidden costs (defects, packaging, WB fines).
+2. **Inventory turnover overstated** – calculation based on average warehouse stock without considering goods in transit or at WB warehouse.
+3. **Review response time** not tracked, no alerts for new negative reviews.
+4. **Forecasting metrics** (demand, raw material needs) absent.
+
+────────────────────────────────────────────────────────────────────────────────────
+**3.5. IDENTIFIED PAIN POINTS (DETAILED CLASSIFICATION)**
+───────────────────────────────────────────────────────────────────────────────────
+
+**3.5.1. Data fragmentation and information gaps**
+- **Symptom:** Excel, WB, 1С, bank are not synchronised.
+- **Consequences:** owner spends 10–15 hours per week on manual data transfer; accounting errors (up to 5% discrepancies); no single source of truth for decisions.
+
+**3.5.2. Manual prioritisation and slow reaction speed**
+- **Symptom:** shortage detection – visual, competitor prices – weekly, reviews – as they arrive.
+- **Consequences:** seasonal shortages (15% revenue loss), off‑season overstocking, missed dynamic pricing opportunities, customer loss due to unanswered reviews.
+
+**3.5.3. Lack of forecasting models**
+- **Symptom:** raw material procurement “by eye”, production without seasonality consideration.
+- **Consequences:** suboptimal use of working capital, production downtime, lost revenue.
+
+**3.5.4. Lack of business health score**
+- **Symptom:** no automatic monitoring of key indicators (shortage, margin, turnover).
+- **Consequences:** problems identified post‑factum (e.g., shortage only when orders are already lost), lack of proactive management.
+
+**3.5.5. High workload on the owner**
+- **Symptom:** 35+ hours per week on routine.
+- **Consequences:** lack of time for strategy (assortment expansion, new channels), burnout, risk of errors.
+
+**3.5.6. Missed expansion opportunities**
+- **Symptom:** new products 1–2 per year, no trend analysis.
+- **Consequences:** loss of market share, untapped potential (up to 30% additional revenue).
+
+────────────────────────────────────────────────────────────────────────────────────
+**3.6. CULTURAL CHARACTERISTICS AND THEIR IMPACT ON AUTOMATION**
+───────────────────────────────────────────────────────────────────────────────────
+
+**3.6.1. Attitude toward automation**
+- Owner recognises the need for change but fears loss of control and implementation complexity.
+- Willing to invest but demands transparency and the ability to manually intervene.
+- Prefers simple interfaces (analogous to strategy games) – does not want to learn complex CRM systems.
+
+**3.6.2. Decision‑making style**
+- Based on intuition and personal experience rather than data.
+- Requires clear visualisations (dashboards, charts) to make decisions.
+
+**3.6.3. System requirements**
+- **Transparency:** all agent decisions must be explainable and viewable.
+- **Control:** owner must have the ability to override any automated action (“Undo” or “Intervene” button).
+- **Phased approach:** implementation in phases, with the option to stop after each stage.
+- **Training:** simple documentation and training via practical examples (plain language) needed.
+
+**3.6.4. Culture‑related risks**
+- Resistance to change if automation is perceived as a “black box”.
+- Reluctance to spend time learning new tools.
+- Possible distrust of agent forecasts in the early stages.
+
+**3.6.5. Implementation strategy considering cultural characteristics**
+- **Pilot on one product:** start by automating one item (pickets), show results.
+- **Operator console in game style:** interface resembling a strategy game with intuitive controls.
+- **Scenario‑based training:** demonstrate how agents help avoid shortages or increase margins.
+- **Manual override:** an “Intervene” button on every automated decision.
+
+═══════════════════════════════════════════════════════════════════════════════════
+**NOTE:** The diagnosis was conducted based on analysis of current processes, interviews with the owner, Wildberries data, and simulation results. The identified pain points are systematised and will be addressed in the target architecture (Section 4) and implementation plan (Section 9).

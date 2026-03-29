@@ -1,0 +1,189 @@
+═══════════════════════════════════════════════════════════════════════════════════
+PROTOCOL: 7.4. ANNUAL PLANNING PROCESS (OKRs, BUDGETING)
+Project: Sourcegraph GTM Infrastructure
+═══════════════════════════════════════════════════════════════════════════════════
+
+**7.4. ANNUAL PLANNING PROCESS (OKRs, BUDGETING)**
+
+────────────────────────────────────────────────────────────────────────────────────
+7.4.1. PURPOSE AND CONTEXT
+────────────────────────────────────────────────────────────────────────────────────
+
+Annual planning is a key process that ensures alignment between the company’s
+strategy, goals, and resources for the upcoming year. In the target architecture,
+it relies on forecasting models (Section 6.4), the headcount model (7.1),
+territory design (7.2), and the compensation model (7.3). The process is automated
+as much as possible, while retaining manual control at the strategic level
+(approval, priority adjustments). Financial agents (Level 4) perform calculations
+and generate scenarios, while RevOps operators and management make decisions.
+
+────────────────────────────────────────────────────────────────────────────────────
+7.4.2. INPUT DATA
+────────────────────────────────────────────────────────────────────────────────────
+
+| Input Data                         | Source                                             | Format                  |
+|------------------------------------|----------------------------------------------------|-------------------------|
+| Strategic priorities               | Board of Directors / C‑level                        | Document / OKR          |
+| Revenue forecast (ARR)             | Section 6.4 (quarterly forecast)                   | Snowflake               |
+| Current headcount and performance  | Salesforce (Employee, Sales_Quota objects)         | Custom fields / reports |
+| Market benchmarks (salaries)       | External sources (Radford, compensation surveys)   | Excel / Snowflake       |
+| Historical OKRs and their execution| Salesforce (OKR__c object)                         | Custom object           |
+| CAPEX requirements (automation)    | Technical team (development projects)              | Requests in Snowflake   |
+
+────────────────────────────────────────────────────────────────────────────────────
+7.4.3. PROCESS STEPS
+────────────────────────────────────────────────────────────────────────────────────
+
+**7.4.3.1. Step 1: Strategic alignment (Q3, August–September)**
+
+- **Participants:** CRO, CPO, CFO, CEO (as needed).
+- **Actions:**
+  1. Define strategic goals for the next year (e.g., 50% ARR growth,
+     NRR >120%, entry into new markets, launch of product X).
+  2. Approve key metrics and priorities.
+  3. Formulate “top‑level” OKRs for the entire GTM organization.
+- **Role of agents:** Financial agents prepare an analytical summary
+  (trends, forecasts, sensitivity to changes) based on data from Snowflake and Tableau.
+
+**7.4.3.2. Step 2: OKR development (Q4, October–November)**
+
+- **Participants:** Department heads (VP Sales, VP CS, VP Marketing,
+  Director RevOps), RevOps operators.
+- **Actions:**
+  1. Decompose strategic OKRs at the department and team levels.
+  2. Align OKRs with owners.
+  3. Load OKRs into Salesforce (OKR__c object) with metrics,
+     timelines, weights.
+  4. Create a draft budget.
+- **Role of agents:**
+  - Analytic agents model scenarios: “what if we increase headcount
+    by 20% in the EMEA region?” – using the headcount model (7.1) and
+    revenue forecast (6.4).
+  - Financial agents calculate the preliminary budget based on
+    forecasts and hiring plans.
+
+**7.4.3.3. Step 3: Budgeting (Q4, November–December)**
+
+Budgeting is performed iteratively, with the participation of financial agents
+and RevOps operators.
+
+**Step 3.1. Base budget calculation:**
+- Financial agents run scripts that:
+  * Take target ARR and OKRs.
+  * Calculate required headcount (AE, CSM, AM, RevOps) using the formulas in 7.1.
+  * Estimate labor costs (base + variable) considering
+    market rates and planned compensation (7.3).
+  * Add OPEX for licenses, cloud resources, marketing (based on
+    historical norms).
+  * Add CAPEX for automation (if enhancements to the agent holding
+    or new integrations are planned).
+  * Form a reserve fund (typically 10% of the total budget).
+
+**Step 3.2. Comparison with constraints:**
+- RevOps operators load budget constraints (limits) from the planning
+  system (e.g., maximum OPEX approved by the board).
+- If the calculated budget exceeds the limit, an optimization cycle is triggered:
+  * Reduce headcount (increase service ratios, more aggressive
+    productivity forecasts).
+  * Postpone CAPEX projects.
+  * Adjust OKRs (lower the target ARR).
+
+**Step 3.3. Approval:**
+- The final budget and OKRs are presented to management (C‑level, board of directors)
+  for approval.
+- Once approved, the data is recorded in Salesforce (the `Budget__c` object).
+
+**7.4.3.4. Step 4: Communication and launch (December–January)**
+
+- Approved OKRs and budget are published in the handbook and dashboards.
+- Each employee gets access to their OKRs in Salesforce.
+- Financial agents set up monthly execution trackers (comparing actuals with plan).
+
+**7.4.3.5. Step 5: Quarterly adjustment (quarterly)**
+
+- **Participants:** RevOps, department heads.
+- **Actions:**
+  1. After quarter close, analytic agents generate a report on OKR and budget execution.
+  2. If deviation exceeds 10% for key metrics (ARR, NRR, headcount),
+     a review process is initiated:
+     - Re‑forecast for the remaining quarters.
+     - Adjust headcount, territories, or compensation plans.
+  3. Changes are approved by C‑level and updated in Salesforce (OKR__c,
+     Budget__c objects).
+
+────────────────────────────────────────────────────────────────────────────────────
+7.4.4. AUTOMATION AND THE ROLE OF AGENTS
+────────────────────────────────────────────────────────────────────────────────────
+
+**Financial agents (Level 4)** automate the following tasks:
+
+- **Data collection:** retrieve target OKRs, historical performance,
+  revenue forecasts.
+- **Scenario modeling:** upon operator request, run calculations
+  for various scenarios (optimistic, pessimistic, conservative).
+- **Budget template generation:** create Excel files (or JSON)
+  with line‑item details, which are then uploaded into the system.
+- **Execution monitoring:** monthly comparison of actual figures
+  with the budget and publishing reports to Tableau / Salesforce.
+
+**Analytic agents (Level 1)** assist in analysis:
+- Identify reasons for deviations (e.g., a drop in win rate in a certain
+  region due to competitors).
+- Provide data for forecast adjustments (update macroeconomic
+  coefficients, seasonality).
+
+**The control panel** contains a “Planning” widget, where RevOps operators can:
+- View the current budget and OKR execution.
+- Run “what‑if” scenarios.
+- Make adjustments (e.g., change the target ARR) and see the impact
+  on headcount and budget in real time.
+
+────────────────────────────────────────────────────────────────────────────────────
+7.4.5. INTEGRATION WITH OTHER MODELS
+────────────────────────────────────────────────────────────────────────────────────
+
+| Model                     | Impact on annual planning                                          |
+|---------------------------|--------------------------------------------------------------------|
+| **Revenue forecast (6.4)**| Defines top‑level ARR targets and serves as the basis for          |
+|                           | headcount and budget calculations.                                 |
+| **Headcount model (7.1)** | Translates ARR targets into required numbers of AE, CSM, AM, RevOps. |
+| **Territory design (7.2)**| Affects AE distribution across regions, which impacts salary       |
+|                           | and travel budgets.                                                |
+| **Compensation model (7.3)** | Determines the variable portion of costs (commissions, bonuses), |
+|                           | which is accounted for in OPEX.                                   |
+
+────────────────────────────────────────────────────────────────────────────────────
+7.4.6. EXAMPLE OF A FINAL BUDGET (HYPOTHETICAL)
+────────────────────────────────────────────────────────────────────────────────────
+
+| Item                            | Amount ($M) | Note                                          |
+|---------------------------------|-------------|-----------------------------------------------|
+| **CAPEX**                       |             |                                               |
+| Agent holding development       | 1.2         | Enhancements for new markets                  |
+| Integrations (new systems)      | 0.5         |                                               |
+| Training and documentation      | 0.3         |                                               |
+| Total CAPEX                     | 2.0         |                                               |
+| **OPEX**                        |             |                                               |
+| Salaries (base)                 | 8.5         |                                               |
+| Variable (bonuses/commissions)  | 3.2         | Depends on plan execution                     |
+| Cloud resources (AWS, Snowflake)| 0.8         |                                               |
+| Licenses (Salesforce, Gainsight)| 0.4         |                                               |
+| Marketing (ABM, events)         | 1.2         |                                               |
+| Reserve fund (10% of OPEX)      | 1.4         |                                               |
+| Total OPEX                      | 15.5        |                                               |
+| **Total budget**                | **17.5**    | CAPEX + OPEX                                  |
+| **Target ARR**                  | 120.0       | 50% YoY growth                                |
+
+────────────────────────────────────────────────────────────────────────────────────
+**CONCLUSIONS ON THE ANNUAL PLANNING PROCESS**
+
+- The process integrates strategy, forecasts, headcount, compensation, and budgeting
+  into a single cycle.
+- Automation (financial agents, analytic agents) enables rapid scenario testing,
+  reducing the RevOps workload.
+- Transparency and data accessibility (Salesforce, Tableau) ensure
+  alignment across teams.
+- Quarterly adjustments allow adaptation to market changes,
+  maintaining flexibility.
+
+═══════════════════════════════════════════════════════════════════════════════════

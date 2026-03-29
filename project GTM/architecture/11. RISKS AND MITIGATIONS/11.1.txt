@@ -1,0 +1,100 @@
+═══════════════════════════════════════════════════════════════════════════════════
+PROTOCOL: 11.1. ORGANISATIONAL RISKS (RESISTANCE TO CHANGE)
+Project: Sourcegraph GTM Infrastructure
+═══════════════════════════════════════════════════════════════════════════════════
+
+**11.1. ORGANISATIONAL RISKS (RESISTANCE TO CHANGE)**
+
+────────────────────────────────────────────────────────────────────────────────────
+11.1.1. DESCRIPTION AND CONTEXT
+────────────────────────────────────────────────────────────────────────────────────
+
+The implementation of the target GTM architecture involves profound changes in the
+work processes of the Sales, CS, and AM teams. Automating some tasks (qualification,
+account distribution, health score, playbooks) may be perceived by employees as
+a threat to their roles, a loss of control, or distrust of new tools. The high‑agency
+culture characteristic of Sourcegraph requires that changes be implemented with
+maximum transparency and involvement, not imposed from above. The risk of resistance
+is one of the key ones, because without acceptance by the teams, even the most
+advanced architecture will not deliver the expected results.
+
+────────────────────────────────────────────────────────────────────────────────────
+11.1.2. KEY ORGANISATIONAL RISKS
+────────────────────────────────────────────────────────────────────────────────────
+
+| Risk                                     | Likelihood | Impact | Mitigation                                                                 | Responsible |
+|------------------------------------------|-------------|--------|----------------------------------------------------------------------------|-------------|
+| **Strategist resistance** – refusal to use automated priority account lists, ignoring tasks created by agents. | Medium | High | • Demonstrate quick wins (response time reduction from 2 days to 2 hours) in the pilot group.<br>• Involve Strategists in testing and feedback during Phase 1.<br>• Training: automation frees them from routine (export CSV, Excel), allowing focus on qualification.<br>• Introduce KPIs for using automated lists. | VP Sales, RevOps |
+| **AE distrust of automated account distribution** – doubts about fairness of assignment, fear of losing best accounts. | Medium | High | • Full transparency of rules: publish Account Score formula, weights, thresholds in handbook.<br>• Manual override capability via control panel (with reason comment).<br>• Show metrics: after implementation, pipeline coverage increased, win rate improved.<br>• Regular Q&A sessions with RevOps and management. | VP Sales, RevOps |
+| **CSM/AM misunderstanding of Health Score role** – ignoring red zone, distrust of automated playbooks. | Low | Medium | • Training on Gainsight usage, interpretation of colour zones and playbooks.<br>• Demonstrate successful cases: customer retention for clients on the verge of churn thanks to automatic alerts.<br>• Regular effectiveness reviews (e.g., percentage of customers returning from red zone). | VP CS, RevOps |
+| **Loss of engagement due to “black box”** – feeling that decisions are made by unknown entities, reduced initiative. | Medium | Medium | • Full transparency of agent logic: all formulas, triggers, playbooks documented.<br>• Control panel with ability to view decision history (why agent created a task, what Account Score was).<br>• Regular automation effectiveness reviews with teams. | RevOps |
+| **Resistance to change from managers** – unwillingness to change established processes, pressure on subordinates. | Low | High | • Involve managers from the start (participation in foresight sessions, approval of OKRs).<br>• Demonstrate benefits for their departments (productivity gains, forecast accuracy).<br>• Regular progress reports and achieved KPIs. | CRO, CPO, CFO |
+| **High turnover due to routine** – before automation, Strategists may have experienced burnout from manual work. After automation, if new roles are not explained, dissatisfaction may persist. | Medium | Medium | • Clearly define new roles: Strategist becomes an analyst, not an “Excel processing robot”.<br>• Provide opportunities for professional growth (participation in model tuning, analytics).<br>• Monitor satisfaction (NPS surveys of teams). | VP Sales, HR |
+
+────────────────────────────────────────────────────────────────────────────────────
+11.1.3. CHANGE MANAGEMENT PLAN
+────────────────────────────────────────────────────────────────────────────────────
+
+**11.1.3.1. Communication Strategy**
+
+| Stage                | Target Audience | Key Messages                                                                 | Channels                        |
+|----------------------|-----------------|-------------------------------------------------------------------------------|---------------------------------|
+| Before launch (Phase 1) | All GTM teams   | • Why we are automating: to eliminate routine and give more time for strategy.<br>• Which tasks remain with people and which go to agents.<br>• There will be a way to influence (manual override, feedback). | All‑hands, handbook, email      |
+| During pilot         | Pilot participants | • Regular progress updates.<br>• Collect feedback, demonstrate quick wins.<br>• Discuss issues, adjust. | Weekly syncs, Slack             |
+| After pilot          | All GTM teams   | • Show pilot results (KPIs).<br>• Scaling plan.<br>• Invitation to participate in model retraining. | All‑hands, handbook             |
+| During scaling       | All GTM teams   | • Continuous training, answering questions.<br>• Acknowledge teams’ contributions to improving automation. | Control panel, Q&A sessions     |
+
+**11.1.3.2. Training and Support**
+
+- **Mandatory training:**
+  * For Strategists: working with the control panel, interpreting Account Score, rules for creating Opportunities.
+  * For AEs: working with automatic distribution, MEDDPICC in Salesforce, forecasting with agents.
+  * For CSMs/AMs: Gainsight, health score, playbooks, interpreting signals.
+- **Documentation:** detailed handbook with sections “How automation works”, “Frequently asked questions”, “What to do during failures”.
+- **Support:** dedicated Slack channel (#gtm-automation-support) with control panel operators and RevOps, response time <1 hour.
+
+**11.1.3.3. Feedback Mechanisms**
+
+- **“Feedback” button** in the control panel for each automated action – ability to mark “incorrect decision”, “false positive”.
+- **Regular NPS surveys** (quarterly) for Sales, CS, AM teams with the question: “How much does automation help you in your work?”.
+- **Focus groups** after each phase to gather detailed suggestions.
+
+────────────────────────────────────────────────────────────────────────────────────
+11.1.4. MONITORING AND METRICS
+────────────────────────────────────────────────────────────────────────────────────
+
+To detect signs of resistance early, the following metrics are used:
+
+| Metric                                     | Source                               | Target / Alert Condition                |
+|--------------------------------------------|--------------------------------------|-----------------------------------------|
+| **Satisfaction (NPS)** of Sales, CS, AM teams | Surveys (quarterly)                 | >70 (target), <50 – alert               |
+| **Percentage of manual overrides**         | Control panel (logs)                 | <5% – normal, >10% – analysis required  |
+| **Response time to automated tasks**       | Salesforce (Task)                    | If tasks are ignored >2 days – signal   |
+| **Number of support requests** (Slack, tickets) | Slack, Jira                       | Growth >20% – possible issues           |
+| **Turnover in GTM teams**                  | HR reports                           | Comparison with historical level        |
+
+────────────────────────────────────────────────────────────────────────────────────
+11.1.5. RESPONSE PLAN UPON DETECTING SIGNS OF RESISTANCE
+────────────────────────────────────────────────────────────────────────────────────
+
+| Sign                                     | Action                                                                 |
+|------------------------------------------|------------------------------------------------------------------------|
+| NPS < 50 (or drop by 20 points)          | • Conduct a focus group with the team, identify causes.<br>• Make adjustments to interface, training. |
+| Increase in manual overrides >10%        | • Analyse causes (false signals, interface inconvenience).<br>• Adjust model weights or thresholds. |
+| Task neglect (overdue >2 days)           | • Remind manager of importance.<br>• Check if there are too many tasks (overload). |
+| Increase in support requests             | • Assign an additional operator temporarily.<br>• Improve documentation. |
+| High turnover                            | • Conduct exit interviews, identify link to automation.<br>• Adjust roles, add motivation. |
+
+────────────────────────────────────────────────────────────────────────────────────
+**CONCLUSIONS ON ORGANISATIONAL RISKS**
+
+- Managing organisational risks requires no less careful planning
+  than technical implementation.
+- Key principles: transparency, involvement, demonstration of quick wins,
+  preserving human‑in‑the‑loop.
+- Continuous monitoring of satisfaction and engagement metrics enables
+  early problem detection.
+- The success of implementation depends on how teams perceive automation
+  as a helper, not a threat.
+
+═══════════════════════════════════════════════════════════════════════════════════

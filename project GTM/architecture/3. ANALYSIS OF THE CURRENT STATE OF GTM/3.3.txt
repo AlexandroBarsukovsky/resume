@@ -1,0 +1,100 @@
+═══════════════════════════════════════════════════════════════════════════════════
+PROTOCOL: 3.3. PROCESSES: FROM LEAD TO DEAL, FROM ONBOARDING TO EXPANSION
+Project: Sourcegraph GTM Infrastructure
+═══════════════════════════════════════════════════════════════════════════════════
+
+**3.3. PROCESSES: FROM LEAD TO DEAL, FROM ONBOARDING TO EXPANSION**
+
+────────────────────────────────────────────────────────────────────────────────────
+3.3.1. PROCESS FROM INTENT SIGNAL TO QUALIFICATION (SALES STRATEGIST)
+────────────────────────────────────────────────────────────────────────────────────
+
+1. **Collection of intent signals** – 6sense records activity: solution searches,
+   product page visits, competitor queries.
+2. **Export to Excel** – Strategist manually exports data, filters by ICP
+   (Clearbit/ZoomInfo).
+3. **Enrichment** – checks product activity (query to Snowflake).
+4. **Prioritization** – manual assessment based on intuition and simple rules.
+5. **Outreach** – Strategist creates a sequence in SalesLoft,
+   sends personalized messages.
+6. **Qualification** – if response is positive, Strategist creates
+   an Opportunity in Salesforce and hands it over to the AE.
+
+**Time estimates:**
+- Collection and enrichment: 30–60 min per 100 accounts.
+- Signal reaction time: up to 2 days.
+- Intent → Opportunity conversion: ~15–20%.
+
+────────────────────────────────────────────────────────────────────────────────────
+3.3.2. PROCESS FROM QUALIFICATION TO DEAL (AE)
+────────────────────────────────────────────────────────────────────────────────────
+
+1. **Opportunity receipt** – AE receives a notification (email, task in Salesforce).
+2. **Demo** – a meeting with the potential client is scheduled and held.
+3. **MEDDPICC qualification** – AE fills in Opportunity fields (metrics,
+   economic buyer, decision criteria, decision process,
+   paper process, pains, champion, competition).
+4. **Negotiation** – terms, prices, deadlines are discussed.
+5. **Contract** – lawyers prepare the agreement (Ironclad), send for signing.
+6. **Closing** – when signed, the Opportunity is moved to Closed Won,
+   a task for the CSM is created.
+
+**Time estimates:**
+- Deal cycle: 90–120 days.
+- Win rate: ~20% (enterprise).
+- Forecast accuracy: 70–80% (subjective).
+
+────────────────────────────────────────────────────────────────────────────────────
+3.3.3. PROCESS FROM CLOSED DEAL TO ONBOARDING (CSM)
+────────────────────────────────────────────────────────────────────────────────────
+
+1. **Automatic notification** – when the status is Closed Won in Salesforce,
+   a task for the CSM is created (via a process, but without automatic transfer
+   of all data).
+2. **Contact with the client** – CSM reaches out within 2–3 days, conducts
+   an introductory meeting.
+3. **Onboarding** – training, assistance with integration setup, setting
+   target metrics (time to first value).
+4. **Regular check‑ins** – CSM meets with the client every 1–2 weeks
+   to track progress.
+
+**Issues:**
+- No automatic transfer of product data (usage, activity).
+- Health score is not calculated; risks are identified subjectively.
+- Time to first value averages 30–45 days (higher than target).
+
+────────────────────────────────────────────────────────────────────────────────────
+3.3.4. EXPANSION PROCESS (AM)
+────────────────────────────────────────────────────────────────────────────────────
+
+1. **Identifying opportunities** – AM manually reviews reports on client
+   activity, requests for new features, growth in user numbers.
+2. **Proposal preparation** – a commercial proposal is drafted.
+3. **Negotiation** – expansion terms are discussed.
+4. **Closing** – a new Opportunity or an amendment to the contract is created.
+
+**Issues:**
+- No automatic expansion signals.
+- Missed opportunities due to manual monitoring.
+- Expansion ARR below potential.
+
+────────────────────────────────────────────────────────────────────────────────────
+3.3.5. CURRENT CUSTOMER LIFECYCLE SCHEMA
+────────────────────────────────────────────────────────────────────────────────────
+[Intent] → [Sales Strategist] → [AE] → [CSM] → [AM]
+          (manual)   (MEDDPICC)   (manual)   (manual)
+
+**Key gaps:**
+- No automatic data transfer between stages.
+- Lack of a unified system for end‑to‑end analytics.
+- Manual handoffs create delays and information loss.
+
+────────────────────────────────────────────────────────────────────────────────────
+**PROJECT CONCLUSIONS**
+- All processes suffer from manual work and lack of automation.
+- The target architecture must provide event‑driven stage transitions,
+  automatic qualification, health score, and expansion signals.
+- Reducing reaction time and deal cycle is only possible by eliminating
+  manual operations.
+
+═══════════════════════════════════════════════════════════════════════════════════

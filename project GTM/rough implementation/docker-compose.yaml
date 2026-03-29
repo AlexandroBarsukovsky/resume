@@ -1,0 +1,111 @@
+# docker-compose.yml
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: sg_postgres
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: sg_redis
+    command: redis-server --requirepass ${REDIS_PASSWORD} --appendonly yes
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    container_name: sg_backend
+    environment:
+      DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      SF_USERNAME: ${SF_USERNAME}
+      SF_PASSWORD: ${SF_PASSWORD}
+      SF_TOKEN: ${SF_TOKEN}
+      GAINSIGHT_API_KEY: ${GAINSIGHT_API_KEY}
+      SIXSENSE_API_KEY: ${SIXSENSE_API_KEY}
+      SALESLOFT_API_KEY: ${SALESLOFT_API_KEY}
+      HIGHTOUCH_API_KEY: ${HIGHTOUCH_API_KEY}
+      SNOWFLAKE_ACCOUNT: ${SNOWFLAKE_ACCOUNT}
+      SNOWFLAKE_USER: ${SNOWFLAKE_USER}
+      SNOWFLAKE_PASSWORD: ${SNOWFLAKE_PASSWORD}
+      SECRET_KEY: ${SECRET_KEY}
+      LOG_LEVEL: ${LOG_LEVEL}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  celery_worker:
+    build: ./backend
+    container_name: sg_celery_worker
+    environment:
+      DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      SF_USERNAME: ${SF_USERNAME}
+      SF_PASSWORD: ${SF_PASSWORD}
+      SF_TOKEN: ${SF_TOKEN}
+      GAINSIGHT_API_KEY: ${GAINSIGHT_API_KEY}
+      SIXSENSE_API_KEY: ${SIXSENSE_API_KEY}
+    depends_on:
+      - postgres
+      - redis
+    command: celery -A tasks.celery_app worker --loglevel=info
+    restart: unless-stopped
+
+  celery_beat:
+    build: ./backend
+    container_name: sg_celery_beat
+    environment:
+      DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+    depends_on:
+      - postgres
+      - redis
+    command: celery -A tasks.celery_app beat --loglevel=info
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    container_name: sg_frontend
+    environment:
+      VITE_API_URL: http://localhost:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:

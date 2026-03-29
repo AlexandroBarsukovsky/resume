@@ -1,0 +1,120 @@
+═══════════════════════════════════════════════════════════════════════════════════
+SECTION 7. RESOURCE PLANNING
+Project: Sourcegraph GTM Infrastructure
+═══════════════════════════════════════════════════════════════════════════════════
+
+**7. RESOURCE PLANNING**
+
+Resource planning in the target architecture is a continuous, data‑driven process
+based on revenue forecasts (Section 6.4), historical team performance, and the
+company’s strategic goals. It covers four key areas: team size and composition
+(headcount), geographic market division (territory design), compensation system
+(base + variable), and the annual planning process (OKRs, budgeting). All decisions
+are made with the participation of agents (financial, analytical) and RevOps operators,
+ensuring transparency, flexibility, and scalability.
+
+────────────────────────────────────────────────────────────────────────────────────
+7.1. HEADCOUNT MODEL (AE, CSM, AM, REVOPS STAFFING)
+────────────────────────────────────────────────────────────────────────────────────
+
+**Objective:** Determine the optimal headcount for each role to achieve target
+ARR, net retention, and win rate within the given budget.
+
+**Approach:** The headcount model is based on three factors:
+- **ARR forecast** (from Section 6.4) and target growth rates.
+- **Productivity per employee** (historical data and industry benchmarks).
+- **Workload ratios** (e.g., number of customers per CSM, number of deals per AE).
+
+**Example calculations:**
+- **AE:** required number of AE = (target ARR from new customers) /
+  (average annual AE productivity). Win rate and sales cycle length are also considered.
+- **CSM:** number of CSM = (number of enterprise customers) /
+  (service ratio, e.g., 50–100 customers per CSM).
+- **AM:** number of AM = (number of customers ready for expansion) /
+  (workload ratio, e.g., 100–150 customers per AM).
+- **RevOps:** number of RevOps = (number of active agents and integrations) /
+  (support ratio, e.g., 5–10 agents per RevOps).
+
+All calculations are automated by financial agents (Level 4) and updated quarterly.
+RevOps operators can adjust the coefficients via the control panel.
+
+────────────────────────────────────────────────────────────────────────────────────
+7.2. TERRITORY DESIGN (MARKET SPLIT AMONG AES)
+────────────────────────────────────────────────────────────────────────────────────
+
+**Objective:** Ensure balanced workload for AEs, minimize conflicts, and maximize market coverage.
+
+**Principles:**
+- **Geographic division:** primary split by region (US, EMEA, APAC, LATAM). Within regions, by country or country groups.
+- **Vertical division:** for large markets (US), split by industry (finance, technology, retail, etc.) or customer size (named accounts for enterprise, territorial for mid‑market).
+- **Dynamic rebalancing:** analytic agents (Level 1) monitor AE workload and initiate boundary reviews when thresholds are exceeded (e.g., >120% of norm). Final decisions are made by RevOps operators.
+
+**Tools:** Salesforce Territory Management (standard functionality) is used to assign accounts and deals. Rules are automatically applied when new accounts are created.
+
+────────────────────────────────────────────────────────────────────────────────────
+7.3. COMPENSATION MODEL (BASE + VARIABLE, OPTIMAL CONTRACT)
+────────────────────────────────────────────────────────────────────────────────────
+
+**Objective:** Design a compensation scheme that incentivizes achieving company goals,
+attracts and retains talent, and aligns with Sourcegraph’s transparency principles.
+
+**Main components:**
+- **Base salary:** determined by level (e.g., M3 for this role) and market data. Transparent to all employees.
+- **Variable component (commissions / bonuses):**
+  * **AE:** commission on revenue from closed deals (typically 5–15% of ARR)
+    with possible accelerators for exceeding quota.
+  * **CSM / AM:** bonus tied to net retention and expansion ARR.
+  * **RevOps:** bonus tied to forecast accuracy, automation task completion time,
+    and team satisfaction.
+
+**Optimal contract (principal‑agent theory):**
+- Linear commission without a cap (to avoid effort limitation when quota is exceeded).
+- Quota set at a level achievable with average effort (historical data + forecast).
+- Payment frequency: monthly or quarterly (for large deals).
+- To prevent short‑termism (focus only on closing rather than long‑term relationships),
+  adjustments for chargebacks and customer experience (health score) are introduced.
+
+**Automation:** financial agents (Level 4) calculate commissions monthly based on closed deals
+and compensation rules. Results are synchronized with Salesforce and the payroll system.
+
+────────────────────────────────────────────────────────────────────────────────────
+7.4. ANNUAL PLANNING PROCESS (OKRS, BUDGETING)
+────────────────────────────────────────────────────────────────────────────────────
+
+**Objective:** Set goals for the upcoming year, allocate budget and resources,
+ensuring alignment between strategy and operational plans.
+
+**Process steps:**
+1. **Foresight session (Q3 of current year)** – leadership (CRO, CPO, CFO)
+   together with RevOps operators define strategic priorities:
+   ARR, net retention, win rate targets, geographic expansion, new products.
+2. **OKR development (Q4)** – OKRs are cascaded from strategic goals to each
+   department (Sales, CS, RevOps, Marketing). Analytic agents help model scenarios
+   (e.g., “what headcount is needed for 50% ARR growth?”).
+3. **Budgeting** – based on revenue forecasts (Section 6.4) and the headcount model (7.1),
+   the budget for the next year is formed. It includes:
+   - CAPEX for automation and integrations (if needed).
+   - OPEX (salaries, licenses, cloud resources, marketing).
+   - Reserve fund (10% of the budget).
+4. **Approval** – the budget and OKRs are approved by the board of directors
+   (or company leadership) in December.
+5. **Quarterly adjustments** – after each quarter, actual results are compared with the plan.
+   If deviation exceeds 10%, a review process is initiated (with RevOps operators and leadership).
+
+**Tools:** A combination of Excel / Google Sheets (for alignment) and Salesforce / Snowflake
+(for execution monitoring) is used. Financial agents automatically generate reports on OKR execution.
+
+────────────────────────────────────────────────────────────────────────────────────
+**CONCLUSIONS ON RESOURCE PLANNING**
+
+- Resource planning is fully integrated with forecasting models and team performance data.
+- The headcount model, territory design, compensation model, and annual planning process
+  are automated as much as possible, while maintaining manual control at key stages
+  (approval, adjustments).
+- Using agents (financial, analytical) reduces the RevOps workload and improves calculation accuracy.
+
+────────────────────────────────────────────────────────────────────────────────────
+**NOTE:** Separate detailed protocols for each subsection (7.1 – Headcount model,
+7.2 – Territory design, 7.3 – Compensation model, 7.4 – Annual planning process)
+will be provided. Each protocol details calculation methods, formulas, roles, and examples.
+═══════════════════════════════════════════════════════════════════════════════════
