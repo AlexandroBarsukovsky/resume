@@ -58,9 +58,9 @@ All projects follow a unified methodology:
 
 ## Contact
 
-Author: **[Your Name]**  
-Email: [your email]  
-GitHub: [profile link]  
-LinkedIn: [profile link]
+Author: **Andreev Alexander Robertovich**  
+Email: alisaaiclub@gmail.com
+tg - @MedoedBarsuk
+
 
 *All materials are provided to demonstrate competencies. For commercial use or adaptation, please contact.*
